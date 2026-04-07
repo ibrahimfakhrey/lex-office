@@ -23,7 +23,7 @@
 <body>
     <div class="d-flex" id="app-wrapper">
         <!-- Sidebar -->
-        <nav id="sidebar" class="bg-dark text-white vh-100 position-fixed" style="width: 260px; z-index: 1040;">
+        <nav id="sidebar" class="sidebar bg-dark text-white vh-100 position-fixed" style="width: 260px; z-index: 1040;">
             <div class="p-3 border-bottom border-secondary">
                 <h5 class="mb-0 fw-bold">
                     <i class="bi bi-briefcase-fill me-2"></i>LexOffice
@@ -98,14 +98,20 @@
             </div>
         </nav>
 
+        <!-- Mobile Overlay -->
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
         <!-- Main Content -->
-        <main class="flex-grow-1" style="margin-right: 260px;">
+        <main class="flex-grow-1 main-content">
             <!-- Top Bar -->
-            <div class="bg-white border-bottom px-4 py-2 d-flex justify-content-between align-items-center">
-                <div>
+            <div class="bg-white border-bottom px-3 py-2 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-outline-secondary d-md-none" id="sidebarToggle">
+                        <i class="bi bi-list"></i>
+                    </button>
                     <h5 class="mb-0">{% block page_title %}{% endblock %}</h5>
                 </div>
-                <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-2">
                     {% block page_actions %}{% endblock %}
                 </div>
             </div>
