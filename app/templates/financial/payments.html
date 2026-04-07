@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}الدفعات - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>الدفعات</h3>
+    <a href="{{ url_for('financial.create_payment') }}" class="btn btn-success"><i class="bi bi-plus-circle me-1"></i> تسجيل دفعة</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="GET" class="row g-2 align-items-center">
+            <div class="col-md-3">
+                <select name="method" class="form-select form-select-sm">
+                    <option value="">كل الطرق</option>
+                    {% for val, label in payment_methods %}
+                    <option value="{{ val }}" {% if method == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-search me-1"></i> بحث</button>
+            </div>
+            <div class="col-md-5 text-end">
+                <span class="text-muted">إجمالي الدفعات:</span>
+                <strong class="text-success" dir="ltr">{{ '{:,.0f}'.format(total) }} ج.م</strong>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if payments.items %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>الموكل</th>
+                        <th>القضية</th>
+                        <th>المبلغ</th>
+                        <th>الطريقة</th>
+                        <th>المرجع</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set method_map = dict(payment_methods) %}
+                    {% for p in payments.items %}
+                    <tr>
+                        <td>{{ p.payment_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ p.client.full_name[:30] if p.client else '-' }}</td>
+                        <td>{{ p.case.case_number if p.case else '-' }}</td>
+                        <td class="text-success" dir="ltr"><strong>{{ '{:,.0f}'.format(p.amount) }}</strong></td>
+                        <td>{{ method_map.get(p.payment_method, p.payment_method) }}</td>
+                        <td>{{ p.reference_number[:20] if p.reference_number else '-' }}</td>
+                        <td><a href="{{ url_for('financial.show_payment', id=p.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if payments.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if payments.has_prev %}<li class="page-item"><a class="page-link" href="?page={{ payments.prev_num }}&method={{ method }}">السابق</a></li>{% endif %}
+                    {% for p in payments.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}<li class="page-item {% if p == payments.page %}active{% endif %}"><a class="page-link" href="?page={{ p }}&method={{ method }}">{{ p }}</a></li>
+                        {% else %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}
+                    {% endfor %}
+                    {% if payments.has_next %}<li class="page-item"><a class="page-link" href="?page={{ payments.next_num }}&method={{ method }}">التالي</a></li>{% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-cash-stack"></i>
+            <p>لا توجد دفعات</p>
+            <a href="{{ url_for('financial.create_payment') }}" class="btn btn-success btn-sm">تسجيل دفعة</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

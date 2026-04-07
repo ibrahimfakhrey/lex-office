@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}إدارة الفريق - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>إدارة الفريق</h3>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#inviteModal"><i class="bi bi-person-plus me-1"></i> دعوة عضو جديد</button>
+        <a href="{{ url_for('settings.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+    </div>
+</div>
+
+<!-- Invite Modal -->
+<div class="modal fade" id="inviteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('settings.invite_member') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">دعوة عضو جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">البريد الإلكتروني</label>
+                        <input type="email" name="email" class="form-control" dir="ltr" required placeholder="member@example.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الدور</label>
+                        <select name="role_id" class="form-select" required>
+                            {% for r in roles %}
+                            <option value="{{ r.id }}">{{ r.name_ar }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i> إرسال الدعوة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>البريد</th>
+                        <th>الدور</th>
+                        <th>الحالة</th>
+                        <th>تاريخ الانضمام</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in members %}
+                    <tr>
+                        <td><strong>{{ m.full_name }}</strong></td>
+                        <td dir="ltr">{{ m.email }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('settings.change_role', user_id=m.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <select name="role_id" class="form-select form-select-sm" style="width:auto;display:inline" onchange="this.form.submit()">
+                                    {% for r in roles %}
+                                    <option value="{{ r.id }}" {% if m.role_id == r.id %}selected{% endif %}>{{ r.name_ar }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if m.is_active else 'danger' }}">{{ 'نشط' if m.is_active else 'معطّل' }}</span>
+                        </td>
+                        <td><small>{{ m.created_at.strftime('%Y-%m-%d') }}</small></td>
+                        <td>
+                            <form method="POST" action="{{ url_for('settings.toggle_member', user_id=m.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-{{ 'danger' if m.is_active else 'success' }}"
+                                        {% if m.id == g.current_user.id %}disabled{% endif %}>
+                                    {{ 'تعطيل' if m.is_active else 'تفعيل' }}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

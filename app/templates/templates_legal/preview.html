@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}معاينة القالب - {{ template.name_ar }}{% endblock %}
+{% block page_title %}معاينة القالب - {{ template.name_ar }}{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('templates_legal.show', id=template.id) }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-right me-1"></i>رجوع
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body p-4" style="white-space: pre-wrap; direction: rtl;">{{ template.template_content }}</div>
+</div>
+{% endblock %}

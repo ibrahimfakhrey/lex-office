@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}جلسة {{ session.session_date }} - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h3>جلسة {{ session.session_date.strftime('%Y-%m-%d') }}</h3>
+        <small class="text-muted">{{ session.case.case_number or '' }} - {{ session.case.subject[:50] if session.case and session.case.subject else '' }}</small>
+    </div>
+    <div class="d-flex gap-2">
+        {% if not session.result %}
+        <a href="{{ url_for('sessions.record_result', id=session.id) }}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square me-1"></i> تسجيل النتيجة</a>
+        {% endif %}
+        <a href="{{ url_for('sessions.edit', id=session.id) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i> تعديل</a>
+        <a href="{{ url_for('cases.show', id=session.case_id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> القضية</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header">تفاصيل الجلسة</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <small class="text-muted">التاريخ</small>
+                        <div><strong>{{ session.session_date.strftime('%Y-%m-%d') }}</strong></div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">الوقت</small>
+                        <div>{{ session.session_time.strftime('%H:%M') if session.session_time else '-' }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">النوع</small>
+                        <div>{{ type_map.get(session.session_type, session.session_type or '-') }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">المحامي</small>
+                        <div>{{ session.responsible_lawyer.full_name if session.responsible_lawyer else '-' }}</div>
+                    </div>
+                    {% if session.court %}
+                    <div class="col-md-6">
+                        <small class="text-muted">المحكمة</small>
+                        <div>{{ session.court.name }}</div>
+                    </div>
+                    {% endif %}
+                    {% if session.circuit %}
+                    <div class="col-md-6">
+                        <small class="text-muted">الدائرة</small>
+                        <div>{{ session.circuit }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if session.preparation_notes %}
+        <div class="card mb-3">
+            <div class="card-header">ملاحظات التحضير</div>
+            <div class="card-body">{{ session.preparation_notes }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Result -->
+        <div class="card mb-3">
+            <div class="card-header">النتيجة</div>
+            <div class="card-body">
+                {% if session.result %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <small class="text-muted">النتيجة</small>
+                        <div><span class="badge bg-success fs-6">{{ result_map.get(session.result, session.result) }}</span></div>
+                    </div>
+                    {% if session.result_summary %}
+                    <div class="col-12">
+                        <small class="text-muted">ملخص</small>
+                        <div>{{ session.result_summary }}</div>
+                    </div>
+                    {% endif %}
+                    {% if session.next_session_date %}
+                    <div class="col-md-4">
+                        <small class="text-muted">الجلسة القادمة</small>
+                        <div><strong>{{ session.next_session_date.strftime('%Y-%m-%d') }}</strong></div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <p class="text-muted">لم يتم تسجيل النتيجة بعد</p>
+                    <a href="{{ url_for('sessions.record_result', id=session.id) }}" class="btn btn-warning btn-sm">تسجيل النتيجة</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">القضية</div>
+            <div class="card-body">
+                <a href="{{ url_for('cases.show', id=session.case_id) }}">
+                    <strong>{{ session.case.case_number or 'بدون رقم' }}</strong>
+                </a>
+                <br><small class="text-muted">{{ session.case.subject[:60] if session.case and session.case.subject else '' }}</small>
+                {% if session.case and session.case.client %}
+                <br><small>الموكل: {{ session.case.client.full_name }}</small>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body small text-muted">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>تاريخ الإنشاء</span>
+                    <span>{{ session.created_at.strftime('%Y-%m-%d') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('sessions.delete', id=session.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm w-100" data-confirm="هل أنت متأكد من حذف هذه الجلسة؟">
+                <i class="bi bi-trash me-1"></i> حذف الجلسة
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

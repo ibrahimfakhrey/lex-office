@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}الفواتير - LexOffice{% endblock %}
+
+{% set status_color = {'draft':'secondary','sent':'info','paid':'success','partially_paid':'warning','overdue':'danger','cancelled':'dark'} %}
+{% set status_map = dict(invoice_statuses) %}
+
+{% block content %}
+<div class="page-header">
+    <h3>الفواتير</h3>
+    <a href="{{ url_for('financial.create_invoice') }}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> فاتورة جديدة</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="GET" class="row g-2 align-items-center">
+            <div class="col-md-3">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">كل الحالات</option>
+                    {% for val, label in invoice_statuses %}
+                    <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-search me-1"></i> بحث</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if invoices.items %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>رقم الفاتورة</th>
+                        <th>التاريخ</th>
+                        <th>الموكل</th>
+                        <th>القضية</th>
+                        <th>الإجمالي</th>
+                        <th>الحالة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inv in invoices.items %}
+                    <tr>
+                        <td><strong>{{ inv.invoice_number or '-' }}</strong></td>
+                        <td>{{ inv.issue_date.strftime('%Y-%m-%d') if inv.issue_date else '-' }}</td>
+                        <td>{{ inv.client.full_name[:30] if inv.client else '-' }}</td>
+                        <td>{{ inv.case.case_number if inv.case else '-' }}</td>
+                        <td dir="ltr"><strong>{{ '{:,.0f}'.format(inv.total) }}</strong></td>
+                        <td><span class="badge bg-{{ status_color.get(inv.status, 'secondary') }}">{{ status_map.get(inv.status, inv.status) }}</span></td>
+                        <td><a href="{{ url_for('financial.show_invoice', id=inv.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if invoices.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if invoices.has_prev %}<li class="page-item"><a class="page-link" href="?page={{ invoices.prev_num }}&status={{ status }}">السابق</a></li>{% endif %}
+                    {% for p in invoices.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}<li class="page-item {% if p == invoices.page %}active{% endif %}"><a class="page-link" href="?page={{ p }}&status={{ status }}">{{ p }}</a></li>
+                        {% else %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}
+                    {% endfor %}
+                    {% if invoices.has_next %}<li class="page-item"><a class="page-link" href="?page={{ invoices.next_num }}&status={{ status }}">التالي</a></li>{% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-receipt"></i>
+            <p>لا توجد فواتير</p>
+            <a href="{{ url_for('financial.create_invoice') }}" class="btn btn-primary btn-sm">إنشاء فاتورة</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

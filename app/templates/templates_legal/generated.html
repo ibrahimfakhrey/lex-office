@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}المستند المُنشأ - {{ template.name_ar }}{% endblock %}
+{% block page_title %}المستند المُنشأ{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <button onclick="window.print()" class="btn btn-primary btn-sm">
+        <i class="bi bi-printer me-1"></i>طباعة
+    </button>
+    <a href="{{ url_for('templates_legal.show', id=template.id) }}" class="btn btn-outline-secondary btn-sm">رجوع</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <strong>القالب:</strong> {{ template.name_ar }}
+            </div>
+            {% if case %}
+            <div class="col-md-4">
+                <strong>القضية:</strong> {{ case.case_number }} - {{ case.subject }}
+            </div>
+            {% endif %}
+            {% if client %}
+            <div class="col-md-4">
+                <strong>الموكل:</strong> {{ client.full_name }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-4" style="white-space: pre-wrap; direction: rtl;">{{ generated_content }}</div>
+</div>
+{% endblock %}

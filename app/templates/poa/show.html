@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}توكيل {{ poa.poa_number or '' }} - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>تفاصيل التوكيل</h3>
+    <a href="{{ url_for('poa.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+</div>
+
+{% set type_labels = {'general':'عام', 'special':'خاص', 'litigation':'تقاضي', 'real_estate':'عقاري'} %}
+{% set status_colors = {'active':'success', 'expired':'danger', 'revoked':'warning'} %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>بيانات التوكيل</span>
+                <span class="badge bg-{{ status_colors.get(poa.status, 'secondary') }}">{{ poa.status }}</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <small class="text-muted">العميل</small>
+                        <div><strong>{{ poa.client.full_name if poa.client else '-' }}</strong></div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">نوع التوكيل</small>
+                        <div>{{ type_labels.get(poa.poa_type, poa.poa_type) }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">رقم التوكيل</small>
+                        <div>{{ poa.poa_number or '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">تاريخ الإصدار</small>
+                        <div>{{ poa.issue_date.strftime('%Y-%m-%d') if poa.issue_date else '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">تاريخ الانتهاء</small>
+                        <div>
+                            {% if poa.expiry_date %}
+                            {{ poa.expiry_date.strftime('%Y-%m-%d') }}
+                            {% if poa.days_until_expiry is not none and poa.days_until_expiry <= 30 %}
+                            <span class="badge bg-{{ 'danger' if poa.days_until_expiry <= 7 else 'warning' }}">{{ poa.days_until_expiry }} يوم متبقي</span>
+                            {% endif %}
+                            {% else %}-{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">مكتب التوثيق</small>
+                        <div>{{ poa.notary_office or '-' }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">رقم التوثيق</small>
+                        <div>{{ poa.notarization_number or '-' }}</div>
+                    </div>
+                    {% if poa.scope %}
+                    <div class="col-12">
+                        <small class="text-muted">نطاق التوكيل</small>
+                        <div>{{ poa.scope }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body small text-muted">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>تاريخ الإنشاء</span>
+                    <span>{{ poa.created_at.strftime('%Y-%m-%d') }}</span>
+                </div>
+                {% if poa.case %}
+                <div class="d-flex justify-content-between mb-1">
+                    <span>القضية</span>
+                    <a href="{{ url_for('cases.show', id=poa.case.id) }}">{{ poa.case.case_number }}</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

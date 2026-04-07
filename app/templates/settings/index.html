@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}إعدادات المكتب - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>إعدادات المكتب</h3>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('settings.team') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-people me-1"></i> الفريق</a>
+        <a href="{{ url_for('settings.profile') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-person me-1"></i> الملف الشخصي</a>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('settings.update_office') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card mb-3">
+        <div class="card-header">بيانات المكتب</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">اسم المكتب <span class="text-danger">*</span></label>
+                    <input type="text" name="office_name" class="form-control" value="{{ tenant.name }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">رقم القيد بالنقابة</label>
+                    <input type="text" name="bar_registration_no" class="form-control" value="{{ tenant.bar_registration_no or '' }}">
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">العنوان</label>
+                    <textarea name="address" class="form-control" rows="2">{{ tenant.address or '' }}</textarea>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">المحكمة الرئيسية</label>
+                    <input type="text" name="primary_court" class="form-control" value="{{ tenant.primary_court or '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">الهاتف</label>
+                    <input type="text" name="phone" class="form-control" dir="ltr" value="{{ tenant.phone or '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">الفاكس</label>
+                    <input type="text" name="fax" class="form-control" dir="ltr" value="{{ tenant.fax or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">البريد الإلكتروني</label>
+                    <input type="email" name="email" class="form-control" dir="ltr" value="{{ tenant.email or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">شعار المكتب</label>
+                    <input type="file" name="logo" class="form-control" accept="image/*">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">معلومات الاشتراك</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <small class="text-muted">الخطة الحالية</small>
+                    <div><strong>{{ tenant.subscription_plan.name_ar if tenant.subscription_plan else 'بدون خطة' }}</strong></div>
+                </div>
+                <div class="col-md-4">
+                    <small class="text-muted">حالة الاشتراك</small>
+                    <div>
+                        {% set status_map = {'trial':'تجريبي','active':'نشط','expired':'منتهي','cancelled':'ملغي'} %}
+                        <span class="badge bg-{{ 'success' if tenant.subscription_status == 'active' else 'warning' if tenant.subscription_status == 'trial' else 'danger' }}">
+                            {{ status_map.get(tenant.subscription_status, tenant.subscription_status) }}
+                        </span>
+                    </div>
+                </div>
+                {% if tenant.trial_ends_at %}
+                <div class="col-md-4">
+                    <small class="text-muted">انتهاء الفترة التجريبية</small>
+                    <div>{{ tenant.trial_ends_at.strftime('%Y-%m-%d') }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle me-1"></i> حفظ الإعدادات</button>
+</form>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base_auth.html" %}
+{% block title %}تسجيل جديد{% endblock %}
+
+{% block content %}
+<h4 class="text-center mb-4">ابدأ تجربتك المجانية</h4>
+<p class="text-center text-muted small mb-4">14 يوم مجاناً بدون بيانات دفع</p>
+
+<form method="POST" action="{{ url_for('auth.register') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="mb-3">
+        <label for="full_name" class="form-label">الاسم الكامل</label>
+        <input type="text" class="form-control" id="full_name" name="full_name"
+               value="{{ full_name|default('') }}" required placeholder="أدخل اسمك الكامل">
+    </div>
+
+    <div class="mb-3">
+        <label for="email" class="form-label">البريد الإلكتروني</label>
+        <input type="email" class="form-control" id="email" name="email"
+               value="{{ email|default('') }}" required placeholder="email@example.com" dir="ltr">
+    </div>
+
+    <div class="mb-3">
+        <label for="phone" class="form-label">رقم الهاتف</label>
+        <input type="tel" class="form-control" id="phone" name="phone"
+               value="{{ phone|default('') }}" required placeholder="01xxxxxxxxx" dir="ltr">
+    </div>
+
+    <div class="mb-3">
+        <label for="password" class="form-label">كلمة المرور</label>
+        <input type="password" class="form-control" id="password" name="password"
+               required placeholder="8 أحرف على الأقل" dir="ltr">
+        <div class="form-text">حرف كبير + رقم + رمز خاص</div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">عدد المحامين في المكتب</label>
+        <select class="form-select" name="office_size">
+            <option value="1-5">1 - 5 محامين</option>
+            <option value="6-15">6 - 15 محامي</option>
+            <option value="15+">أكثر من 15</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100 mb-3">
+        <i class="bi bi-person-plus me-1"></i> إنشاء حساب
+    </button>
+</form>
+{% endblock %}
+
+{% block footer %}
+<div class="text-center mt-3">
+    <span class="text-muted small">لديك حساب بالفعل؟</span>
+    <a href="{{ url_for('auth.login') }}" class="text-decoration-none small">سجل دخولك</a>
+</div>
+{% endblock %}

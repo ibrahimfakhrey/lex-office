@@ -1,0 +1,147 @@
+{% extends "base_onboarding.html" %}
+{% block title %}دعوة الفريق - LexOffice{% endblock %}
+{% block step_label %}الخطوة ٣ من ٣ — دعوة الفريق{% endblock %}
+
+{% block extra_head %}
+<style>
+.invite-row {
+    display: grid; grid-template-columns: 1fr auto auto;
+    gap: 0.7rem; align-items: center;
+    margin-bottom: 0.8rem;
+}
+.invite-row input, .invite-row select {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(108,71,255,0.22);
+    border-radius: 10px;
+    padding: 0.65rem 0.9rem;
+    color: #e8e3ff;
+    font-size: 0.88rem;
+    font-family: 'Cairo','Tajawal',sans-serif;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+}
+.invite-row input:focus, .invite-row select:focus {
+    border-color: #6c47ff;
+    box-shadow: 0 0 0 3px rgba(108,71,255,0.15);
+}
+.invite-row input::placeholder { color: #4a4272; }
+.invite-row select option { background: #1a1535; }
+.btn-remove {
+    width: 36px; height: 36px;
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 8px; color: #f87171;
+    display: grid; place-items: center;
+    cursor: pointer; transition: all 0.2s;
+    font-size: 1rem; flex-shrink: 0;
+}
+.btn-remove:hover { background: rgba(239,68,68,0.2); }
+.btn-add-row {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.5rem 1.1rem;
+    background: rgba(108,71,255,0.08);
+    border: 1px dashed rgba(108,71,255,0.3);
+    border-radius: 10px;
+    color: #a78bfa; font-size: 0.85rem; font-weight: 600;
+    font-family: 'Cairo','Tajawal',sans-serif;
+    cursor: pointer; transition: all 0.2s; margin-bottom: 1.5rem;
+}
+.btn-add-row:hover { background: rgba(108,71,255,0.15); border-color: rgba(108,71,255,0.5); }
+.btn-skip {
+    width: 100%; padding: 0.7rem;
+    background: transparent; border: none;
+    color: #9d94c4; font-size: 0.85rem; font-weight: 500;
+    font-family: 'Cairo','Tajawal',sans-serif;
+    cursor: pointer; margin-top: 0.5rem;
+    transition: color 0.2s;
+}
+.btn-skip:hover { color: #a78bfa; }
+.team-tip {
+    background: rgba(108,71,255,0.07);
+    border: 1px solid rgba(108,71,255,0.18);
+    border-radius: 12px;
+    padding: 0.9rem 1.1rem;
+    font-size: 0.82rem; color: #9d94c4;
+    margin-bottom: 1.5rem;
+    display: flex; align-items: flex-start; gap: 0.6rem;
+}
+.team-tip i { color: #6c47ff; font-size: 1rem; flex-shrink: 0; margin-top: 0.1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Wizard -->
+<div class="wizard">
+    <div class="w-step">
+        <div class="w-dot w-dot-done"><i class="bi bi-check-lg"></i></div>
+        <div class="w-label w-label-done">بيانات المكتب</div>
+    </div>
+    <div class="w-line w-line-done"></div>
+    <div class="w-step">
+        <div class="w-dot w-dot-done"><i class="bi bi-check-lg"></i></div>
+        <div class="w-label w-label-done">الاشتراك</div>
+    </div>
+    <div class="w-line w-line-done"></div>
+    <div class="w-step">
+        <div class="w-dot w-dot-active">٣</div>
+        <div class="w-label w-label-active">الفريق</div>
+    </div>
+</div>
+
+<div class="ob-panel">
+    <div class="ob-title">
+        <h2>دعوة أعضاء الفريق</h2>
+        <p>أرسل دعوات للمحامين والمساعدين للانضمام إلى مكتبك</p>
+    </div>
+
+    <div class="team-tip">
+        <i class="bi bi-info-circle-fill"></i>
+        <span>سيتلقى كل عضو بريداً إلكترونياً يحتوي على رابط تفعيل الحساب. يمكنك تخطي هذه الخطوة وإضافة الأعضاء لاحقاً من الإعدادات.</span>
+    </div>
+
+    <form method="POST" id="inviteForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div id="inviteRows">
+            <div class="invite-row">
+                <input type="email" name="email" placeholder="البريد الإلكتروني" dir="ltr">
+                <select name="role_id">
+                    {% for role in roles %}
+                    <option value="{{ role.id }}">{{ role.name_ar }}</option>
+                    {% endfor %}
+                </select>
+                <button type="button" class="btn-remove" style="visibility:hidden;" onclick="this.closest('.invite-row').remove()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <button type="button" id="addRow" class="btn-add-row">
+            <i class="bi bi-plus-circle"></i> إضافة عضو آخر
+        </button>
+
+        <button type="submit" class="btn-submit">
+            <i class="bi bi-send-fill"></i>
+            إرسال الدعوات والدخول للوحة التحكم
+        </button>
+    </form>
+
+    <form method="POST" action="{{ url_for('onboarding.skip_invite') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn-skip">تخطي هذه الخطوة ←</button>
+    </form>
+</div>
+
+<script>
+document.getElementById('addRow').addEventListener('click', function () {
+    const container = document.getElementById('inviteRows');
+    const first = container.querySelector('.invite-row');
+    const clone = first.cloneNode(true);
+    clone.querySelector('input[type="email"]').value = '';
+    clone.querySelector('.btn-remove').style.visibility = 'visible';
+    clone.querySelector('.btn-remove').onclick = function () { clone.remove(); };
+    container.appendChild(clone);
+});
+</script>
+{% endblock %}

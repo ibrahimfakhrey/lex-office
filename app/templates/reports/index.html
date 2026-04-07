@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}التقارير{% endblock %}
+{% block page_title %}التقارير والإحصائيات{% endblock %}
+
+{% block content %}
+<!-- Row 1: Main Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="display-6 fw-bold text-primary">{{ total_cases }}</div>
+                <div class="text-muted mt-1"><i class="bi bi-folder-fill me-1"></i>إجمالي القضايا</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="display-6 fw-bold text-success">{{ active_cases }}</div>
+                <div class="text-muted mt-1"><i class="bi bi-play-circle-fill me-1"></i>القضايا النشطة</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="display-6 fw-bold text-info">{{ "{:,.2f}".format(total_income) }}</div>
+                <div class="text-muted mt-1"><i class="bi bi-cash-stack me-1"></i>إجمالي الإيرادات</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="display-6 fw-bold text-danger">{{ "{:,.2f}".format(total_expenses) }}</div>
+                <div class="text-muted mt-1"><i class="bi bi-credit-card me-1"></i>إجمالي المصروفات</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row 2: Secondary Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="display-6 fw-bold text-warning">{{ pending_tasks }}</div>
+                <div class="text-muted mt-1"><i class="bi bi-list-task me-1"></i>المهام المعلقة</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="display-6 fw-bold text-purple">{{ upcoming_sessions }}</div>
+                <div class="text-muted mt-1"><i class="bi bi-calendar-event me-1"></i>الجلسات القادمة</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                {% set net = total_income - total_expenses %}
+                <div class="display-6 fw-bold {{ 'text-success' if net >= 0 else 'text-danger' }}">{{ "{:,.2f}".format(net) }}</div>
+                <div class="text-muted mt-1"><i class="bi bi-graph-up-arrow me-1"></i>صافي الربح</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="display-6 fw-bold text-secondary">{{ total_clients }}</div>
+                <div class="text-muted mt-1"><i class="bi bi-people-fill me-1"></i>إجمالي الموكلين</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Links -->
+<div class="row g-3">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-cash-coin display-4 text-success mb-3 d-block"></i>
+                <h5>التقرير المالي</h5>
+                <p class="text-muted small">الإيرادات والمصروفات والأرباح</p>
+                <a href="{{ url_for('reports.financial') }}" class="btn btn-success">
+                    <i class="bi bi-arrow-left me-1"></i>عرض التقرير
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-bar-chart-line display-4 text-primary mb-3 d-block"></i>
+                <h5>أداء المحامين</h5>
+                <p class="text-muted small">إحصائيات أداء فريق العمل</p>
+                <a href="{{ url_for('reports.performance') }}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left me-1"></i>عرض التقرير
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-people-fill display-4 text-warning mb-3 d-block"></i>
+                <h5>عبء العمل</h5>
+                <p class="text-muted small">توزيع العمل على الفريق</p>
+                <a href="{{ url_for('reports.workload') }}" class="btn btn-warning">
+                    <i class="bi bi-arrow-left me-1"></i>عرض التقرير
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-calendar-check display-4 text-info mb-3 d-block"></i>
+                <h5>تقرير الجلسات</h5>
+                <p class="text-muted small">ملخص الجلسات ونتائجها</p>
+                <a href="{{ url_for('reports.sessions_report') }}" class="btn btn-info text-white">
+                    <i class="bi bi-arrow-left me-1"></i>عرض التقرير
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

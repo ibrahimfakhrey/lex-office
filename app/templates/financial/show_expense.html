@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}مصروف - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>تفاصيل المصروف</h3>
+    <div class="d-flex gap-2">
+        <form method="POST" action="{{ url_for('financial.delete_expense', id=expense.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="هل أنت متأكد من حذف هذا المصروف؟"><i class="bi bi-trash me-1"></i> حذف</button>
+        </form>
+        <a href="{{ url_for('financial.expenses') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">بيانات المصروف</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <small class="text-muted">المبلغ</small>
+                        <div class="display-6 text-danger" dir="ltr">{{ '{:,.2f}'.format(expense.amount) }}</div>
+                        <small class="text-muted">ج.م</small>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">تاريخ المصروف</small>
+                        <div><strong>{{ expense.expense_date.strftime('%Y-%m-%d') }}</strong></div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">النوع</small>
+                        <div>{{ type_map.get(expense.expense_type, expense.expense_type) }}</div>
+                    </div>
+                    {% if expense.description %}
+                    <div class="col-12">
+                        <small class="text-muted">الوصف</small>
+                        <div>{{ expense.description }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-6">
+                        <small class="text-muted">القضية</small>
+                        <div>
+                            {% if expense.case %}
+                            <a href="{{ url_for('cases.show', id=expense.case_id) }}">{{ expense.case.case_number or '-' }}</a>
+                            {% else %}-{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">الموكل</small>
+                        <div>
+                            {% if expense.client %}
+                            <a href="{{ url_for('clients.show', id=expense.client_id) }}">{{ expense.client.full_name }}</a>
+                            {% else %}-{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body small text-muted">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>سجّل بواسطة</span>
+                    <span>{{ expense.recorder.full_name if expense.recorder else '-' }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span>تاريخ التسجيل</span>
+                    <span>{{ expense.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

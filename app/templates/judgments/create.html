@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}إضافة حكم - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>إضافة حكم</h3>
+    <a href="{{ url_for('judgments.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="row g-3">
+                <!-- Case -->
+                <div class="col-md-6">
+                    <label class="form-label">القضية <span class="text-danger">*</span></label>
+                    <select name="case_id" class="form-select" required>
+                        <option value="">اختر القضية</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}" {% if (form.get('case_id')|string == c.id|string) or (pre_case_id and pre_case_id == c.id) %}selected{% endif %}>
+                            {{ c.case_number }} - {{ c.subject[:40] if c.subject else '' }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Date -->
+                <div class="col-md-3">
+                    <label class="form-label">تاريخ الحكم <span class="text-danger">*</span></label>
+                    <input type="date" name="judgment_date" class="form-control" dir="ltr" value="{{ form.get('judgment_date', '') }}" required>
+                </div>
+
+                <!-- Court -->
+                <div class="col-md-3">
+                    <label class="form-label">المحكمة</label>
+                    <select name="court_id" class="form-select">
+                        <option value="">اختر المحكمة</option>
+                        {% for court in courts %}
+                        <option value="{{ court.id }}" {% if form.get('court_id')|string == court.id|string %}selected{% endif %}>{{ court.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Type -->
+                <div class="col-md-4">
+                    <label class="form-label">نوع الحكم <span class="text-danger">*</span></label>
+                    <select name="judgment_type" id="judgment_type" class="form-select" required>
+                        <option value="">اختر النوع</option>
+                        {% for val, label in judgment_types %}
+                        <option value="{{ val }}" {% if form.get('judgment_type') == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Result -->
+                <div class="col-md-4">
+                    <label class="form-label">النتيجة <span class="text-danger">*</span></label>
+                    <select name="result" class="form-select" required>
+                        <option value="">اختر النتيجة</option>
+                        {% for val, label in judgment_results %}
+                        <option value="{{ val }}" {% if form.get('result') == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Judge Name -->
+                <div class="col-md-4">
+                    <label class="form-label">اسم القاضي</label>
+                    <input type="text" name="judge_name" class="form-control" value="{{ form.get('judge_name', '') }}">
+                </div>
+
+                <!-- Awarded Amount -->
+                <div class="col-md-4">
+                    <label class="form-label">المبلغ المحكوم به</label>
+                    <input type="number" name="awarded_amount" class="form-control" dir="ltr" step="0.01" value="{{ form.get('awarded_amount', '') }}">
+                </div>
+
+                <!-- Judgment Text -->
+                <div class="col-12">
+                    <label class="form-label">نص الحكم / المنطوق</label>
+                    <textarea name="judgment_text" class="form-control" rows="4">{{ form.get('judgment_text', '') }}</textarea>
+                </div>
+
+                <!-- Notes -->
+                <div class="col-12">
+                    <label class="form-label">ملاحظات</label>
+                    <textarea name="notes" class="form-control" rows="2">{{ form.get('notes', '') }}</textarea>
+                </div>
+            </div>
+
+            <!-- Appeal Tracking Section -->
+            <hr class="my-4">
+            <h5 class="mb-3">تتبع الاستئناف</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="appeal_tracking_enabled" value="yes" id="appealCheck"
+                               {% if form.get('appeal_tracking_enabled') == 'yes' %}checked{% endif %}
+                               onchange="toggleAppeal()">
+                        <label class="form-check-label" for="appealCheck">تفعيل تتبع الاستئناف</label>
+                    </div>
+                </div>
+                <div class="col-md-4" id="appealDeadlineAuto" style="display:none;">
+                    <label class="form-label">الموعد التلقائي</label>
+                    <div class="form-control-plaintext" id="autoDeadline">سيتم حسابه عند اختيار النوع والتاريخ</div>
+                </div>
+                <div class="col-md-4" id="appealDeadlineManual" style="display:none;">
+                    <label class="form-label">تعديل يدوي للموعد</label>
+                    <input type="date" name="appeal_deadline" class="form-control" dir="ltr" value="{{ form.get('appeal_deadline', '') }}">
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i> حفظ الحكم</button>
+                <a href="{{ url_for('judgments.index') }}" class="btn btn-outline-secondary me-2">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const appealDays = {'primary': 40, 'appeal': 60, 'cassation': 60};
+
+function toggleAppeal() {
+    const checked = document.getElementById('appealCheck').checked;
+    document.getElementById('appealDeadlineAuto').style.display = checked ? '' : 'none';
+    document.getElementById('appealDeadlineManual').style.display = checked ? '' : 'none';
+    if (checked) calcDeadline();
+}
+
+function calcDeadline() {
+    const type = document.getElementById('judgment_type').value;
+    const dateVal = document.querySelector('[name="judgment_date"]').value;
+    if (type && dateVal && appealDays[type]) {
+        const d = new Date(dateVal);
+        d.setDate(d.getDate() + appealDays[type]);
+        document.getElementById('autoDeadline').textContent = d.toISOString().split('T')[0] + ' (' + appealDays[type] + ' يوم)';
+    } else {
+        document.getElementById('autoDeadline').textContent = 'سيتم حسابه عند اختيار النوع والتاريخ';
+    }
+}
+
+document.getElementById('judgment_type').addEventListener('change', calcDeadline);
+document.querySelector('[name="judgment_date"]').addEventListener('change', calcDeadline);
+
+// Init on load
+if (document.getElementById('appealCheck').checked) toggleAppeal();
+</script>
+{% endblock %}

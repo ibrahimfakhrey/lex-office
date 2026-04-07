@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}التنفيذ - LexOffice{% endblock %}
+
+{% set type_map = {'real_estate_seizure':'حجز عقاري','funds_seizure':'حجز على أموال','movables_seizure':'حجز منقولات','eviction':'إخلاء','delivery':'تسليم'} %}
+{% set status_map = dict(enforcement_statuses) %}
+{% set status_color = {'active':'success','completed':'primary','suspended':'warning','cancelled':'danger'} %}
+
+{% block content %}
+<div class="page-header">
+    <h3>ملفات التنفيذ</h3>
+    <a href="{{ url_for('enforcement.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i> إضافة ملف تنفيذ
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="GET" class="row g-2 align-items-center">
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="">كل الحالات</option>
+                    {% for val, label in enforcement_statuses %}
+                    <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Enforcements Table -->
+<div class="card">
+    <div class="card-body p-0">
+        {% if enforcements.items %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>رقم التنفيذ</th>
+                        <th>القضية</th>
+                        <th>النوع</th>
+                        <th>المبلغ الإجمالي</th>
+                        <th>المحصّل</th>
+                        <th>نسبة التحصيل</th>
+                        <th>الحالة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in enforcements.items %}
+                    <tr>
+                        <td><a href="{{ url_for('enforcement.show', id=e.id) }}">{{ e.enforcement_number or '-' }}</a></td>
+                        <td>
+                            {% if e.case %}
+                            <a href="{{ url_for('cases.show', id=e.case_id) }}">{{ e.case.case_number or '-' }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td>{{ type_map.get(e.enforcement_type, e.enforcement_type or '-') }}</td>
+                        <td dir="ltr" class="text-end">{{ '{:,.0f}'.format(e.total_amount) if e.total_amount else '-' }}</td>
+                        <td dir="ltr" class="text-end">{{ '{:,.0f}'.format(e.collected_amount) if e.collected_amount else '0' }}</td>
+                        <td style="min-width: 120px;">
+                            {% set pct = (e.collected_amount / e.total_amount * 100) if e.total_amount and e.collected_amount else 0 %}
+                            <div class="progress" style="height: 18px;">
+                                <div class="progress-bar bg-{{ 'success' if pct >= 100 else 'info' }}" style="width: {{ [pct, 100]|min }}%">
+                                    {{ '%.0f'|format(pct) }}%
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ status_color.get(e.status, 'secondary') }}">{{ status_map.get(e.status, e.status or '-') }}</span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('enforcement.show', id=e.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if enforcements.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if enforcements.has_prev %}
+                    <li class="page-item"><a class="page-link" href="?page={{ enforcements.prev_num }}&status={{ status }}">السابق</a></li>
+                    {% endif %}
+                    {% for p in enforcements.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}
+                        <li class="page-item {% if p == enforcements.page %}active{% endif %}">
+                            <a class="page-link" href="?page={{ p }}&status={{ status }}">{{ p }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if enforcements.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ enforcements.next_num }}&status={{ status }}">التالي</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-file-earmark-ruled"></i>
+            <p>لا توجد ملفات تنفيذ</p>
+            <a href="{{ url_for('enforcement.create') }}" class="btn btn-primary btn-sm">إضافة أول ملف تنفيذ</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

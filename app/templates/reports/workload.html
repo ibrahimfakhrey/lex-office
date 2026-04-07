@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}عبء العمل{% endblock %}
+{% block page_title %}توزيع عبء العمل{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-right me-1"></i>العودة للتقارير
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>المحامي</th>
+                        <th class="text-center">القضايا النشطة</th>
+                        <th class="text-center">المهام المعلقة</th>
+                        <th class="text-center">الجلسات القادمة</th>
+                        <th class="text-center">إجمالي العبء</th>
+                        <th style="min-width: 250px;">توزيع العبء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in workload_data %}
+                    {% set load_class = 'danger' if item.total_load > 10 else ('warning' if item.total_load >= 5 else 'success') %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2"
+                                     style="width: 32px; height: 32px;">
+                                    <span class="text-white small fw-bold">{{ item.lawyer.full_name[0] }}</span>
+                                </div>
+                                {{ item.lawyer.full_name }}
+                            </div>
+                        </td>
+                        <td class="text-center">{{ item.active_cases }}</td>
+                        <td class="text-center">{{ item.pending_tasks }}</td>
+                        <td class="text-center">{{ item.upcoming_sessions }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-{{ load_class }} fs-6">{{ item.total_load }}</span>
+                        </td>
+                        <td>
+                            {% if item.total_load > 0 %}
+                            <div class="progress" style="height: 24px;">
+                                {% set pct_cases = (item.active_cases / item.total_load * 100)|round %}
+                                {% set pct_tasks = (item.pending_tasks / item.total_load * 100)|round %}
+                                {% set pct_sessions = (100 - pct_cases - pct_tasks) %}
+                                <div class="progress-bar bg-primary" role="progressbar"
+                                     style="width: {{ pct_cases }}%"
+                                     title="قضايا: {{ item.active_cases }}">
+                                    {% if pct_cases > 15 %}{{ item.active_cases }}{% endif %}
+                                </div>
+                                <div class="progress-bar bg-warning" role="progressbar"
+                                     style="width: {{ pct_tasks }}%"
+                                     title="مهام: {{ item.pending_tasks }}">
+                                    {% if pct_tasks > 15 %}{{ item.pending_tasks }}{% endif %}
+                                </div>
+                                <div class="progress-bar bg-info" role="progressbar"
+                                     style="width: {{ pct_sessions }}%"
+                                     title="جلسات: {{ item.upcoming_sessions }}">
+                                    {% if pct_sessions > 15 %}{{ item.upcoming_sessions }}{% endif %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted small">لا يوجد عبء</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">لا توجد بيانات</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if workload_data %}
+    <div class="card-footer bg-white">
+        <small class="text-muted">
+            <span class="badge bg-primary">&nbsp;</span> قضايا نشطة
+            <span class="badge bg-warning me-2">&nbsp;</span> مهام معلقة
+            <span class="badge bg-info me-2">&nbsp;</span> جلسات قادمة
+            &mdash;
+            <span class="badge bg-success">&nbsp;</span> عبء منخفض (&lt;5)
+            <span class="badge bg-warning">&nbsp;</span> عبء متوسط (5-10)
+            <span class="badge bg-danger">&nbsp;</span> عبء مرتفع (&gt;10)
+        </small>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

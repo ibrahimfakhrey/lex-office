@@ -1,0 +1,91 @@
+{% extends "base_onboarding.html" %}
+{% block title %}إعداد المكتب - LexOffice{% endblock %}
+{% block step_label %}الخطوة ١ من ٣ — بيانات المكتب{% endblock %}
+
+{% block content %}
+<!-- Wizard -->
+<div class="wizard">
+    <div class="w-step">
+        <div class="w-dot w-dot-active">١</div>
+        <div class="w-label w-label-active">بيانات المكتب</div>
+    </div>
+    <div class="w-line"></div>
+    <div class="w-step">
+        <div class="w-dot w-dot-idle">٢</div>
+        <div class="w-label w-label-idle">الاشتراك</div>
+    </div>
+    <div class="w-line"></div>
+    <div class="w-step">
+        <div class="w-dot w-dot-idle">٣</div>
+        <div class="w-label w-label-idle">الفريق</div>
+    </div>
+</div>
+
+<div class="ob-panel">
+    <div class="ob-title">
+        <h2>إعداد بيانات المكتب</h2>
+        <p>أدخل معلومات مكتبك الأساسية للمتابعة</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="field">
+            <label>اسم المكتب <span class="req">*</span></label>
+            <input type="text" name="office_name" value="{{ tenant.name or '' }}" required placeholder="مكتب المحامي / إبراهيم فخري">
+        </div>
+
+        <div class="field">
+            <label>العنوان</label>
+            <textarea name="address" rows="2" placeholder="عنوان المكتب بالتفصيل">{{ tenant.address or '' }}</textarea>
+        </div>
+
+        <div class="field-row">
+            <div class="field">
+                <label>رقم القيد بالنقابة</label>
+                <input type="text" name="bar_registration_no" value="{{ tenant.bar_registration_no or '' }}" placeholder="12345">
+            </div>
+            <div class="field">
+                <label>المحكمة الرئيسية</label>
+                <select name="primary_court">
+                    <option value="">— اختر —</option>
+                    {% for court in courts %}
+                    <option value="{{ court.id }}" {% if tenant.primary_court == court.id|string %}selected{% endif %}>{{ court.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="field-row">
+            <div class="field">
+                <label>رقم الهاتف</label>
+                <input type="tel" name="phone" value="{{ tenant.phone or '' }}" dir="ltr" placeholder="01xxxxxxxxx">
+            </div>
+            <div class="field">
+                <label>الفاكس</label>
+                <input type="tel" name="fax" value="{{ tenant.fax or '' }}" dir="ltr" placeholder="03xxxxxxxx">
+            </div>
+        </div>
+
+        <div class="field">
+            <label>البريد الإلكتروني للمكتب</label>
+            <input type="email" name="email" value="{{ tenant.email or '' }}" dir="ltr" placeholder="office@example.com">
+        </div>
+
+        <div class="field">
+            <label>شعار المكتب</label>
+            <div class="upload-zone">
+                <input type="file" name="logo" accept="image/*">
+                <i class="bi bi-cloud-arrow-up"></i>
+                <span>اختر صورة أو اسحبها هنا</span>
+                <small>PNG أو JPG — الحد الأقصى 2 ميجا</small>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-submit">
+            التالي: اختيار الخطة
+            <i class="bi bi-arrow-left"></i>
+        </button>
+    </form>
+</div>
+{% endblock %}

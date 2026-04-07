@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}تعديل الحكم - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>تعديل الحكم</h3>
+    <a href="{{ url_for('judgments.show', id=judgment.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">القضية</label>
+                    <input type="text" class="form-control" value="{{ judgment.case.case_number or '' }} - {{ judgment.case.subject[:40] if judgment.case and judgment.case.subject else '' }}" disabled>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">تاريخ الحكم <span class="text-danger">*</span></label>
+                    <input type="date" name="judgment_date" class="form-control" dir="ltr" value="{{ judgment.judgment_date.strftime('%Y-%m-%d') }}" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">المحكمة</label>
+                    <select name="court_id" class="form-select">
+                        <option value="">-- اختر --</option>
+                        {% for court in courts %}
+                        <option value="{{ court.id }}" {% if judgment.court_id == court.id %}selected{% endif %}>{{ court.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">نوع الحكم <span class="text-danger">*</span></label>
+                    <select name="judgment_type" class="form-select" required>
+                        {% for val, label in judgment_types %}
+                        <option value="{{ val }}" {% if judgment.judgment_type == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">النتيجة <span class="text-danger">*</span></label>
+                    <select name="result" class="form-select" required>
+                        {% for val, label in judgment_results %}
+                        <option value="{{ val }}" {% if judgment.result == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">اسم القاضي</label>
+                    <input type="text" name="judge_name" class="form-control" value="{{ judgment.judge_name or '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">المبلغ المحكوم به</label>
+                    <input type="number" name="awarded_amount" class="form-control" dir="ltr" step="0.01" value="{{ judgment.awarded_amount or '' }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">نص الحكم / المنطوق</label>
+                    <textarea name="judgment_text" class="form-control" rows="4">{{ judgment.judgment_text or '' }}</textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">ملاحظات</label>
+                    <textarea name="notes" class="form-control" rows="2">{{ judgment.notes or '' }}</textarea>
+                </div>
+            </div>
+
+            <hr class="my-4">
+            <h5 class="mb-3">تتبع الاستئناف</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">موعد الاستئناف</label>
+                    <input type="date" name="appeal_deadline" class="form-control" dir="ltr" value="{{ judgment.appeal_deadline.strftime('%Y-%m-%d') if judgment.appeal_deadline else '' }}">
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle me-1"></i> حفظ التعديلات</button>
+                <a href="{{ url_for('judgments.show', id=judgment.id) }}" class="btn btn-outline-secondary">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

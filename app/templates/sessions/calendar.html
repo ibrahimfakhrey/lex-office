@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}تقويم الجلسات - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>تقويم الجلسات</h3>
+    <a href="{{ url_for('sessions.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list me-1"></i> عرض القائمة</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="row g-2">
+            {% set today = [] %}
+            {% for s in sessions %}
+            <div class="col-md-4">
+                <div class="card {% if s.result %}border-success{% elif s.session_date < now().date() %}border-warning{% else %}border-primary{% endif %} mb-2">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ s.session_date.strftime('%Y-%m-%d') }}</strong>
+                            <span class="badge bg-{{ 'success' if s.result else 'primary' }}">
+                                {{ s.session_time.strftime('%H:%M') if s.session_time else '--:--' }}
+                            </span>
+                        </div>
+                        <div class="mt-1">
+                            <a href="{{ url_for('sessions.show', id=s.id) }}">
+                                {{ s.case.case_number or 'قضية' }}
+                            </a>
+                            <span class="text-muted">- {{ s.case.subject[:30] if s.case and s.case.subject else '' }}</span>
+                        </div>
+                        {% if s.court %}
+                        <small class="text-muted">{{ s.court.name[:40] }}</small>
+                        {% endif %}
+                        {% if s.result %}
+                        <div class="mt-1"><span class="badge bg-success">{{ s.result }}</span></div>
+                        {% elif s.session_date < now().date() %}
+                        <div class="mt-1">
+                            <a href="{{ url_for('sessions.record_result', id=s.id) }}" class="badge bg-warning text-dark text-decoration-none">سجّل النتيجة</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if not sessions %}
+        <div class="empty-state">
+            <i class="bi bi-calendar"></i>
+            <p>لا توجد جلسات</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

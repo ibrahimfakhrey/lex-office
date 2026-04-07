@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}إعدادات الإشعارات - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>إعدادات الإشعارات</h3>
+    <a href="{{ url_for('notifications.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+</div>
+
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card">
+        <div class="card-body p-0">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>نوع الإشعار</th>
+                        <th class="text-center">داخل التطبيق</th>
+                        <th class="text-center">بريد إلكتروني</th>
+                        <th class="text-center">رسالة نصية</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ntype, label in notification_types %}
+                    {% set s = current_settings.get(ntype) %}
+                    <tr>
+                        <td>{{ label }}</td>
+                        <td class="text-center">
+                            <input class="form-check-input" type="checkbox" name="{{ ntype }}_in_app"
+                                   {% if not s or s.in_app_enabled %}checked{% endif %}>
+                        </td>
+                        <td class="text-center">
+                            <input class="form-check-input" type="checkbox" name="{{ ntype }}_email"
+                                   {% if not s or s.email_enabled %}checked{% endif %}>
+                        </td>
+                        <td class="text-center">
+                            <input class="form-check-input" type="checkbox" name="{{ ntype }}_sms"
+                                   {% if s and s.sms_enabled %}checked{% endif %}>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="mt-3">
+        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle me-1"></i> حفظ الإعدادات</button>
+    </div>
+</form>
+{% endblock %}

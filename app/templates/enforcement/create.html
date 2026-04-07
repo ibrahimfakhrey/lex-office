@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}إضافة ملف تنفيذ - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>إضافة ملف تنفيذ</h3>
+    <a href="{{ url_for('enforcement.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="row g-3">
+                <!-- Case -->
+                <div class="col-md-6">
+                    <label class="form-label">القضية <span class="text-danger">*</span></label>
+                    <select name="case_id" class="form-select" required>
+                        <option value="">اختر القضية</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}" {% if form.get('case_id')|string == c.id|string %}selected{% endif %}>
+                            {{ c.case_number }} - {{ c.subject[:40] if c.subject else '' }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Client -->
+                <div class="col-md-6">
+                    <label class="form-label">الموكل <span class="text-danger">*</span></label>
+                    <select name="client_id" class="form-select" required>
+                        <option value="">اختر الموكل</option>
+                        {% for cl in clients %}
+                        <option value="{{ cl.id }}" {% if form.get('client_id')|string == cl.id|string %}selected{% endif %}>{{ cl.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Enforcement Type -->
+                <div class="col-md-4">
+                    <label class="form-label">نوع التنفيذ <span class="text-danger">*</span></label>
+                    <select name="enforcement_type" class="form-select" required>
+                        <option value="">اختر النوع</option>
+                        {% for val, label in enforcement_types %}
+                        <option value="{{ val }}" {% if form.get('enforcement_type') == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Enforcement Number -->
+                <div class="col-md-4">
+                    <label class="form-label">رقم التنفيذ</label>
+                    <input type="text" name="enforcement_number" class="form-control" value="{{ form.get('enforcement_number', '') }}">
+                </div>
+
+                <!-- Enforcement Court -->
+                <div class="col-md-4">
+                    <label class="form-label">محكمة التنفيذ</label>
+                    <input type="text" name="enforcement_court" class="form-control" value="{{ form.get('enforcement_court', '') }}">
+                </div>
+
+                <!-- Executor Name -->
+                <div class="col-md-4">
+                    <label class="form-label">اسم المحضر</label>
+                    <input type="text" name="executor_name" class="form-control" value="{{ form.get('executor_name', '') }}">
+                </div>
+
+                <!-- Total Amount -->
+                <div class="col-md-4">
+                    <label class="form-label">المبلغ الإجمالي <span class="text-danger">*</span></label>
+                    <input type="number" name="total_amount" class="form-control" dir="ltr" step="0.01" value="{{ form.get('total_amount', '') }}" required>
+                </div>
+
+                <!-- Debtor Name -->
+                <div class="col-md-4">
+                    <label class="form-label">اسم المدين</label>
+                    <input type="text" name="debtor_name" class="form-control" value="{{ form.get('debtor_name', '') }}">
+                </div>
+
+                <!-- Start Date -->
+                <div class="col-md-4">
+                    <label class="form-label">تاريخ البدء</label>
+                    <input type="date" name="start_date" class="form-control" dir="ltr" value="{{ form.get('start_date', '') }}">
+                </div>
+
+                <!-- Notes -->
+                <div class="col-12">
+                    <label class="form-label">ملاحظات</label>
+                    <textarea name="notes" class="form-control" rows="3">{{ form.get('notes', '') }}</textarea>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i> حفظ ملف التنفيذ</button>
+                <a href="{{ url_for('enforcement.index') }}" class="btn btn-outline-secondary me-2">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}الملف الشخصي - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>الملف الشخصي</h3>
+    <a href="{{ url_for('settings.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="row g-3">
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header">البيانات الشخصية</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">الاسم بالعربية <span class="text-danger">*</span></label>
+                            <input type="text" name="full_name" class="form-control" value="{{ user.full_name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">الاسم بالإنجليزية</label>
+                            <input type="text" name="full_name_en" class="form-control" dir="ltr" value="{{ user.full_name_en or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">البريد الإلكتروني</label>
+                            <input type="email" class="form-control" dir="ltr" value="{{ user.email }}" disabled>
+                            <small class="text-muted">لا يمكن تغيير البريد الإلكتروني</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">الهاتف</label>
+                            <input type="text" name="phone" class="form-control" dir="ltr" value="{{ user.phone or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">صورة شخصية</label>
+                            <input type="file" name="avatar" class="form-control" accept="image/*">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">تغيير كلمة المرور</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">كلمة المرور الحالية</label>
+                            <input type="password" name="current_password" class="form-control" dir="ltr">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">كلمة المرور الجديدة</label>
+                            <input type="password" name="new_password" class="form-control" dir="ltr" minlength="8">
+                            <small class="text-muted">8 أحرف على الأقل</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-body text-center">
+                    {% if user.avatar_path %}
+                    <img src="{{ url_for('static', filename=user.avatar_path.replace('app/static/', '')) }}" class="rounded-circle mb-3" style="width:80px;height:80px;object-fit:cover">
+                    {% else %}
+                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3" style="width:80px;height:80px;font-size:2rem">
+                        {{ user.full_name[0] }}
+                    </div>
+                    {% endif %}
+                    <h5>{{ user.full_name }}</h5>
+                    <small class="text-muted">{{ user.role.name_ar if user.role else '' }}</small>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body small text-muted">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>تاريخ التسجيل</span>
+                        <span>{{ user.created_at.strftime('%Y-%m-%d') }}</span>
+                    </div>
+                    {% if user.last_login_at %}
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>آخر دخول</span>
+                        <span>{{ user.last_login_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                    </div>
+                    {% endif %}
+                    {% if user.password_changed_at %}
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>تغيير كلمة المرور</span>
+                        <span>{{ user.password_changed_at.strftime('%Y-%m-%d') }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle me-1"></i> حفظ التعديلات</button>
+</form>
+{% endblock %}

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}المهام - LexOffice{% endblock %}
+
+{% set priority_color = {'urgent':'danger','important':'warning','normal':'secondary'} %}
+{% set status_color = {'new':'info','in_progress':'primary','done':'success','cancelled':'dark'} %}
+{% set priority_map = dict(priorities) %}
+{% set status_map_local = dict(statuses) %}
+
+{% block content %}
+<div class="page-header">
+    <h3>المهام</h3>
+    <a href="{{ url_for('tasks.create') }}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> مهمة جديدة</a>
+</div>
+
+<!-- Quick Filters -->
+<div class="d-flex gap-2 mb-3">
+    <a href="{{ url_for('tasks.index') }}" class="btn btn-sm {% if not view or view == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">الكل</a>
+    <a href="{{ url_for('tasks.index', view='mine') }}" class="btn btn-sm {% if view == 'mine' %}btn-primary{% else %}btn-outline-primary{% endif %}">مهامي</a>
+    <a href="{{ url_for('tasks.index', view='overdue') }}" class="btn btn-sm {% if view == 'overdue' %}btn-danger{% else %}btn-outline-danger{% endif %}">متأخرة</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="GET" class="row g-2 align-items-center">
+            <input type="hidden" name="view" value="{{ view }}">
+            <div class="col-md-3">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">كل الحالات</option>
+                    {% for val, label in statuses %}
+                    <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="priority" class="form-select form-select-sm">
+                    <option value="">كل الأولويات</option>
+                    {% for val, label in priorities %}
+                    <option value="{{ val }}" {% if priority == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-search me-1"></i> بحث</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if tasks.items %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>المهمة</th>
+                        <th>القضية</th>
+                        <th>المكلف</th>
+                        <th>الأولوية</th>
+                        <th>الموعد</th>
+                        <th>الحالة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tasks.items %}
+                    {% set overdue = t.deadline and t.deadline.date() < today and t.status not in ('done','cancelled') %}
+                    <tr class="{% if overdue %}table-warning{% endif %}">
+                        <td>
+                            <a href="{{ url_for('tasks.show', id=t.id) }}">{{ t.title[:40] }}</a>
+                        </td>
+                        <td>{{ t.case.case_number if t.case else '-' }}</td>
+                        <td>{{ t.assignee.full_name[:20] if t.assignee else '-' }}</td>
+                        <td><span class="badge bg-{{ priority_color.get(t.priority, 'secondary') }}">{{ priority_map.get(t.priority, t.priority) }}</span></td>
+                        <td>
+                            {% if t.deadline %}
+                            <small class="{% if overdue %}text-danger fw-bold{% endif %}">{{ t.deadline.strftime('%Y-%m-%d %H:%M') }}</small>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td><span class="badge bg-{{ status_color.get(t.status, 'secondary') }}">{{ status_map_local.get(t.status, t.status) }}</span></td>
+                        <td>
+                            {% if t.status != 'done' %}
+                            <form method="POST" action="{{ url_for('tasks.update_status', id=t.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="status" value="done">
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="إتمام"><i class="bi bi-check2"></i></button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if tasks.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if tasks.has_prev %}<li class="page-item"><a class="page-link" href="?page={{ tasks.prev_num }}&view={{ view }}&status={{ status }}&priority={{ priority }}">السابق</a></li>{% endif %}
+                    {% for p in tasks.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}<li class="page-item {% if p == tasks.page %}active{% endif %}"><a class="page-link" href="?page={{ p }}&view={{ view }}&status={{ status }}&priority={{ priority }}">{{ p }}</a></li>
+                        {% else %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}
+                    {% endfor %}
+                    {% if tasks.has_next %}<li class="page-item"><a class="page-link" href="?page={{ tasks.next_num }}&view={{ view }}&status={{ status }}&priority={{ priority }}">التالي</a></li>{% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-check2-square"></i>
+            <p>لا توجد مهام</p>
+            <a href="{{ url_for('tasks.create') }}" class="btn btn-primary btn-sm">إنشاء مهمة</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

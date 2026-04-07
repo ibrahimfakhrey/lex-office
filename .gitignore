@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment variables
+.env
+.env.*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads
+app/static/uploads/
+
+# Testing folder
+tests/
+
+# Playwright
+node_modules/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Logs
+*.log
+/tmp/
+
+# IDE
+.vscode/
+.idea/

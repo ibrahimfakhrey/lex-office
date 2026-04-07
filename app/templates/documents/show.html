@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}{{ document.name }} - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>{{ document.name[:50] }}</h3>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('documents.download', id=document.id) }}" class="btn btn-success btn-sm"><i class="bi bi-download me-1"></i> تحميل</a>
+        <form method="POST" action="{{ url_for('documents.delete', id=document.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="هل أنت متأكد من حذف هذا المستند؟"><i class="bi bi-trash me-1"></i> حذف</button>
+        </form>
+        <a href="{{ url_for('documents.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header">تفاصيل المستند</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <small class="text-muted">الاسم</small>
+                        <div><strong>{{ document.name }}</strong></div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">النوع</small>
+                        <div><span class="badge bg-secondary">{{ type_map.get(document.doc_type, document.doc_type) }}</span></div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">صيغة الملف</small>
+                        <div>.{{ document.file_type }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">الحجم</small>
+                        <div>{{ document.file_size_display }}</div>
+                    </div>
+                    {% if document.doc_date %}
+                    <div class="col-md-4">
+                        <small class="text-muted">تاريخ المستند</small>
+                        <div>{{ document.doc_date.strftime('%Y-%m-%d') }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-4">
+                        <small class="text-muted">القضية</small>
+                        <div>
+                            {% if document.case %}
+                            <a href="{{ url_for('cases.show', id=document.case_id) }}">{{ document.case.case_number }}</a>
+                            {% else %}-{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">الموكل</small>
+                        <div>
+                            {% if document.client %}
+                            <a href="{{ url_for('clients.show', id=document.client_id) }}">{{ document.client.full_name }}</a>
+                            {% else %}-{% endif %}
+                        </div>
+                    </div>
+                    {% if document.notes %}
+                    <div class="col-12">
+                        <small class="text-muted">ملاحظات</small>
+                        <div>{{ document.notes }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Share Section -->
+        <div class="card mb-3">
+            <div class="card-header">مشاركة المستند</div>
+            <div class="card-body">
+                {% if document.is_share_active %}
+                <div class="alert alert-info mb-2">
+                    <small>رابط المشاركة فعّال حتى {{ document.share_expires_at.strftime('%Y-%m-%d') }}</small>
+                </div>
+                {% endif %}
+                <form method="POST" action="{{ url_for('documents.share', id=document.id) }}" class="row g-2 align-items-end">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="col-md-4">
+                        <label class="form-label small">مدة الصلاحية (أيام)</label>
+                        <select name="days" class="form-select form-select-sm">
+                            <option value="1">يوم واحد</option>
+                            <option value="7" selected>أسبوع</option>
+                            <option value="30">شهر</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-share me-1"></i> إنشاء رابط مشاركة</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body small text-muted">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>رُفع بواسطة</span>
+                    <span>{{ document.uploader.full_name if document.uploader else '-' }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span>تاريخ الرفع</span>
+                    <span>{{ document.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

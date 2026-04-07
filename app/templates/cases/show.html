@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block title %}قضية {{ case.case_number or '' }} - LexOffice{% endblock %}
+
+{% set type_map = {'criminal':'جنائية','civil':'مدنية','commercial':'تجارية','administrative':'إدارية','labor':'عمالية','family':'أسرة','constitutional':'دستورية','enforcement':'تنفيذ'} %}
+{% set status_map = {'new':'جديدة','active':'نشطة','awaiting_judgment':'منتظرة حكم','suspended':'موقوفة','closed':'مغلقة'} %}
+{% set status_color = {'new':'info','active':'success','awaiting_judgment':'warning','suspended':'secondary','closed':'dark'} %}
+{% set cap_map = {'plaintiff':'مدعي','defendant':'مدعى عليه','appellant':'مستأنف','respondent':'مطعون ضده','other':'أخرى'} %}
+{% set fee_map = {'fixed':'مبلغ ثابت','percentage':'نسبة','hourly':'بالساعة','mixed':'مختلط'} %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h3>
+            {{ case.case_number or 'قضية جديدة' }}
+            <span class="badge bg-{{ status_color.get(case.status, 'secondary') }} fs-6">{{ status_map.get(case.status, case.status) }}</span>
+            {% if case.priority == 'critical' %}<span class="badge bg-danger fs-6">حرجة</span>{% elif case.priority == 'important' %}<span class="badge bg-warning text-dark fs-6">مهمة</span>{% endif %}
+        </h3>
+        <small class="text-muted">{{ type_map.get(case.case_type, case.case_type) }} | {{ case.court.name if case.court else '-' }} {% if case.circuit %} - الدائرة {{ case.circuit }}{% endif %}</small>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('cases.edit', id=case.id) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i> تعديل</a>
+        {% if case.status != 'closed' %}
+        <form method="POST" action="{{ url_for('cases.close', id=case.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-warning btn-sm" data-confirm="هل أنت متأكد من إغلاق القضية؟"><i class="bi bi-lock me-1"></i> إغلاق</button>
+        </form>
+        {% endif %}
+        <a href="{{ url_for('cases.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Main Content -->
+    <div class="col-md-8">
+        <!-- Case Info -->
+        <div class="card mb-3">
+            <div class="card-header">بيانات القضية</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <small class="text-muted">الموكل</small>
+                        <div><a href="{{ url_for('clients.show', id=case.client_id) }}"><strong>{{ case.client.full_name if case.client else '-' }}</strong></a></div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">صفة الموكل</small>
+                        <div>{{ cap_map.get(case.our_client_capacity, case.our_client_capacity or '-') }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">السنة القضائية</small>
+                        <div>{{ case.judicial_year or '-' }}</div>
+                    </div>
+                    {% if case.subject %}
+                    <div class="col-12">
+                        <small class="text-muted">الموضوع</small>
+                        <div>{{ case.subject }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Parties -->
+        {% if case.opponent_name %}
+        <div class="card mb-3">
+            <div class="card-header">الخصم</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <small class="text-muted">اسم الخصم</small>
+                        <div>{{ case.opponent_name }}</div>
+                    </div>
+                    {% if case.opponent_capacity %}
+                    <div class="col-md-4">
+                        <small class="text-muted">صفة الخصم</small>
+                        <div>{{ case.opponent_capacity }}</div>
+                    </div>
+                    {% endif %}
+                    {% if case.opponent_lawyer %}
+                    <div class="col-md-4">
+                        <small class="text-muted">محامي الخصم</small>
+                        <div>{{ case.opponent_lawyer }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tabs: Sessions, Judgments, Tasks, Documents -->
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#sessions">الجلسات <span class="badge bg-secondary">{{ sessions|length }}</span></a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#judgments">الأحكام <span class="badge bg-secondary">{{ judgments|length }}</span></a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tasks">المهام <span class="badge bg-secondary">{{ tasks|length }}</span></a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#docs">المستندات <span class="badge bg-secondary">{{ documents|length }}</span></a></li>
+        </ul>
+        <div class="tab-content card card-body border-top-0 rounded-top-0">
+            <!-- Sessions Tab -->
+            <div class="tab-pane active" id="sessions">
+                {% if sessions %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>التاريخ</th><th>الوقت</th><th>النوع</th><th>النتيجة</th></tr></thead>
+                        <tbody>
+                            {% for s in sessions %}
+                            <tr>
+                                <td>{{ s.session_date.strftime('%Y-%m-%d') if s.session_date else '-' }}</td>
+                                <td>{{ s.session_time.strftime('%H:%M') if s.session_time else '-' }}</td>
+                                <td>{{ s.session_type or '-' }}</td>
+                                <td>{{ s.result or 'لم تسجل' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0 py-3">لا توجد جلسات</p>
+                {% endif %}
+                <div class="mt-2">
+                    <a href="{{ url_for('sessions.create') }}?case_id={{ case.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus me-1"></i> إضافة جلسة</a>
+                </div>
+            </div>
+
+            <!-- Judgments Tab -->
+            <div class="tab-pane" id="judgments">
+                {% if judgments %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>التاريخ</th><th>النوع</th><th>المنطوق</th><th>موعد الاستئناف</th></tr></thead>
+                        <tbody>
+                            {% for j in judgments %}
+                            <tr>
+                                <td>{{ j.judgment_date.strftime('%Y-%m-%d') if j.judgment_date else '-' }}</td>
+                                <td>{{ j.judgment_type or '-' }}</td>
+                                <td>{{ j.ruling[:50] if j.ruling else '-' }}</td>
+                                <td>{{ j.appeal_deadline.strftime('%Y-%m-%d') if j.appeal_deadline else '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0 py-3">لا توجد أحكام</p>
+                {% endif %}
+                <div class="mt-2">
+                    <a href="{{ url_for('judgments.create') }}?case_id={{ case.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus me-1"></i> إضافة حكم</a>
+                </div>
+            </div>
+
+            <!-- Tasks Tab -->
+            <div class="tab-pane" id="tasks">
+                {% if tasks %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>المهمة</th><th>المسند إليه</th><th>الموعد</th><th>الحالة</th></tr></thead>
+                        <tbody>
+                            {% for t in tasks %}
+                            <tr>
+                                <td>{{ t.title }}</td>
+                                <td>{{ t.assignee.full_name if t.assignee else '-' }}</td>
+                                <td>{{ t.deadline.strftime('%Y-%m-%d') if t.deadline else '-' }}</td>
+                                <td><span class="badge bg-{{ 'success' if t.status == 'done' else 'warning' }}">{{ t.status }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0 py-3">لا توجد مهام</p>
+                {% endif %}
+            </div>
+
+            <!-- Documents Tab -->
+            <div class="tab-pane" id="docs">
+                {% if documents %}
+                <ul class="list-unstyled mb-0">
+                    {% for d in documents %}
+                    <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span><i class="bi bi-file-earmark-text me-1"></i> {{ d.title or d.file_name }}</span>
+                        <small class="text-muted">{{ d.created_at.strftime('%Y-%m-%d') }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted text-center mb-0 py-3">لا توجد مستندات</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if case.internal_notes %}
+        <div class="card mt-3">
+            <div class="card-header">ملاحظات داخلية</div>
+            <div class="card-body">{{ case.internal_notes }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <!-- Team -->
+        <div class="card mb-3">
+            <div class="card-header">فريق العمل</div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <small class="text-muted">المحامي المسؤول</small>
+                    <div><i class="bi bi-person-fill text-primary me-1"></i> {{ case.responsible_lawyer.full_name if case.responsible_lawyer else '-' }}</div>
+                </div>
+                {% if case.assistant_lawyer %}
+                <div>
+                    <small class="text-muted">محامي مساعد</small>
+                    <div><i class="bi bi-person me-1"></i> {{ case.assistant_lawyer.full_name }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Financial -->
+        <div class="card mb-3">
+            <div class="card-header">الملخص المالي</div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>نوع الأتعاب</span>
+                    <span>{{ fee_map.get(case.fee_type, case.fee_type or '-') }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>الأتعاب</span>
+                    <strong>{{ case.fee_amount|int if case.fee_amount else 0 }} ج.م</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>المقدم</span>
+                    <span>{{ case.retainer_paid|int if case.retainer_paid else 0 }} ج.م</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>المدفوع</span>
+                    <span class="text-success">{{ case.total_paid|int }} ج.م</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>المصروفات</span>
+                    <span class="text-danger">{{ case.total_expenses|int }} ج.م</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span>المتبقي</span>
+                    <strong class="{% if case.remaining_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                        {{ case.remaining_balance|int }} ج.م
+                    </strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payments -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>المدفوعات <span class="badge bg-secondary">{{ payments|length }}</span></span>
+                {% if g.current_user.has_permission('financial', 'create')[0] %}
+                <a href="{{ url_for('financial.create_payment', case_id=case.id, client_id=case.client_id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-circle me-1"></i> إضافة دفعة</a>
+                {% else %}
+                <span class="btn btn-sm btn-outline-secondary disabled" title="غير مصرح لك بإضافة مدفوعات"><i class="bi bi-lock me-1"></i> إضافة دفعة</span>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if payments %}
+                <div class="list-group list-group-flush">
+                    {% for p in payments %}
+                    <div class="list-group-item d-flex justify-content-between">
+                        <span>{{ p.amount|int }} ج.م</span>
+                        <small class="text-muted">{{ p.payment_date.strftime('%Y-%m-%d') if p.payment_date else '' }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="p-3 text-center text-muted small">لا توجد مدفوعات</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Metadata -->
+        <div class="card mb-3">
+            <div class="card-body small text-muted">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>تاريخ التسجيل</span>
+                    <span>{{ case.created_at.strftime('%Y-%m-%d') }}</span>
+                </div>
+                {% if case.closed_at %}
+                <div class="d-flex justify-content-between mb-1">
+                    <span>تاريخ الإغلاق</span>
+                    <span>{{ case.closed_at.strftime('%Y-%m-%d') }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Delete -->
+        <form method="POST" action="{{ url_for('cases.delete', id=case.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm w-100" data-confirm="هل أنت متأكد من حذف هذه القضية؟ سيتم حذف جميع البيانات المرتبطة بها.">
+                <i class="bi bi-trash me-1"></i> حذف القضية
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

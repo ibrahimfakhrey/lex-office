@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}القوالب القانونية{% endblock %}
+{% block page_title %}القوالب القانونية{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('templates_legal.create') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>قالب جديد
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">تصفية حسب النوع</label>
+                <select name="type" class="form-select" onchange="this.form.submit()">
+                    <option value="">الكل</option>
+                    {% for value, label in template_types %}
+                    <option value="{{ value }}" {% if template_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if templates.items %}
+<div class="row g-3">
+    {% for t in templates.items %}
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">{{ t.name_ar }}</h5>
+                <p class="card-text">
+                    {% for value, label in template_types %}
+                        {% if t.template_type == value %}
+                        <span class="badge bg-info">{{ label }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </p>
+            </div>
+            <div class="card-footer d-flex gap-2">
+                <a href="{{ url_for('templates_legal.preview', id=t.id) }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-eye me-1"></i>معاينة
+                </a>
+                <a href="{{ url_for('templates_legal.use_template', id=t.id) }}" class="btn btn-success btn-sm">
+                    <i class="bi bi-file-earmark-text me-1"></i>استخدام
+                </a>
+                <a href="{{ url_for('templates_legal.show', id=t.id) }}" class="btn btn-outline-primary btn-sm ms-auto">
+                    <i class="bi bi-info-circle me-1"></i>تفاصيل
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if templates.pages > 1 %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if templates.has_prev %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('templates_legal.index', page=templates.prev_num, type=template_type) }}">السابق</a>
+        </li>
+        {% endif %}
+        {% for p in templates.iter_pages() %}
+            {% if p %}
+            <li class="page-item {% if p == templates.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('templates_legal.index', page=p, type=template_type) }}">{{ p }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+        {% endfor %}
+        {% if templates.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('templates_legal.index', page=templates.next_num, type=template_type) }}">التالي</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-file-earmark-ruled fs-1"></i>
+    <p class="mt-2">لا توجد قوالب حالياً</p>
+    <a href="{{ url_for('templates_legal.create') }}" class="btn btn-primary">إنشاء قالب جديد</a>
+</div>
+{% endif %}
+{% endblock %}

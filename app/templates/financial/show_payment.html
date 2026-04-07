@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}دفعة - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>تفاصيل الدفعة</h3>
+    <div class="d-flex gap-2">
+        <form method="POST" action="{{ url_for('financial.delete_payment', id=payment.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="هل أنت متأكد من حذف هذه الدفعة؟"><i class="bi bi-trash me-1"></i> حذف</button>
+        </form>
+        <a href="{{ url_for('financial.payments') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">بيانات الدفعة</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <small class="text-muted">المبلغ</small>
+                        <div class="display-6 text-success" dir="ltr">{{ '{:,.2f}'.format(payment.amount) }}</div>
+                        <small class="text-muted">ج.م</small>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">تاريخ الدفع</small>
+                        <div><strong>{{ payment.payment_date.strftime('%Y-%m-%d') }}</strong></div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">طريقة الدفع</small>
+                        <div>{{ method_map.get(payment.payment_method, payment.payment_method) }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">��لموكل</small>
+                        <div>
+                            {% if payment.client %}
+                            <a href="{{ url_for('clients.show', id=payment.client_id) }}">{{ payment.client.full_name }}</a>
+                            {% else %}-{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">القضية</small>
+                        <div>
+                            {% if payment.case %}
+                            <a href="{{ url_for('cases.show', id=payment.case_id) }}">{{ payment.case.case_number or '-' }}</a>
+                            {% else %}-{% endif %}
+                        </div>
+                    </div>
+                    {% if payment.reference_number %}
+                    <div class="col-md-6">
+                        <small class="text-muted">رقم المرجع</small>
+                        <div>{{ payment.reference_number }}</div>
+                    </div>
+                    {% endif %}
+                    {% if payment.notes %}
+                    <div class="col-12">
+                        <small class="text-muted">ملاحظات</small>
+                        <div>{{ payment.notes }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body small text-muted">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>سجّل بواسطة</span>
+                    <span>{{ payment.recorder.full_name if payment.recorder else '-' }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span>تاريخ التسجيل</span>
+                    <span>{{ payment.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

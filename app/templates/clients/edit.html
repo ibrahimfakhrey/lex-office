@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}تعديل {{ client.full_name }} - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>تعديل بيانات الموكل</h3>
+    <a href="{{ url_for('clients.show', id=client.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-right me-1"></i> العودة
+    </a>
+</div>
+
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- Basic Info -->
+    <div class="card mb-3">
+        <div class="card-header">البيانات الأساسية</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">نوع الموكل</label>
+                    <select name="client_type" class="form-select" id="clientType">
+                        <option value="individual" {% if client.client_type == 'individual' %}selected{% endif %}>فرد</option>
+                        <option value="company" {% if client.client_type == 'company' %}selected{% endif %}>شركة</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">الاسم بالعربية <span class="text-danger">*</span></label>
+                    <input type="text" name="full_name" class="form-control" value="{{ client.full_name }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">الاسم بالإنجليزية</label>
+                    <input type="text" name="full_name_en" class="form-control" dir="ltr" value="{{ client.full_name_en or '' }}">
+                </div>
+                <div class="col-md-4" id="nationalIdField">
+                    <label class="form-label">الرقم القومي</label>
+                    <input type="text" name="national_id" class="form-control" dir="ltr" maxlength="14" value="{{ client.national_id or '' }}">
+                </div>
+                <div class="col-md-4" id="commercialRegField" style="display:none;">
+                    <label class="form-label">السجل التجاري</label>
+                    <input type="text" name="commercial_reg" class="form-control" dir="ltr" value="{{ client.commercial_reg or '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">تاريخ الميلاد</label>
+                    <input type="date" name="date_of_birth" class="form-control datepicker" value="{{ client.date_of_birth.strftime('%Y-%m-%d') if client.date_of_birth else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">الجنسية</label>
+                    <input type="text" name="nationality" class="form-control" value="{{ client.nationality or '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">المهنة</label>
+                    <input type="text" name="profession" class="form-control" value="{{ client.profession or '' }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Address -->
+    <div class="card mb-3">
+        <div class="card-header">العنوان</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">المحافظة</label>
+                    <select name="governorate" class="form-select">
+                        <option value="">-- اختر --</option>
+                        {% for gov in governorates %}
+                        <option value="{{ gov }}" {% if client.governorate == gov %}selected{% endif %}>{{ gov }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">المدينة / المركز</label>
+                    <input type="text" name="city" class="form-control" value="{{ client.city or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">الحي / القرية</label>
+                    <input type="text" name="district" class="form-control" value="{{ client.district or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">الشارع</label>
+                    <input type="text" name="street" class="form-control" value="{{ client.street or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">رقم العقار</label>
+                    <input type="text" name="building_no" class="form-control" value="{{ client.building_no or '' }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="card mb-3">
+        <div class="card-header">بيانات التواصل</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">الهاتف الأساسي</label>
+                    <input type="tel" name="phone_primary" class="form-control" dir="ltr" value="{{ client.phone_primary or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">هاتف ثانوي</label>
+                    <input type="tel" name="phone_secondary" class="form-control" dir="ltr" value="{{ client.phone_secondary or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">البريد الإلكتروني</label>
+                    <input type="email" name="email" class="form-control" dir="ltr" value="{{ client.email or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">واتساب</label>
+                    <input type="tel" name="whatsapp" class="form-control" dir="ltr" value="{{ client.whatsapp or '' }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Contact -->
+    <div class="card mb-3">
+        <div class="card-header">جهة اتصال الطوارئ</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">الاسم</label>
+                    <input type="text" name="emergency_contact_name" class="form-control" value="{{ client.emergency_contact_name or '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">الهاتف</label>
+                    <input type="tel" name="emergency_contact_phone" class="form-control" dir="ltr" value="{{ client.emergency_contact_phone or '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">صلة القرابة</label>
+                    <input type="text" name="emergency_contact_relation" class="form-control" value="{{ client.emergency_contact_relation or '' }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="card mb-3">
+        <div class="card-header">ملاحظات داخلية</div>
+        <div class="card-body">
+            <textarea name="internal_notes" class="form-control" rows="3">{{ client.internal_notes or '' }}</textarea>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check-circle me-1"></i> حفظ التعديلات
+        </button>
+        <a href="{{ url_for('clients.show', id=client.id) }}" class="btn btn-outline-secondary">إلغاء</a>
+    </div>
+</form>
+
+<script>
+document.getElementById('clientType').addEventListener('change', function() {
+    const isCompany = this.value === 'company';
+    document.getElementById('nationalIdField').style.display = isCompany ? 'none' : '';
+    document.getElementById('commercialRegField').style.display = isCompany ? '' : 'none';
+});
+document.getElementById('clientType').dispatchEvent(new Event('change'));
+</script>
+{% endblock %}

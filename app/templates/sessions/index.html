@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}الجلسات - LexOffice{% endblock %}
+
+{% set result_labels = dict(session_results) if session_results else {} %}
+
+{% block content %}
+<div class="page-header">
+    <h3>الجلسات</h3>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('sessions.calendar') }}" class="btn btn-outline-info btn-sm"><i class="bi bi-calendar3 me-1"></i> التقويم</a>
+        <a href="{{ url_for('sessions.create') }}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> إضافة جلسة</a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="GET" class="row g-2 align-items-center">
+            <div class="col-md-3">
+                <input type="date" name="date" class="form-control" value="{{ filter_date }}">
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="">كل الجلسات</option>
+                    <option value="today" {% if status == 'today' %}selected{% endif %}>اليوم</option>
+                    <option value="upcoming" {% if status == 'upcoming' %}selected{% endif %}>القادمة</option>
+                    <option value="pending" {% if status == 'pending' %}selected{% endif %}>بدون نتيجة</option>
+                    <option value="completed" {% if status == 'completed' %}selected{% endif %}>مكتملة</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search me-1"></i> بحث</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if sessions.items %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>الوقت</th>
+                        <th>القضية</th>
+                        <th>المحكمة</th>
+                        <th>النوع</th>
+                        <th>المحامي</th>
+                        <th>النتيجة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in sessions.items %}
+                    {% set is_today = s.session_date == today %}
+                    {% set is_past = s.session_date < today and not s.result %}
+                    <tr class="{% if is_past %}table-warning{% elif is_today %}table-info{% endif %}">
+                        <td>{{ s.session_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ s.session_time.strftime('%H:%M') if s.session_time else '-' }}</td>
+                        <td><a href="{{ url_for('cases.show', id=s.case_id) }}">{{ s.case.case_number or '-' }}</a></td>
+                        <td>{{ s.court.name[:30] if s.court else '-' }}</td>
+                        <td>
+                            {% set type_map = {'first':'أولى','evidence':'إثبات','pleading':'مرافعة','judgment':'حكم','emergency':'طارئة','postponement':'تأجيل'} %}
+                            {{ type_map.get(s.session_type, s.session_type or '-') }}
+                        </td>
+                        <td>{{ s.responsible_lawyer.full_name if s.responsible_lawyer else '-' }}</td>
+                        <td>
+                            {% if s.result %}
+                            <span class="badge bg-success">{{ result_labels.get(s.result, s.result) }}</span>
+                            {% elif is_past %}
+                            <a href="{{ url_for('sessions.record_result', id=s.id) }}" class="badge bg-warning text-dark text-decoration-none">سجّل النتيجة</a>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('sessions.show', id=s.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if sessions.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if sessions.has_prev %}<li class="page-item"><a class="page-link" href="?page={{ sessions.prev_num }}&date={{ filter_date }}&status={{ status }}">السابق</a></li>{% endif %}
+                    {% for p in sessions.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}<li class="page-item {% if p == sessions.page %}active{% endif %}"><a class="page-link" href="?page={{ p }}&date={{ filter_date }}&status={{ status }}">{{ p }}</a></li>
+                        {% else %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}
+                    {% endfor %}
+                    {% if sessions.has_next %}<li class="page-item"><a class="page-link" href="?page={{ sessions.next_num }}&date={{ filter_date }}&status={{ status }}">التالي</a></li>{% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-calendar-event"></i>
+            <p>لا توجد جلسات</p>
+            <a href="{{ url_for('sessions.create') }}" class="btn btn-primary btn-sm">إضافة جلسة</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

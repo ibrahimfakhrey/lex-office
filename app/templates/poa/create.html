@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}توكيل جديد - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>توكيل جديد</h3>
+    <a href="{{ url_for('poa.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+</div>
+
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card mb-3">
+        <div class="card-header">بيانات التوكيل</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">العميل <span class="text-danger">*</span></label>
+                    <select name="client_id" class="form-select" required>
+                        <option value="">-- اختر العميل --</option>
+                        {% for c in clients %}
+                        <option value="{{ c.id }}">{{ c.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">نوع التوكيل <span class="text-danger">*</span></label>
+                    <select name="poa_type" class="form-select" required>
+                        <option value="">-- اختر --</option>
+                        <option value="general">عام</option>
+                        <option value="special">خاص</option>
+                        <option value="litigation">تقاضي</option>
+                        <option value="real_estate">عقاري</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">رقم التوكيل</label>
+                    <input type="text" name="poa_number" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">تاريخ الإصدار <span class="text-danger">*</span></label>
+                    <input type="date" name="issue_date" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">تاريخ الانتهاء</label>
+                    <input type="date" name="expiry_date" class="form-control">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">مكتب التوثيق</label>
+                    <input type="text" name="notary_office" class="form-control">
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">نطاق التوكيل</label>
+                    <textarea name="scope" class="form-control" rows="3" placeholder="وصف صلاحيات التوكيل..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle me-1"></i> حفظ التوكيل</button>
+</form>
+{% endblock %}

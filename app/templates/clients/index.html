@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}ال��وكلون - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>الموكلون</h3>
+    <a href="{{ url_for('clients.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i> إضافة موكل
+    </a>
+</div>
+
+<!-- Search & Filters -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="GET" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <input type="text" name="search" class="form-control" placeholder="بحث بالاسم، رقم الموكل، الرقم القومي، الهاتف..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <select name="type" class="form-select">
+                    <option value="">كل الأنواع</option>
+                    <option value="individual" {% if client_type == 'individual' %}selected{% endif %}>فرد</option>
+                    <option value="company" {% if client_type == 'company' %}selected{% endif %}>شركة</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="">كل الحالات</option>
+                    <option value="active" {% if status == 'active' %}selected{% endif %}>نشط</option>
+                    <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>غير نشط</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-search me-1"></i> بحث
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Clients Table -->
+<div class="card">
+    <div class="card-body p-0">
+        {% if clients.items %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>رقم الموكل</th>
+                        <th>الاسم</th>
+                        <th>النوع</th>
+                        <th>الهاتف</th>
+                        <th>المحافظة</th>
+                        <th>القضايا</th>
+                        <th>الرصيد</th>
+                        <th>الحالة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in clients.items %}
+                    <tr>
+                        <td><a href="{{ url_for('clients.show', id=client.id) }}">{{ client.client_number or '-' }}</a></td>
+                        <td>
+                            <strong>{{ client.full_name }}</strong>
+                            {% if client.full_name_en %}<br><small class="text-muted">{{ client.full_name_en }}</small>{% endif %}
+                        </td>
+                        <td>
+                            {% if client.client_type == 'individual' %}
+                            <span class="badge bg-info bg-opacity-10 text-info">فرد</span>
+                            {% else %}
+                            <span class="badge bg-primary bg-opacity-10 text-primary">شركة</span>
+                            {% endif %}
+                        </td>
+                        <td dir="ltr">{{ client.phone_primary or '-' }}</td>
+                        <td>{{ client.governorate or '-' }}</td>
+                        <td>{{ client.cases.count() }}</td>
+                        <td>
+                            {% set bal = client.balance %}
+                            {% if bal > 0 %}
+                            <span class="text-danger">{{ bal|int }} ج.م</span>
+                            {% elif bal < 0 %}
+                            <span class="text-success">{{ bal|int }} ج.م</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if client.is_active %}
+                            <span class="status-dot status-active"></span> نشط
+                            {% else %}
+                            <span class="status-dot status-closed"></span> غير نشط
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('clients.show', id=client.id) }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if clients.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if clients.has_prev %}
+                    <li class="page-item"><a class="page-link" href="?page={{ clients.prev_num }}&search={{ search }}&type={{ client_type }}&status={{ status }}">السابق</a></li>
+                    {% endif %}
+                    {% for p in clients.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}
+                        <li class="page-item {% if p == clients.page %}active{% endif %}">
+                            <a class="page-link" href="?page={{ p }}&search={{ search }}&type={{ client_type }}&status={{ status }}">{{ p }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if clients.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ clients.next_num }}&search={{ search }}&type={{ client_type }}&status={{ status }}">التالي</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-people"></i>
+            <p>لا يوجد موكلون</p>
+            <a href="{{ url_for('clients.create') }}" class="btn btn-primary btn-sm">إضافة أول موكل</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

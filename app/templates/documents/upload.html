@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}رفع مستند - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>رفع مستند جديد</h3>
+    <a href="{{ url_for('documents.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card mb-3">
+        <div class="card-header">بيانات المستند</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label">الملف <span class="text-danger">*</span></label>
+                    <input type="file" name="file" class="form-control" required accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.xlsx,.xls">
+                    <small class="text-muted">الأنواع المسموحة: PDF, DOCX, DOC, PNG, JPG, XLSX, XLS (حد أقصى 20MB)</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">اسم المستند</label>
+                    <input type="text" name="name" class="form-control" value="{{ form.get('name', '') }}" placeholder="سيُستخدم اسم الملف إذا تُرك فارغاً">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">نوع المستند <span class="text-danger">*</span></label>
+                    <select name="doc_type" class="form-select" required>
+                        <option value="">-- اختر --</option>
+                        {% for val, label in doc_types %}
+                        <option value="{{ val }}" {% if form.get('doc_type') == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">تاريخ المستند</label>
+                    <input type="date" name="doc_date" class="form-control" dir="ltr" value="{{ form.get('doc_date', '') }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">القضية</label>
+                    <select name="case_id" class="form-select">
+                        <option value="">-- اختياري --</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}" {% if form.get('case_id', pre_case_id|string if pre_case_id else '') == c.id|string %}selected{% endif %}>{{ c.case_number or '-' }} - {{ c.subject[:30] if c.subject else '' }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">الموكل</label>
+                    <select name="client_id" class="form-select">
+                        <option value="">-- اختياري --</option>
+                        {% for cl in clients %}
+                        <option value="{{ cl.id }}" {% if form.get('client_id', pre_client_id|string if pre_client_id else '') == cl.id|string %}selected{% endif %}>{{ cl.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">ملاحظات</label>
+                    <textarea name="notes" class="form-control" rows="2">{{ form.get('notes', '') }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-cloud-upload me-1"></i> رفع المستند</button>
+        <a href="{{ url_for('documents.index') }}" class="btn btn-outline-secondary">إلغاء</a>
+    </div>
+</form>
+{% endblock %}

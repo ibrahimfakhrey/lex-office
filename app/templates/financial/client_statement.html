@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}كشف حساب - {{ client.full_name }} - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>كشف حساب: {{ client.full_name }}</h3>
+    <a href="{{ url_for('clients.show', id=client.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة للموكل</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <small class="text-muted">إجمالي الأتعاب</small>
+                <div class="h4 text-primary mb-0" dir="ltr">{{ '{:,.0f}'.format(total_fees) }} ج.م</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <small class="text-muted">إجمالي المدفوع</small>
+                <div class="h4 text-success mb-0" dir="ltr">{{ '{:,.0f}'.format(total_paid) }} ج.م</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <small class="text-muted">الرصيد المتبقي</small>
+                <div class="h4 {% if total_fees - total_paid > 0 %}text-danger{% else %}text-success{% endif %} mb-0" dir="ltr">{{ '{:,.0f}'.format(total_fees - total_paid) }} ج.م</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <small class="text-muted">إجمالي المصروفات</small>
+                <div class="h4 text-warning mb-0" dir="ltr">{{ '{:,.0f}'.format(total_expenses) }} ج.م</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payments -->
+<div class="card mb-3">
+    <div class="card-header">الدفعات</div>
+    <div class="card-body p-0">
+        {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>القضية</th>
+                        <th>المبلغ</th>
+                        <th>طريقة الدفع</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payments %}
+                    <tr>
+                        <td>{{ p.payment_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ p.case.case_number if p.case else '-' }}</td>
+                        <td class="text-success" dir="ltr"><strong>{{ '{:,.0f}'.format(p.amount) }}</strong></td>
+                        <td>{{ method_map.get(p.payment_method, p.payment_method) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>لا توجد دفعات</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Invoices -->
+<div class="card mb-3">
+    <div class="card-header">الفواتير</div>
+    <div class="card-body p-0">
+        {% if invoices %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>رقم الفاتورة</th>
+                        <th>التاريخ</th>
+                        <th>الإجمالي</th>
+                        <th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inv in invoices %}
+                    <tr>
+                        <td><a href="{{ url_for('financial.show_invoice', id=inv.id) }}">{{ inv.invoice_number }}</a></td>
+                        <td>{{ inv.issue_date.strftime('%Y-%m-%d') }}</td>
+                        <td dir="ltr"><strong>{{ '{:,.0f}'.format(inv.total) }}</strong></td>
+                        <td>{{ status_map.get(inv.status, inv.status) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>لا توجد فواتير</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Expenses -->
+<div class="card mb-3">
+    <div class="card-header">المصروفات</div>
+    <div class="card-body p-0">
+        {% if expenses %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>النوع</th>
+                        <th>المبلغ</th>
+                        <th>الوصف</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in expenses %}
+                    <tr>
+                        <td>{{ e.expense_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ type_map.get(e.expense_type, e.expense_type) }}</td>
+                        <td class="text-danger" dir="ltr"><strong>{{ '{:,.0f}'.format(e.amount) }}</strong></td>
+                        <td>{{ e.description[:40] if e.description else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>لا توجد مصروفات</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

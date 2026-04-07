@@ -1,0 +1,44 @@
+{% extends "base_auth.html" %}
+{% block title %}تسجيل الدخول{% endblock %}
+
+{% block content %}
+<h4 class="text-center mb-4">تسجيل الدخول</h4>
+<form method="POST" action="{{ url_for('auth.login') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="mb-3">
+        <label for="email" class="form-label">البريد الإلكتروني</label>
+        <input type="email" class="form-control" id="email" name="email"
+               value="{{ email|default('') }}" required autofocus
+               placeholder="email@example.com" dir="ltr">
+    </div>
+
+    <div class="mb-3">
+        <label for="password" class="form-label">كلمة المرور</label>
+        <input type="password" class="form-control" id="password" name="password"
+               required placeholder="••••••••" dir="ltr">
+    </div>
+
+    <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="remember" name="remember">
+        <label class="form-check-label" for="remember">تذكرني لمدة 30 يوم</label>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100 mb-3">
+        <i class="bi bi-box-arrow-in-left me-1"></i> دخول
+    </button>
+
+    <div class="text-center">
+        <a href="{{ url_for('auth.forgot_password') }}" class="text-decoration-none small">
+            نسيت كلمة المرور؟
+        </a>
+    </div>
+</form>
+{% endblock %}
+
+{% block footer %}
+<div class="text-center mt-3">
+    <span class="text-muted small">ليس لديك حساب؟</span>
+    <a href="{{ url_for('auth.register') }}" class="text-decoration-none small">ابدأ تجربتك المجانية</a>
+</div>
+{% endblock %}

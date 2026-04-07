@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}تعديل القالب - {{ template.name_ar }}{% endblock %}
+{% block page_title %}تعديل القالب - {{ template.name_ar }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label class="form-label">اسم القالب (إنجليزي)</label>
+                        <input type="text" name="name" class="form-control" value="{{ template.name }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">اسم القالب (عربي)</label>
+                        <input type="text" name="name_ar" class="form-control" value="{{ template.name_ar }}">
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">نوع القالب</label>
+                            <select name="template_type" class="form-select" required>
+                                <option value="">اختر النوع</option>
+                                {% for value, label in template_types %}
+                                <option value="{{ value }}" {% if template.template_type == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">صيغة الإخراج</label>
+                            <select name="output_format" class="form-select">
+                                {% for value, label in output_formats %}
+                                <option value="{{ value }}" {% if template.output_format == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">محتوى القالب</label>
+                        <textarea name="template_content" class="form-control" rows="15" required>{{ template.template_content }}</textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>حفظ التعديلات
+                        </button>
+                        <a href="{{ url_for('templates_legal.show', id=template.id) }}" class="btn btn-outline-secondary">إلغاء</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-braces me-1"></i>المتغيرات المتاحة</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">انسخ المتغير وألصقه في محتوى القالب:</p>
+                <ul class="list-unstyled">
+                    {% for var_name, var_label in available_variables.items() %}
+                    <li class="mb-2">
+                        <code class="user-select-all">{{ '{{' }}{{ var_name }}{{ '}}' }}</code>
+                        <br><small class="text-muted">{{ var_label }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

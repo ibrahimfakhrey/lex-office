@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}تسجيل دفعة - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>تسجيل دفعة جديدة</h3>
+    <a href="{{ url_for('financial.payments') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+</div>
+
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card mb-3">
+        <div class="card-header">بيانات الدفعة</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">الموكل <span class="text-danger">*</span></label>
+                    <select name="client_id" class="form-select" required>
+                        <option value="">-- اختر الموكل --</option>
+                        {% for cl in clients %}
+                        <option value="{{ cl.id }}" {% if form.get('client_id', pre_client_id|string if pre_client_id else '') == cl.id|string %}selected{% endif %}>{{ cl.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">القضية</label>
+                    <select name="case_id" class="form-select">
+                        <option value="">-- اختياري --</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}" {% if form.get('case_id', pre_case_id|string if pre_case_id else '') == c.id|string %}selected{% endif %}>{{ c.case_number or '-' }} - {{ c.subject[:30] if c.subject else '' }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">المبلغ <span class="text-danger">*</span></label>
+                    <input type="number" name="amount" class="form-control" dir="ltr" step="0.01" value="{{ form.get('amount', '') }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">تاريخ الدفع <span class="text-danger">*</span></label>
+                    <input type="date" name="payment_date" class="form-control" dir="ltr" value="{{ form.get('payment_date', '') }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">��ريقة الدفع <span class="text-danger">*</span></label>
+                    <select name="payment_method" class="form-select" required>
+                        <option value="">-- اختر --</option>
+                        {% for val, label in payment_methods %}
+                        <option value="{{ val }}" {% if form.get('payment_method') == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">رقم المرجع / الإيصال</label>
+                    <input type="text" name="reference_number" class="form-control" value="{{ form.get('reference_number', '') }}">
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">ملاحظات</label>
+                    <textarea name="notes" class="form-control" rows="2">{{ form.get('notes', '') }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success px-4"><i class="bi bi-check-circle me-1"></i> حفظ الدفعة</button>
+        <a href="{{ url_for('financial.payments') }}" class="btn btn-outline-secondary">إلغاء</a>
+    </div>
+</form>
+{% endblock %}

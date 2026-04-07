@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block title %}لوحة التحكم - LexOffice{% endblock %}
+
+{% block content %}
+
+<!-- ── Page Header ── -->
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+    <div>
+        <h3 style="margin:0;font-size:1.4rem;font-weight:800;">لوحة التحكم</h3>
+        <div style="font-size:0.83rem;color:var(--text-muted,#9d94c4);margin-top:0.2rem;">
+            مرحباً <strong style="color:var(--primary,#6c47ff);">{{ current_user.full_name or current_user.email }}</strong>
+            {% if now %}— {{ now().strftime('%A، %d %B %Y') }}{% endif %}
+        </div>
+    </div>
+    <a href="{{ url_for('sessions.create') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i> جلسة جديدة
+    </a>
+</div>
+
+<!-- ── Stat Cards ── -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;">
+
+    <div class="dash-stat" style="--clr:#6c47ff;--bg:rgba(108,71,255,0.12);">
+        <div class="ds-icon"><i class="bi bi-briefcase-fill"></i></div>
+        <div class="ds-body">
+            <div class="ds-val">{{ active_cases_count }}</div>
+            <div class="ds-lbl">قضايا نشطة</div>
+        </div>
+        <a href="{{ url_for('cases.index') }}" class="ds-link"></a>
+    </div>
+
+    <div class="dash-stat" style="--clr:#10b981;--bg:rgba(16,185,129,0.12);">
+        <div class="ds-icon"><i class="bi bi-people-fill"></i></div>
+        <div class="ds-body">
+            <div class="ds-val">{{ total_clients }}</div>
+            <div class="ds-lbl">إجمالي الموكلين</div>
+        </div>
+        <a href="{{ url_for('clients.index') }}" class="ds-link"></a>
+    </div>
+
+    <div class="dash-stat" style="--clr:#f59e0b;--bg:rgba(245,158,11,0.12);">
+        <div class="ds-icon"><i class="bi bi-cash-stack"></i></div>
+        <div class="ds-body">
+            <div class="ds-val">{{ monthly_payments|int }}<small style="font-size:0.6em;font-weight:600;"> ج.م</small></div>
+            <div class="ds-lbl">إيرادات الشهر</div>
+        </div>
+        <a href="{{ url_for('financial.index') }}" class="ds-link"></a>
+    </div>
+
+    <div class="dash-stat" style="--clr:#ef4444;--bg:rgba(239,68,68,0.12);">
+        <div class="ds-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+        <div class="ds-body">
+            <div class="ds-val">{{ pending_results }}</div>
+            <div class="ds-lbl">جلسات بدون نتيجة</div>
+        </div>
+        <a href="{{ url_for('sessions.index') }}" class="ds-link"></a>
+    </div>
+
+</div>
+
+<style>
+.dash-stat {
+    position: relative;
+    background: var(--bg);
+    border: 1px solid color-mix(in srgb, var(--clr) 30%, transparent);
+    border-radius: 16px;
+    padding: 1.3rem 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+.dash-stat:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,0.2); }
+.dash-stat::after {
+    content: '';
+    position: absolute;
+    top: -20px; right: -20px;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: var(--clr);
+    opacity: 0.08;
+}
+.ds-icon {
+    width: 50px; height: 50px;
+    border-radius: 13px;
+    background: var(--clr);
+    display: grid; place-items: center;
+    font-size: 1.35rem;
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--clr) 40%, transparent);
+}
+.ds-val { font-size: 1.7rem; font-weight: 900; line-height: 1.1; color: #fff; }
+.ds-lbl { font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 500; margin-top: 0.1rem; }
+.ds-link { position: absolute; inset: 0; }
+
+/* ── Cards ── */
+.dash-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(108,71,255,0.18);
+    border-radius: 16px;
+    overflow: hidden;
+    height: 100%;
+}
+.dash-card-head {
+    padding: 1rem 1.2rem;
+    border-bottom: 1px solid rgba(108,71,255,0.12);
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.88rem; font-weight: 700;
+}
+.dash-card-head .head-label { display:flex;align-items:center;gap:0.5rem; color: rgba(255,255,255,0.85); }
+.dash-card-head .head-label i { color: var(--primary,#6c47ff); }
+.dash-badge {
+    font-size: 0.72rem; font-weight: 700;
+    padding: 0.2rem 0.65rem;
+    border-radius: 100px;
+}
+.badge-primary { background: rgba(108,71,255,0.25); color: #a78bfa; }
+.badge-success { background: rgba(16,185,129,0.2); color: #34d399; }
+.badge-warning { background: rgba(245,158,11,0.2); color: #fbbf24; }
+.badge-danger  { background: rgba(239,68,68,0.2);  color: #f87171; }
+
+/* ── List Items ── */
+.dash-list { padding: 0; margin: 0; list-style: none; }
+.dash-list-item {
+    padding: 0.85rem 1.2rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.75rem;
+    transition: background 0.15s;
+    font-size: 0.85rem;
+}
+.dash-list-item:last-child { border-bottom: none; }
+.dash-list-item:hover { background: rgba(108,71,255,0.06); }
+.item-main { font-weight: 600; color: rgba(255,255,255,0.9); margin-bottom: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.item-sub  { font-size: 0.75rem; color: rgba(255,255,255,0.4); }
+.item-badge {
+    font-size: 0.72rem; font-weight: 700;
+    padding: 0.2rem 0.7rem;
+    border-radius: 100px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.ib-time    { background: rgba(108,71,255,0.2); color: #c4b8ff; }
+.ib-late    { background: rgba(239,68,68,0.15); color: #f87171; }
+.ib-urgent  { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.ib-date    { background: rgba(16,185,129,0.15); color: #34d399; }
+
+/* ── Empty State ── */
+.dash-empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: rgba(255,255,255,0.25);
+}
+.dash-empty i { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+.dash-empty p { font-size: 0.82rem; margin: 0; }
+
+/* ── Financial Summary ── */
+.fin-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.9rem 1.2rem; }
+.fin-item { text-align: center; flex: 1; }
+.fin-amount { font-size: 1.3rem; font-weight: 800; line-height: 1.2; }
+.fin-label { font-size: 0.72rem; color: rgba(255,255,255,0.45); margin-top: 0.2rem; }
+.fin-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.08); }
+.fin-net { border-top: 1px solid rgba(255,255,255,0.06); }
+
+/* ── Grid ── */
+.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media(max-width: 768px) {
+    .dash-grid { grid-template-columns: 1fr; }
+    [style*="grid-template-columns:repeat(4"] { grid-template-columns: repeat(2,1fr) !important; }
+}
+</style>
+
+<!-- ── Cards Grid ── -->
+<div class="dash-grid">
+
+    <!-- Today's Sessions -->
+    <div class="dash-card">
+        <div class="dash-card-head">
+            <div class="head-label"><i class="bi bi-calendar-event-fill"></i> جلسات اليوم</div>
+            <span class="dash-badge badge-primary">{{ today_sessions|length }}</span>
+        </div>
+        {% if today_sessions %}
+        <ul class="dash-list">
+            {% for s in today_sessions %}
+            <li class="dash-list-item">
+                <div>
+                    <div class="item-main">{{ s.case.case_number or 'بدون رقم' }}</div>
+                    <div class="item-sub">{{ (s.case.subject or '')[:45] }}</div>
+                </div>
+                <span class="item-badge ib-time">{{ s.session_time.strftime('%H:%M') if s.session_time else '--:--' }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="dash-empty">
+            <i class="bi bi-calendar-check"></i>
+            <p>لا توجد جلسات اليوم</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Urgent Tasks -->
+    <div class="dash-card">
+        <div class="dash-card-head">
+            <div class="head-label"><i class="bi bi-lightning-charge-fill"></i> المهام العاجلة</div>
+            <span class="dash-badge badge-danger">{{ overdue_tasks|length + urgent_tasks|length }}</span>
+        </div>
+        {% if overdue_tasks or urgent_tasks %}
+        <ul class="dash-list">
+            {% for task in overdue_tasks[:4] %}
+            <li class="dash-list-item">
+                <div>
+                    <div class="item-main">{{ task.title }}</div>
+                    <div class="item-sub">{{ task.assigned_user.full_name if task.assigned_user else '' }}</div>
+                </div>
+                <span class="item-badge ib-late">متأخرة</span>
+            </li>
+            {% endfor %}
+            {% for task in urgent_tasks[:4] %}
+            <li class="dash-list-item">
+                <div>
+                    <div class="item-main">{{ task.title }}</div>
+                    <div class="item-sub">{{ task.assigned_user.full_name if task.assigned_user else '' }}</div>
+                </div>
+                <span class="item-badge ib-urgent">خلال 48س</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="dash-empty">
+            <i class="bi bi-check-circle"></i>
+            <p>لا توجد مهام عاجلة 🎉</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Upcoming Sessions -->
+    <div class="dash-card">
+        <div class="dash-card-head">
+            <div class="head-label"><i class="bi bi-calendar-week-fill"></i> الجلسات القادمة</div>
+            <span class="dash-badge badge-success">{{ upcoming_sessions|length }}</span>
+        </div>
+        {% if upcoming_sessions %}
+        <ul class="dash-list">
+            {% for s in upcoming_sessions[:5] %}
+            <li class="dash-list-item">
+                <div>
+                    <div class="item-main">{{ s.case.case_number or 'بدون رقم' }}</div>
+                    <div class="item-sub">{{ (s.case.subject or '')[:40] }}</div>
+                </div>
+                <span class="item-badge ib-date">{{ s.session_date.strftime('%d/%m') }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="dash-empty">
+            <i class="bi bi-calendar3"></i>
+            <p>لا توجد جلسات في الأيام السبعة القادمة</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Financial Summary -->
+    <div class="dash-card">
+        <div class="dash-card-head">
+            <div class="head-label"><i class="bi bi-graph-up-arrow"></i> الملخص المالي — الشهر الحالي</div>
+        </div>
+        <div class="fin-row">
+            <div class="fin-item">
+                <div class="fin-amount" style="color:#34d399;">{{ monthly_payments|int }}<span style="font-size:0.6em;"> ج.م</span></div>
+                <div class="fin-label">الإيرادات</div>
+            </div>
+            <div class="fin-divider"></div>
+            <div class="fin-item">
+                <div class="fin-amount" style="color:#f87171;">{{ monthly_expenses|int }}<span style="font-size:0.6em;"> ج.م</span></div>
+                <div class="fin-label">المصروفات</div>
+            </div>
+            <div class="fin-divider"></div>
+            <div class="fin-item">
+                {% set net = monthly_payments - monthly_expenses %}
+                <div class="fin-amount" style="color:{{ '#34d399' if net >= 0 else '#f87171' }};">{{ net|int }}<span style="font-size:0.6em;"> ج.م</span></div>
+                <div class="fin-label">صافي الربح</div>
+            </div>
+        </div>
+        <!-- Notifications -->
+        <div class="dash-card-head fin-net" style="margin-top:0;">
+            <div class="head-label"><i class="bi bi-bell-fill"></i> آخر الإشعارات</div>
+            <a href="{{ url_for('notifications.index') }}" style="font-size:0.75rem;color:#a78bfa;text-decoration:none;">عرض الكل</a>
+        </div>
+        {% if unread_notifications %}
+        <ul class="dash-list">
+            {% for n in unread_notifications[:3] %}
+            <li class="dash-list-item">
+                <div>
+                    <div class="item-main">{{ n.title }}</div>
+                    <div class="item-sub">{{ (n.message or '')[:55] }}</div>
+                </div>
+                <span style="font-size:0.72rem;color:rgba(255,255,255,0.3);white-space:nowrap;">{{ n.created_at.strftime('%H:%M') }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="dash-empty" style="padding:1.5rem 1rem;">
+            <i class="bi bi-bell-slash" style="font-size:1.4rem;"></i>
+            <p>لا توجد إشعارات جديدة</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}

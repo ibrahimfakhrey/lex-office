@@ -1,0 +1,15 @@
+{% extends "base_auth.html" %}
+{% block title %}التحقق الثنائي{% endblock %}
+
+{% block content %}
+<h4 class="text-center mb-4">التحقق بخطوتين</h4>
+<p class="text-center text-muted small mb-4">أدخل الرمز من تطبيق المصادقة</p>
+<form method="POST" action="{{ url_for('auth.verify_mfa', user_id=user_id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="mb-4">
+        <input type="text" class="form-control form-control-lg text-center" name="otp"
+               maxlength="6" required placeholder="000000" dir="ltr">
+    </div>
+    <button type="submit" class="btn btn-primary w-100">تحقق</button>
+</form>
+{% endblock %}

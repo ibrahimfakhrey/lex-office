@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}{{ template.name_ar }}{% endblock %}
+{% block page_title %}{{ template.name_ar }}{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <a href="{{ url_for('templates_legal.edit', id=template.id) }}" class="btn btn-warning btn-sm">
+        <i class="bi bi-pencil me-1"></i>تعديل
+    </a>
+    <a href="{{ url_for('templates_legal.use_template', id=template.id) }}" class="btn btn-success btn-sm">
+        <i class="bi bi-file-earmark-text me-1"></i>استخدام
+    </a>
+    <a href="{{ url_for('templates_legal.preview', id=template.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-eye me-1"></i>معاينة
+    </a>
+    <form method="POST" action="{{ url_for('templates_legal.delete', id=template.id) }}" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا القالب؟')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-danger btn-sm">
+            <i class="bi bi-trash me-1"></i>حذف
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-3"><strong>الاسم (إنجليزي):</strong></div>
+            <div class="col-md-9">{{ template.name }}</div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-3"><strong>الاسم (عربي):</strong></div>
+            <div class="col-md-9">{{ template.name_ar }}</div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-3"><strong>النوع:</strong></div>
+            <div class="col-md-9"><span class="badge bg-info">{{ type_map.get(template.template_type, template.template_type) }}</span></div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-3"><strong>صيغة الإخراج:</strong></div>
+            <div class="col-md-9">{{ template.output_format }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0">محتوى القالب</h6>
+    </div>
+    <div class="card-body">
+        <pre style="white-space: pre-wrap; direction: rtl;">{{ template.template_content }}</pre>
+    </div>
+</div>
+{% endblock %}

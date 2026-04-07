@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}أداء المحامين{% endblock %}
+{% block page_title %}تقرير أداء المحامين{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-right me-1"></i>العودة للتقارير
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>المحامي</th>
+                        <th class="text-center">إجمالي القضايا</th>
+                        <th class="text-center">القضايا النشطة</th>
+                        <th class="text-center">الجلسات</th>
+                        <th class="text-center">المهام (منجز/إجمالي)</th>
+                        <th style="min-width: 200px;">نسبة الإنجاز</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in perf_data %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2"
+                                     style="width: 32px; height: 32px;">
+                                    <span class="text-white small fw-bold">{{ item.lawyer.full_name[0] }}</span>
+                                </div>
+                                {{ item.lawyer.full_name }}
+                            </div>
+                        </td>
+                        <td class="text-center">{{ item.cases_total }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-success">{{ item.active_cases }}</span>
+                        </td>
+                        <td class="text-center">{{ item.sessions }}</td>
+                        <td class="text-center">{{ item.tasks_done }} / {{ item.tasks_total }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="progress flex-grow-1 me-2" style="height: 20px;">
+                                    <div class="progress-bar
+                                        {% if item.completion_rate >= 75 %}bg-success
+                                        {% elif item.completion_rate >= 50 %}bg-warning
+                                        {% else %}bg-danger{% endif %}"
+                                        role="progressbar"
+                                        style="width: {{ item.completion_rate }}%"
+                                        aria-valuenow="{{ item.completion_rate }}"
+                                        aria-valuemin="0" aria-valuemax="100">
+                                    </div>
+                                </div>
+                                <span class="fw-semibold small" style="min-width: 40px;">{{ item.completion_rate }}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">لا توجد بيانات</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

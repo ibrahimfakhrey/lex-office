@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{{ task.title }} - LexOffice{% endblock %}
+
+{% set priority_color = {'urgent':'danger','important':'warning','normal':'secondary'} %}
+{% set status_color = {'new':'info','in_progress':'primary','done':'success','cancelled':'dark'} %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h3>
+            {{ task.title[:60] }}
+            <span class="badge bg-{{ priority_color.get(task.priority, 'secondary') }} fs-6">{{ priority_map.get(task.priority, task.priority) }}</span>
+        </h3>
+        <span class="badge bg-{{ status_color.get(task.status, 'secondary') }}">{{ status_map.get(task.status, task.status) }}</span>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('tasks.edit', id=task.id) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i> تعديل</a>
+        <form method="POST" action="{{ url_for('tasks.delete', id=task.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="هل أنت متأكد من حذف هذه المهمة؟"><i class="bi bi-trash me-1"></i> حذف</button>
+        </form>
+        <a href="{{ url_for('tasks.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header">تفاصيل المهمة</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <small class="text-muted">المكلّف</small>
+                        <div><strong>{{ task.assignee.full_name if task.assignee else '-' }}</strong></div>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">كُلّف بواسطة</small>
+                        <div>{{ task.assigner.full_name if task.assigner else '-' }}</div>
+                    </div>
+                    {% if task.case %}
+                    <div class="col-md-6">
+                        <small class="text-muted">القضية</small>
+                        <div><a href="{{ url_for('cases.show', id=task.case_id) }}">{{ task.case.case_number }}</a></div>
+                    </div>
+                    {% endif %}
+                    {% if task.deadline %}
+                    <div class="col-md-6">
+                        <small class="text-muted">الموعد النهائي</small>
+                        <div class="{% if task.is_overdue %}text-danger fw-bold{% endif %}">
+                            {{ task.deadline.strftime('%Y-%m-%d %H:%M') }}
+                            {% if task.is_overdue %}<span class="badge bg-danger">متأخرة</span>{% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if task.description %}
+        <div class="card mb-3">
+            <div class="card-header">الوصف</div>
+            <div class="card-body">{{ task.description }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <!-- Quick Status -->
+        <div class="card mb-3">
+            <div class="card-header">تحديث الحالة</div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% for val, label in statuses %}
+                    {% if val != task.status %}
+                    <form method="POST" action="{{ url_for('tasks.update_status', id=task.id) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="{{ val }}">
+                        <button type="submit" class="btn btn-sm btn-outline-{{ status_color.get(val, 'secondary') }} w-100">{{ label }}</button>
+                    </form>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body small text-muted">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>تاريخ الإنشاء</span>
+                    <span>{{ task.created_at.strftime('%Y-%m-%d') }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span>آخر تحديث</span>
+                    <span>{{ task.updated_at.strftime('%Y-%m-%d') if task.updated_at else '-' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}فاتورة جديدة - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>إنشاء فاتورة جديدة</h3>
+    <a href="{{ url_for('financial.invoices') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+</div>
+
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="card mb-3">
+        <div class="card-header">بيانات الفاتورة</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">الموكل <span class="text-danger">*</span></label>
+                    <select name="client_id" class="form-select" required>
+                        <option value="">-- اختر الموكل --</option>
+                        {% for cl in clients %}
+                        <option value="{{ cl.id }}" {% if form.get('client_id', pre_client_id|string if pre_client_id else '') == cl.id|string %}selected{% endif %}>{{ cl.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">القضية</label>
+                    <select name="case_id" class="form-select">
+                        <option value="">-- اختياري --</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}" {% if form.get('case_id', pre_case_id|string if pre_case_id else '') == c.id|string %}selected{% endif %}>{{ c.case_number or '-' }} - {{ c.subject[:30] if c.subject else '' }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">تاريخ الإصدار <span class="text-danger">*</span></label>
+                    <input type="date" name="issue_date" class="form-control" dir="ltr" value="{{ form.get('issue_date', '') }}" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">نسبة الضريبة %</label>
+                    <input type="number" name="tax_rate" class="form-control" dir="ltr" step="0.01" value="{{ form.get('tax_rate', '14') }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">نوع الخصم</label>
+                    <select name="discount_type" class="form-select">
+                        <option value="">بدون خصم</option>
+                        <option value="percentage" {% if form.get('discount_type') == 'percentage' %}selected{% endif %}>نسبة %</option>
+                        <option value="fixed" {% if form.get('discount_type') == 'fixed' %}selected{% endif %}>مبلغ ثابت</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">قيمة الخصم</label>
+                    <input type="number" name="discount_value" class="form-control" dir="ltr" step="0.01" value="{{ form.get('discount_value', '') }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Line Items -->
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>بنود الفاتورة</span>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addItem()"><i class="bi bi-plus me-1"></i> إضافة بند</button>
+        </div>
+        <div class="card-body p-0">
+            <table class="table mb-0" id="itemsTable">
+                <thead>
+                    <tr>
+                        <th style="width:40%">الوصف</th>
+                        <th style="width:25%">النوع</th>
+                        <th style="width:25%">المبلغ</th>
+                        <th style="width:10%"></th>
+                    </tr>
+                </thead>
+                <tbody id="itemsBody">
+                    <tr>
+                        <td><input type="text" name="item_description[]" class="form-control form-control-sm" required></td>
+                        <td>
+                            <select name="item_type[]" class="form-select form-select-sm">
+                                {% for val, label in item_types %}
+                                <option value="{{ val }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td><input type="number" name="item_amount[]" class="form-control form-control-sm" dir="ltr" step="0.01" required></td>
+                        <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()"><i class="bi bi-x"></i></button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <label class="form-label">ملاحظات</label>
+            <textarea name="notes" class="form-control" rows="2">{{ form.get('notes', '') }}</textarea>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle me-1"></i> إنشاء الفاتورة</button>
+        <a href="{{ url_for('financial.invoices') }}" class="btn btn-outline-secondary">إلغاء</a>
+    </div>
+</form>
+
+<script>
+function addItem() {
+    const row = document.querySelector('#itemsBody tr').cloneNode(true);
+    row.querySelectorAll('input').forEach(i => i.value = '');
+    document.getElementById('itemsBody').appendChild(row);
+}
+</script>
+{% endblock %}

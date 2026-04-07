@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}حكم - {{ judgment.case.case_number if judgment.case else '' }} - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h3>تفاصيل الحكم</h3>
+        <small class="text-muted">{{ judgment.case.case_number if judgment.case else '' }} | {{ type_map.get(judgment.judgment_type, judgment.judgment_type or '') }}</small>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('judgments.edit', id=judgment.id) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i> تعديل</a>
+        <form method="POST" action="{{ url_for('judgments.delete', id=judgment.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="هل أنت متأكد من حذف هذا الحكم؟"><i class="bi bi-trash me-1"></i> حذف</button>
+        </form>
+        <a href="{{ url_for('judgments.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <!-- Judgment Info -->
+        <div class="card mb-3">
+            <div class="card-header">بيانات الحكم</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <small class="text-muted">القضية</small>
+                        <div>
+                            {% if judgment.case %}
+                            <a href="{{ url_for('cases.show', id=judgment.case_id) }}"><strong>{{ judgment.case.case_number }}</strong></a>
+                            {% else %}-{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">تاريخ الحكم</small>
+                        <div>{{ judgment.judgment_date.strftime('%Y-%m-%d') if judgment.judgment_date else '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">المحكمة</small>
+                        <div>{{ judgment.court.name if judgment.court else '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">نوع الحكم</small>
+                        <div>{{ type_map.get(judgment.judgment_type, judgment.judgment_type or '-') }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">النتيجة</small>
+                        <div>
+                            {% set result_color = {'full_win':'success','partial_win':'info','loss':'danger','postponement':'warning','procedural':'secondary','absence':'dark'} %}
+                            <span class="badge bg-{{ result_color.get(judgment.result, 'secondary') }}">{{ result_map.get(judgment.result, judgment.result or '-') }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">اسم القاضي</small>
+                        <div>{{ judgment.judge_name or '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">المبلغ المحكوم به</small>
+                        <div dir="ltr" class="text-end">{{ '{:,.0f}'.format(judgment.awarded_amount) if judgment.awarded_amount else '-' }}</div>
+                    </div>
+                    {% if judgment.judgment_text %}
+                    <div class="col-12">
+                        <small class="text-muted">نص الحكم / المنطوق</small>
+                        <div class="border rounded p-2 bg-light">{{ judgment.judgment_text }}</div>
+                    </div>
+                    {% endif %}
+                    {% if judgment.notes %}
+                    <div class="col-12">
+                        <small class="text-muted">ملاحظات</small>
+                        <div>{{ judgment.notes }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar: Appeal Tracking -->
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">تتبع الاستئناف</div>
+            <div class="card-body">
+                {% if judgment.appeal_tracking_enabled and judgment.appeal_deadline %}
+                    {% if days_until_appeal is not none %}
+                        {% if days_until_appeal > 14 %}
+                            {% set appeal_color = 'success' %}
+                        {% elif days_until_appeal > 7 %}
+                            {% set appeal_color = 'warning' %}
+                        {% else %}
+                            {% set appeal_color = 'danger' %}
+                        {% endif %}
+
+                        <div class="text-center mb-3">
+                            <div class="display-4 text-{{ appeal_color }}">
+                                {% if days_until_appeal >= 0 %}{{ days_until_appeal }}{% else %}0{% endif %}
+                            </div>
+                            <div class="text-muted">
+                                {% if days_until_appeal > 0 %}
+                                    يوم متبقي للاستئناف
+                                {% elif days_until_appeal == 0 %}
+                                    اليوم آخر موعد!
+                                {% else %}
+                                    <span class="text-danger fw-bold">انتهت المهلة منذ {{ days_until_appeal|abs }} يوم</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="progress mb-3" style="height: 8px;">
+                            {% set progress = [0, ((40 - days_until_appeal) / 40 * 100)]|max %}
+                            <div class="progress-bar bg-{{ appeal_color }}" style="width: {{ [progress, 100]|min }}%"></div>
+                        </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>موعد الاستئناف</span>
+                        <span>{{ judgment.appeal_deadline.strftime('%Y-%m-%d') }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>نوع الطعن</span>
+                        <span>{{ type_map.get(judgment.appeal_type, judgment.appeal_type or '-') }}</span>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center mb-0">تتبع الاستئناف غير مفعل</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Metadata -->
+        <div class="card">
+            <div class="card-body small text-muted">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>تاريخ التسجيل</span>
+                    <span>{{ judgment.created_at.strftime('%Y-%m-%d') if judgment.created_at else '-' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

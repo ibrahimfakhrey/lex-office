@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}التوكيلات - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>التوكيلات</h3>
+    <a href="{{ url_for('poa.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i> توكيل جديد</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if poas.items %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>رقم التوكيل</th>
+                        <th>العميل</th>
+                        <th>النوع</th>
+                        <th>تاريخ الإصدار</th>
+                        <th>تاريخ الانتهاء</th>
+                        <th>الحالة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set type_labels = {'general':'عام', 'special':'خاص', 'litigation':'تقاضي', 'real_estate':'عقاري'} %}
+                    {% set status_colors = {'active':'success', 'expired':'danger', 'revoked':'warning'} %}
+                    {% for poa in poas.items %}
+                    <tr>
+                        <td><strong>{{ poa.poa_number or poa.notarization_number or '-' }}</strong></td>
+                        <td>{{ poa.client.full_name if poa.client else '-' }}</td>
+                        <td>{{ type_labels.get(poa.poa_type, poa.poa_type) }}</td>
+                        <td>{{ poa.issue_date.strftime('%Y-%m-%d') if poa.issue_date else '-' }}</td>
+                        <td>
+                            {% if poa.expiry_date %}
+                            {{ poa.expiry_date.strftime('%Y-%m-%d') }}
+                            {% if poa.days_until_expiry is not none and poa.days_until_expiry <= 30 %}
+                            <span class="badge bg-{{ 'danger' if poa.days_until_expiry <= 7 else 'warning' }} ms-1">{{ poa.days_until_expiry }} يوم</span>
+                            {% endif %}
+                            {% else %}-{% endif %}
+                        </td>
+                        <td><span class="badge bg-{{ status_colors.get(poa.status, 'secondary') }}">{{ poa.status }}</span></td>
+                        <td><a href="{{ url_for('poa.show', id=poa.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if poas.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if poas.has_prev %}<li class="page-item"><a class="page-link" href="?page={{ poas.prev_num }}">السابق</a></li>{% endif %}
+                    {% for p in poas.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}<li class="page-item {% if p == poas.page %}active{% endif %}"><a class="page-link" href="?page={{ p }}">{{ p }}</a></li>
+                        {% else %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}
+                    {% endfor %}
+                    {% if poas.has_next %}<li class="page-item"><a class="page-link" href="?page={{ poas.next_num }}">التالي</a></li>{% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-file-earmark-text"></i>
+            <p>لا توجد توكيلات</p>
+            <a href="{{ url_for('poa.create') }}" class="btn btn-primary btn-sm">إضافة توكيل</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block title %}{{ client.full_name }} - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h3>{{ client.full_name }}</h3>
+        <small class="text-muted">{{ client.client_number or '' }} | {{ 'فرد' if client.client_type == 'individual' else 'شركة' }}</small>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('clients.edit', id=client.id) }}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-pencil me-1"></i> تعديل
+        </a>
+        <a href="{{ url_for('clients.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-right me-1"></i> العودة
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Client Info Card -->
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header">البيانات الشخصية</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <small class="text-muted">الاسم بالعربية</small>
+                        <div>{{ client.full_name }}</div>
+                    </div>
+                    {% if client.full_name_en %}
+                    <div class="col-md-6">
+                        <small class="text-muted">الاسم بالإنجليزية</small>
+                        <div dir="ltr">{{ client.full_name_en }}</div>
+                    </div>
+                    {% endif %}
+                    {% if client.national_id %}
+                    <div class="col-md-4">
+                        <small class="text-muted">الرقم القومي</small>
+                        <div dir="ltr">{{ client.national_id }}</div>
+                    </div>
+                    {% endif %}
+                    {% if client.commercial_reg %}
+                    <div class="col-md-4">
+                        <small class="text-muted">السجل التجاري</small>
+                        <div dir="ltr">{{ client.commercial_reg }}</div>
+                    </div>
+                    {% endif %}
+                    {% if client.date_of_birth %}
+                    <div class="col-md-4">
+                        <small class="text-muted">تاريخ الميلاد</small>
+                        <div>{{ client.date_of_birth.strftime('%Y-%m-%d') }}</div>
+                    </div>
+                    {% endif %}
+                    {% if client.nationality %}
+                    <div class="col-md-4">
+                        <small class="text-muted">الجنسية</small>
+                        <div>{{ client.nationality }}</div>
+                    </div>
+                    {% endif %}
+                    {% if client.profession %}
+                    <div class="col-md-4">
+                        <small class="text-muted">المهنة</small>
+                        <div>{{ client.profession }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if client.full_address %}
+        <div class="card mb-3">
+            <div class="card-header">العنوان</div>
+            <div class="card-body">{{ client.full_address }}</div>
+        </div>
+        {% endif %}
+
+        <div class="card mb-3">
+            <div class="card-header">بيانات التواصل</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% if client.phone_primary %}
+                    <div class="col-md-3">
+                        <small class="text-muted">الهاتف الأساسي</small>
+                        <div dir="ltr">{{ client.phone_primary }}</div>
+                    </div>
+                    {% endif %}
+                    {% if client.phone_secondary %}
+                    <div class="col-md-3">
+                        <small class="text-muted">هاتف ثانوي</small>
+                        <div dir="ltr">{{ client.phone_secondary }}</div>
+                    </div>
+                    {% endif %}
+                    {% if client.email %}
+                    <div class="col-md-3">
+                        <small class="text-muted">البريد</small>
+                        <div dir="ltr">{{ client.email }}</div>
+                    </div>
+                    {% endif %}
+                    {% if client.whatsapp %}
+                    <div class="col-md-3">
+                        <small class="text-muted">واتساب</small>
+                        <div dir="ltr">{{ client.whatsapp }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if client.emergency_contact_name %}
+        <div class="card mb-3">
+            <div class="card-header">جهة اتصال الطوارئ</div>
+            <div class="card-body">
+                {{ client.emergency_contact_name }}
+                {% if client.emergency_contact_relation %} ({{ client.emergency_contact_relation }}){% endif %}
+                {% if client.emergency_contact_phone %} - <span dir="ltr">{{ client.emergency_contact_phone }}</span>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if client.internal_notes %}
+        <div class="card mb-3">
+            <div class="card-header">ملاحظات داخلية</div>
+            <div class="card-body">{{ client.internal_notes }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Cases -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-briefcase me-1"></i> القضايا ({{ cases|length }})</span>
+                <a href="{{ url_for('cases.create') }}?client_id={{ client.id }}" class="btn btn-sm btn-outline-primary">إضافة قض��ة</a>
+            </div>
+            <div class="card-body p-0">
+                {% if cases %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr><th>رقم القضية</th><th>الموضوع</th><th>الحالة</th><th>المحامي</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for case in cases %}
+                            <tr>
+                                <td><a href="{{ url_for('cases.show', id=case.id) }}">{{ case.case_number or '-' }}</a></td>
+                                <td>{{ case.subject[:50] if case.subject else '-' }}</td>
+                                <td><span class="badge bg-{{ 'success' if case.status == 'active' else 'secondary' }}">{{ case.status }}</span></td>
+                                <td>{{ case.responsible_lawyer.full_name if case.responsible_lawyer else '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state py-3">
+                    <p class="mb-0 small text-muted">لا توجد ��ضايا</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <!-- Financial Summary -->
+        <div class="card mb-3">
+            <div class="card-header">الملخص المالي</div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>إجمالي الأتعاب</span>
+                    <strong>{{ client.total_fees|int }} ج.م</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>إجمالي المدفوع</span>
+                    <strong class="text-success">{{ client.total_paid|int }} ج.م</strong>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span>المتبقي</span>
+                    <strong class="{% if client.balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                        {{ client.balance|int }} ج.م
+                    </strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-file-earmark me-1"></i> المستندات</span>
+            </div>
+            <div class="card-body">
+                {% if documents %}
+                <ul class="list-unstyled mb-3">
+                    {% for doc in documents %}
+                    <li class="d-flex justify-content-between align-items-center mb-2">
+                        <span><i class="bi bi-file-earmark-text me-1"></i> {{ doc.file_name }}</span>
+                        <small class="text-muted">{{ doc.document_type }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('clients.upload_document', id=client.id) }}" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-2">
+                        <select name="document_type" class="form-select form-select-sm">
+                            <option value="national_id">صورة بطاقة</option>
+                            <option value="passport">جواز سفر</option>
+                            <option value="commercial_reg">سجل تجاري</option>
+                            <option value="power_of_attorney">توكيل</option>
+                            <option value="other">أخرى</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <input type="file" name="file" class="form-control form-control-sm" required>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="bi bi-upload me-1"></i> رفع مستند
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Metadata -->
+        <div class="card">
+            <div class="card-body small text-muted">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>تاريخ التسجيل</span>
+                    <span>{{ client.created_at.strftime('%Y-%m-%d') }}</span>
+                </div>
+                {% if client.registrar %}
+                <div class="d-flex justify-content-between mb-1">
+                    <span>سجّل بواسطة</span>
+                    <span>{{ client.registrar.full_name }}</span>
+                </div>
+                {% endif %}
+                <div class="d-flex justify-content-between">
+                    <span>الحالة</span>
+                    <span>{% if client.is_active %}نشط{% else %}غير نشط{% endif %}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete -->
+        <form method="POST" action="{{ url_for('clients.delete', id=client.id) }}" class="mt-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm w-100" data-confirm="هل أنت متأكد من حذف هذا الموكل؟">
+                <i class="bi bi-trash me-1"></i> حذف الموكل
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}المالية - LexOffice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3>النظرة المالية</h3>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('financial.create_payment') }}" class="btn btn-success btn-sm"><i class="bi bi-cash-stack me-1"></i> تسجيل دفعة</a>
+        <a href="{{ url_for('financial.create_invoice') }}" class="btn btn-primary btn-sm"><i class="bi bi-receipt me-1"></i> فاتورة جديدة</a>
+        <a href="{{ url_for('financial.create_expense') }}" class="btn btn-outline-danger btn-sm"><i class="bi bi-dash-circle me-1"></i> تسجيل مصروف</a>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <small class="text-muted">إيرادات الشهر</small>
+                <div class="display-6 text-success" dir="ltr">{{ '{:,.0f}'.format(monthly_payments) }}</div>
+                <small class="text-muted">ج.م</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <small class="text-muted">مصروفات الشهر</small>
+                <div class="display-6 text-danger" dir="ltr">{{ '{:,.0f}'.format(monthly_expenses) }}</div>
+                <small class="text-muted">ج.م</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <small class="text-muted">صافي الشهر</small>
+                <div class="display-6 {% if monthly_payments - monthly_expenses >= 0 %}text-success{% else %}text-danger{% endif %}" dir="ltr">
+                    {{ '{:,.0f}'.format(monthly_payments - monthly_expenses) }}
+                </div>
+                <small class="text-muted">ج.م</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <small class="text-muted">فواتير معلقة ({{ pending_invoices }})</small>
+                <div class="display-6 text-warning" dir="ltr">{{ '{:,.0f}'.format(pending_invoice_total) }}</div>
+                <small class="text-muted">ج.م</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Recent Payments -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>آخر الدفعات</span>
+                <a href="{{ url_for('financial.payments') }}" class="btn btn-sm btn-outline-success">عرض الكل</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_payments %}
+                <div class="list-group list-group-flush">
+                    {% for p in recent_payments %}
+                    <a href="{{ url_for('financial.show_payment', id=p.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between">
+                            <small>{{ p.client.full_name[:25] if p.client else '-' }}</small>
+                            <strong class="text-success" dir="ltr">{{ '{:,.0f}'.format(p.amount) }}</strong>
+                        </div>
+                        <small class="text-muted">{{ p.payment_date.strftime('%Y-%m-%d') }}</small>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3 mb-0">لا توجد دفعات</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Invoices -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>آخر الفواتير</span>
+                <a href="{{ url_for('financial.invoices') }}" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_invoices %}
+                {% set status_color = {'draft':'secondary','sent':'info','paid':'success','partially_paid':'warning','overdue':'danger','cancelled':'dark'} %}
+                <div class="list-group list-group-flush">
+                    {% for inv in recent_invoices %}
+                    <a href="{{ url_for('financial.show_invoice', id=inv.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between">
+                            <small>{{ inv.invoice_number or '-' }}</small>
+                            <strong dir="ltr">{{ '{:,.0f}'.format(inv.total) }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">{{ inv.client.full_name[:20] if inv.client else '-' }}</small>
+                            <span class="badge bg-{{ status_color.get(inv.status, 'secondary') }}">{{ dict(invoice_statuses).get(inv.status, inv.status) }}</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3 mb-0">لا توجد فواتير</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Expenses -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>آخر المصروفات</span>
+                <a href="{{ url_for('financial.expenses') }}" class="btn btn-sm btn-outline-danger">عرض الكل</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_expenses %}
+                <div class="list-group list-group-flush">
+                    {% for e in recent_expenses %}
+                    <a href="{{ url_for('financial.show_expense', id=e.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between">
+                            <small>{{ e.description[:30] if e.description else e.expense_type }}</small>
+                            <strong class="text-danger" dir="ltr">{{ '{:,.0f}'.format(e.amount) }}</strong>
+                        </div>
+                        <small class="text-muted">{{ e.expense_date.strftime('%Y-%m-%d') }}</small>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3 mb-0">لا توجد مصروفات</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

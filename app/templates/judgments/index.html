@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}الأحكام - LexOffice{% endblock %}
+
+{% block content %}
+{% set type_map = {'primary':'ابتدائي','appeal':'استئنافي','cassation':'نقض','constitutional':'دستوري'} %}
+{% set result_map = dict(judgment_results) %}
+
+<div class="page-header">
+    <h3>الأحكام</h3>
+    <a href="{{ url_for('judgments.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i> إضافة حكم
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="GET" class="row g-2 align-items-center">
+            <div class="col-md-3">
+                <select name="result" class="form-select">
+                    <option value="">كل النتائج</option>
+                    {% for val, label in judgment_results %}
+                    <option value="{{ val }}" {% if result == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Judgments Table -->
+<div class="card">
+    <div class="card-body p-0">
+        {% if judgments.items %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>رقم القضية</th>
+                        <th>النوع</th>
+                        <th>النتيجة</th>
+                        <th>المبلغ المحكوم به</th>
+                        <th>موعد الاستئناف</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for j in judgments.items %}
+                    <tr>
+                        <td>{{ j.judgment_date.strftime('%Y-%m-%d') if j.judgment_date else '-' }}</td>
+                        <td>
+                            {% if j.case %}
+                            <a href="{{ url_for('cases.show', id=j.case_id) }}">{{ j.case.case_number or '-' }}</a>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td>{{ type_map.get(j.judgment_type, j.judgment_type or '-') }}</td>
+                        <td>
+                            {% set result_color = {'full_win':'success','partial_win':'info','loss':'danger','postponement':'warning','procedural':'secondary','absence':'dark'} %}
+                            <span class="badge bg-{{ result_color.get(j.result, 'secondary') }}">{{ result_map.get(j.result, j.result or '-') }}</span>
+                        </td>
+                        <td dir="ltr">{{ '{:,.0f}'.format(j.awarded_amount) if j.awarded_amount else '-' }}</td>
+                        <td>
+                            {% if j.appeal_deadline %}
+                                {% set days_left = (j.appeal_deadline - import_datetime().date()).days if j.appeal_deadline else none %}
+                                {{ j.appeal_deadline.strftime('%Y-%m-%d') }}
+                            {% else %}-{% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('judgments.show', id=j.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if judgments.pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if judgments.has_prev %}
+                    <li class="page-item"><a class="page-link" href="?page={{ judgments.prev_num }}&result={{ result }}">السابق</a></li>
+                    {% endif %}
+                    {% for p in judgments.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}
+                        <li class="page-item {% if p == judgments.page %}active{% endif %}">
+                            <a class="page-link" href="?page={{ p }}&result={{ result }}">{{ p }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if judgments.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ judgments.next_num }}&result={{ result }}">التالي</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-hammer"></i>
+            <p>لا توجد أحكام</p>
+            <a href="{{ url_for('judgments.create') }}" class="btn btn-primary btn-sm">إضافة أول حكم</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
