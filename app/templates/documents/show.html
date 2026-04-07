@@ -73,9 +73,28 @@
             <div class="card-header">مشاركة المستند</div>
             <div class="card-body">
                 {% if document.is_share_active %}
-                <div class="alert alert-info mb-2">
-                    <small>رابط المشاركة فعّال حتى {{ document.share_expires_at.strftime('%Y-%m-%d') }}</small>
+                <div class="alert alert-success mb-3">
+                    <div class="mb-1"><small class="fw-bold">رابط المشاركة فعّال حتى {{ document.share_expires_at.strftime('%Y-%m-%d') }}</small></div>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control font-monospace" id="shareUrl"
+                               value="{{ request.host_url.rstrip('/') }}{{ url_for('documents.shared_view', token=document.share_token) }}"
+                               readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyShareLink()">
+                            <i class="bi bi-clipboard"></i> نسخ
+                        </button>
+                    </div>
                 </div>
+                <script>
+                function copyShareLink() {
+                    var el = document.getElementById('shareUrl');
+                    el.select();
+                    navigator.clipboard.writeText(el.value).then(function() {
+                        var btn = el.nextElementSibling;
+                        btn.innerHTML = '<i class="bi bi-check-lg"></i> تم النسخ';
+                        setTimeout(function(){ btn.innerHTML = '<i class="bi bi-clipboard"></i> نسخ'; }, 2000);
+                    });
+                }
+                </script>
                 {% endif %}
                 <form method="POST" action="{{ url_for('documents.share', id=document.id) }}" class="row g-2 align-items-end">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

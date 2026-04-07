@@ -37,7 +37,7 @@ class Config:
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@lexoffice.app')
 
     # File Upload
-    UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'app/static/uploads')
+    UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'app', 'static', 'uploads'))
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_FILE_SIZE', 20971520))  # 20MB
     ALLOWED_EXTENSIONS = {'pdf', 'docx', 'doc', 'png', 'jpg', 'jpeg', 'xlsx', 'xls'}
 

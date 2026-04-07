@@ -38,7 +38,7 @@ def update_office():
     logo = request.files.get('logo')
     if logo and logo.filename:
         filename = secure_filename(logo.filename)
-        upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'app/static/uploads'), 'logos')
+        upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'logos')
         os.makedirs(upload_dir, exist_ok=True)
         logo_path = os.path.join(upload_dir, f'tenant_{g.tenant_id}_{filename}')
         logo.save(logo_path)
@@ -157,7 +157,7 @@ def profile():
         avatar = request.files.get('avatar')
         if avatar and avatar.filename:
             filename = secure_filename(avatar.filename)
-            upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'app/static/uploads'), 'avatars')
+            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'avatars')
             os.makedirs(upload_dir, exist_ok=True)
             avatar_path = os.path.join(upload_dir, f'user_{user.id}_{filename}')
             avatar.save(avatar_path)

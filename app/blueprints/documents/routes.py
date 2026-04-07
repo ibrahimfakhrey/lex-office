@@ -82,8 +82,8 @@ def upload():
         if not name:
             name = filename
 
-        upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'app/static/uploads'),
-                                  'documents', str(g.tenant_id))
+        upload_base = current_app.config.get('UPLOAD_FOLDER') or os.path.join(current_app.root_path, 'static', 'uploads')
+        upload_dir = os.path.join(upload_base, 'documents', str(g.tenant_id))
         os.makedirs(upload_dir, exist_ok=True)
         timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
         saved_filename = f'{timestamp}_{filename}'
@@ -154,6 +154,15 @@ def share(id):
     db.session.commit()
     flash(f'تم إنشاء رابط المشاركة (صالح لمدة {days} أيام)', 'success')
     return redirect(url_for('documents.show', id=document.id))
+
+
+@documents_bp.route('/shared/<token>')
+def shared_view(token):
+    """Public shared document view (no login required)."""
+    document = Document.query.filter_by(share_token=token).first_or_404()
+    if not document.is_share_active:
+        return render_template('documents/shared_expired.html'), 410
+    return send_file(document.file_path, as_attachment=False, download_name=document.name)
 
 
 @documents_bp.route('/<int:id>/delete', methods=['POST'])
