@@ -43,7 +43,7 @@ def index():
 def create():
     """Record a new judgment."""
     cases = Case.query.filter_by(tenant_id=g.tenant_id).filter(
-        Case.status.in_(['active', 'awaiting_judgment'])
+        Case.status.in_(['new', 'active', 'awaiting_judgment'])
     ).order_by(Case.case_number).all()
     courts = Court.query.filter_by(is_active=True).order_by(Court.name).all()
 

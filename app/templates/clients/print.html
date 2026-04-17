@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>ملف الموكل — {{ client.full_name }}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 13px; color: #1a1a2e; background: #fff; padding: 20px; direction: rtl; }
+        h1 { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+        .sub { font-size: 12px; color: #666; margin-bottom: 20px; }
+        .print-btn { position: fixed; top: 16px; left: 16px; padding: 8px 18px; background: #6c47ff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        @media print { .print-btn { display: none; } }
+
+        section { margin-bottom: 20px; }
+        h2 { font-size: 14px; font-weight: 700; background: #f0eeff; color: #4c2bd6; padding: 6px 12px; border-right: 4px solid #6c47ff; margin-bottom: 10px; }
+
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 20px; }
+        .field label { font-size: 11px; color: #888; display: block; margin-bottom: 2px; }
+        .field span { font-weight: 600; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f0eeff; padding: 6px 8px; text-align: right; font-weight: 700; border: 1px solid #ddd; }
+        td { padding: 5px 8px; border: 1px solid #eee; }
+        tr:nth-child(even) td { background: #fafafa; }
+
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 700; }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-danger  { background: #fee2e2; color: #991b1b; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-secondary { background: #f1f5f9; color: #475569; }
+
+        .footer { margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; font-size: 11px; color: #aaa; display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">🖨️ طباعة</button>
+
+<h1>{{ client.full_name }}</h1>
+<div class="sub">{{ client.client_number or '' }} | {{ 'فرد' if client.client_type == 'individual' else 'شركة' }} | تاريخ التسجيل: {{ client.created_at.strftime('%Y-%m-%d') }}</div>
+
+<!-- Personal Info -->
+<section>
+    <h2>البيانات الشخصية</h2>
+    <div class="grid">
+        {% if client.national_id %}<div class="field"><label>الرقم القومي</label><span>{{ client.national_id }}</span></div>{% endif %}
+        {% if client.date_of_birth %}<div class="field"><label>تاريخ الميلاد</label><span>{{ client.date_of_birth.strftime('%Y-%m-%d') }}</span></div>{% endif %}
+        {% if client.nationality %}<div class="field"><label>الجنسية</label><span>{{ client.nationality }}</span></div>{% endif %}
+        {% if client.profession %}<div class="field"><label>المهنة</label><span>{{ client.profession }}</span></div>{% endif %}
+        {% if client.phone_primary %}<div class="field"><label>الهاتف الأساسي</label><span>{{ client.phone_primary }}</span></div>{% endif %}
+        {% if client.phone_secondary %}<div class="field"><label>هاتف ثانوي</label><span>{{ client.phone_secondary }}</span></div>{% endif %}
+        {% if client.email %}<div class="field"><label>البريد الإلكتروني</label><span>{{ client.email }}</span></div>{% endif %}
+        {% if client.whatsapp %}<div class="field"><label>واتساب</label><span>{{ client.whatsapp }}</span></div>{% endif %}
+        {% if client.full_address %}<div class="field" style="grid-column:span 2"><label>العنوان</label><span>{{ client.full_address }}</span></div>{% endif %}
+    </div>
+</section>
+
+<!-- Financial Summary -->
+<section>
+    <h2>الملخص المالي</h2>
+    <div class="grid">
+        <div class="field"><label>إجمالي الأتعاب</label><span>{{ client.total_fees|int }} ج.م</span></div>
+        <div class="field"><label>إجمالي المدفوع</label><span>{{ client.total_paid|int }} ج.م</span></div>
+        <div class="field"><label>المتبقي</label><span>{{ client.balance|int }} ج.م</span></div>
+    </div>
+</section>
+
+<!-- Cases -->
+{% if cases %}
+<section>
+    <h2>القضايا ({{ cases|length }})</h2>
+    <table>
+        <thead><tr><th>رقم القضية</th><th>الموضوع</th><th>النوع</th><th>الحالة</th><th>المحامي</th><th>الأتعاب</th></tr></thead>
+        <tbody>
+            {% set status_ar = {'new':'جديدة','active':'نشطة','awaiting_judgment':'منتظرة حكم','suspended':'موقوفة','closed':'مغلقة'} %}
+            {% set type_ar = {'criminal':'جنائية','civil':'مدنية','commercial':'تجارية','administrative':'إدارية','labor':'عمالية','family':'أسرة','enforcement':'تنفيذ'} %}
+            {% for case in cases %}
+            <tr>
+                <td>{{ case.case_number or '-' }}</td>
+                <td>{{ (case.subject or '')[:50] }}</td>
+                <td>{{ type_ar.get(case.case_type, case.case_type) }}</td>
+                <td><span class="badge badge-{{ 'success' if case.status == 'active' else 'danger' if case.status == 'closed' else 'secondary' }}">{{ status_ar.get(case.status, case.status) }}</span></td>
+                <td>{{ case.responsible_lawyer.full_name if case.responsible_lawyer else '-' }}</td>
+                <td>{{ case.fee_amount|int if case.fee_amount else '-' }} ج.م</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+
+<!-- Payments -->
+{% if payments %}
+<section>
+    <h2>المدفوعات ({{ payments|length }})</h2>
+    <table>
+        <thead><tr><th>التاريخ</th><th>المبلغ</th><th>طريقة الدفع</th><th>ملاحظات</th></tr></thead>
+        <tbody>
+            {% for p in payments %}
+            <tr>
+                <td>{{ p.payment_date.strftime('%Y-%m-%d') if p.payment_date else '-' }}</td>
+                <td>{{ p.amount|int }} ج.م</td>
+                <td>{{ p.payment_method or '-' }}</td>
+                <td>{{ p.notes or '' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+
+<!-- POAs -->
+{% if poas %}
+<section>
+    <h2>التوكيلات ({{ poas|length }})</h2>
+    <table>
+        <thead><tr><th>رقم التوكيل</th><th>النوع</th><th>تاريخ الإصدار</th><th>تاريخ الانتهاء</th><th>الحالة</th></tr></thead>
+        <tbody>
+            {% set type_labels = {'general':'عام','special':'خاص','litigation':'تقاضي','real_estate':'عقاري'} %}
+            {% for poa in poas %}
+            {% set cs = poa.computed_status %}
+            <tr>
+                <td>{{ poa.notarization_number or '-' }}</td>
+                <td>{{ type_labels.get(poa.poa_type, poa.poa_type) }}</td>
+                <td>{{ poa.issue_date.strftime('%Y-%m-%d') if poa.issue_date else '-' }}</td>
+                <td>{{ poa.expiry_date.strftime('%Y-%m-%d') if poa.expiry_date else 'غير محدد' }}</td>
+                <td><span class="badge badge-{{ 'danger' if cs == 'expired' else 'warning' if cs == 'expiring_soon' else 'success' }}">{{ 'منتهي' if cs == 'expired' else 'ينتهي قريباً' if cs == 'expiring_soon' else 'ساري' }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+
+<!-- Documents -->
+{% if documents %}
+<section>
+    <h2>المستندات ({{ documents|length }})</h2>
+    <table>
+        <thead><tr><th>اسم الملف</th><th>النوع</th><th>تاريخ الرفع</th></tr></thead>
+        <tbody>
+            {% for doc in documents %}
+            <tr>
+                <td>{{ doc.file_name }}</td>
+                <td>{{ doc.document_type }}</td>
+                <td>{{ doc.created_at.strftime('%Y-%m-%d') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+
+{% if client.internal_notes %}
+<section>
+    <h2>ملاحظات داخلية</h2>
+    <p style="padding: 8px 12px; background:#fafafa; border-right: 3px solid #6c47ff; border-radius:4px;">{{ client.internal_notes }}</p>
+</section>
+{% endif %}
+
+<div class="footer">
+    <span>LexOffice — نظام إدارة مكتب المحاماة</span>
+    <span>طُبع في: {{ now().strftime('%Y-%m-%d %H:%M') if now else '' }}</span>
+</div>
+
+</body>
+</html>

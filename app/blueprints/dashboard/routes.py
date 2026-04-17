@@ -9,6 +9,7 @@ from app.models.task import Task, Appointment
 from app.models.notification import Notification
 from app.models.client import Client
 from app.models.financial import Payment, Invoice, Expense
+from app.models.power_of_attorney import PowerOfAttorney
 
 dashboard_bp = Blueprint('dashboard', __name__, template_folder='../../templates/dashboard')
 
@@ -88,6 +89,12 @@ def index():
         Expense.expense_date >= month_start
     ).scalar()
 
+    # POAs expiring within 30 days or already expired (for alerts)
+    expiring_poas = PowerOfAttorney.query.filter_by(tenant_id=g.tenant_id).filter(
+        PowerOfAttorney.expiry_date.isnot(None),
+        PowerOfAttorney.expiry_date <= today + timedelta(days=30),
+    ).order_by(PowerOfAttorney.expiry_date).limit(5).all()
+
     # Sessions without recorded results
     pending_results = Session.query.filter_by(
         tenant_id=g.tenant_id
@@ -107,4 +114,5 @@ def index():
                            today_appointments=today_appointments,
                            monthly_payments=monthly_payments,
                            monthly_expenses=monthly_expenses,
-                           pending_results=pending_results)
+                           pending_results=pending_results,
+                           expiring_poas=expiring_poas)

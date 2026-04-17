@@ -150,7 +150,8 @@ def edit(id):
         client.client_type = request.form.get('client_type', client.client_type)
         client.national_id = national_id or None
         client.commercial_reg = request.form.get('commercial_reg', '').strip() or None
-        client.date_of_birth = request.form.get('date_of_birth') or None
+        dob_str = request.form.get('date_of_birth', '').strip()
+        client.date_of_birth = datetime.strptime(dob_str, '%Y-%m-%d').date() if dob_str else None
         client.nationality = request.form.get('nationality', '').strip() or None
         client.profession = request.form.get('profession', '').strip() or None
         client.governorate = request.form.get('governorate', '').strip() or None
@@ -183,6 +184,19 @@ def delete(id):
     db.session.commit()
     flash('تم حذف الموكل', 'warning')
     return redirect(url_for('clients.index'))
+
+
+@clients_bp.route('/<int:id>/print')
+@permission_required('clients', 'view')
+def print_profile(id):
+    """Print-friendly client profile with all related data."""
+    client = Client.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
+    cases = client.cases.order_by(db.text('created_at desc')).all()
+    documents = client.documents.order_by(db.text('created_at desc')).all()
+    poas = client.powers_of_attorney.order_by(db.text('created_at desc')).all()
+    payments = client.payments.order_by(db.text('payment_date desc')).all()
+    return render_template('clients/print.html', client=client, cases=cases,
+                           documents=documents, poas=poas, payments=payments)
 
 
 @clients_bp.route('/<int:id>/upload-document', methods=['POST'])

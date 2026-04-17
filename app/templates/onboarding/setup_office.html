@@ -75,10 +75,14 @@
         <div class="field">
             <label>شعار المكتب</label>
             <div class="upload-zone">
-                <input type="file" name="logo" accept="image/*">
-                <i class="bi bi-cloud-arrow-up"></i>
-                <span>اختر صورة أو اسحبها هنا</span>
+                <input type="file" name="logo" accept="image/*" id="onboardingLogo">
+                <i class="bi bi-cloud-arrow-up" id="uploadIcon"></i>
+                <span id="uploadLabel">اختر صورة أو اسحبها هنا</span>
                 <small>PNG أو JPG — الحد الأقصى 2 ميجا</small>
+            </div>
+            <div id="logoOnboardPreview" style="display:none; margin-top:8px;">
+                <img id="logoOnboardImg" src="" alt="معاينة" style="max-height:80px; border-radius:6px; border:1px solid #dee2e6;">
+                <small style="display:block; margin-top:4px; color:#64748b;">تم اختيار الشعار بنجاح ✓</small>
             </div>
         </div>
 
@@ -88,4 +92,18 @@
         </button>
     </form>
 </div>
+
+{% block scripts %}
+<script>
+document.getElementById('onboardingLogo').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const preview = document.getElementById('logoOnboardPreview');
+    const img = document.getElementById('logoOnboardImg');
+    img.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+    document.getElementById('uploadLabel').textContent = file.name;
+});
+</script>
+{% endblock %}
 {% endblock %}

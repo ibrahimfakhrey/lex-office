@@ -6,6 +6,7 @@ from app.utils.decorators import login_required, permission_required
 from app.models.task import Task
 from app.models.case import Case
 from app.models.user import User
+from app.models.client import Client
 
 tasks_bp = Blueprint('tasks', __name__, template_folder='../../templates/tasks')
 
@@ -24,6 +25,15 @@ def index():
     view = request.args.get('view', 'all')  # all, mine, overdue
 
     query = Task.query.filter_by(tenant_id=g.tenant_id)
+
+    # Non-managers only see tasks assigned to or created by them
+    if not (g.current_user.is_manager or g.current_user.is_partner):
+        query = query.filter(
+            db.or_(
+                Task.assigned_to == g.current_user.id,
+                Task.assigned_by == g.current_user.id,
+            )
+        )
 
     if status:
         query = query.filter_by(status=status)
@@ -53,6 +63,7 @@ def create():
         Case.status.in_(['new', 'active'])
     ).order_by(Case.case_number).all()
     lawyers = User.query.filter_by(tenant_id=g.tenant_id, is_active=True).order_by(User.full_name).all()
+    clients = Client.query.filter_by(tenant_id=g.tenant_id, is_active=True).order_by(Client.full_name).all()
 
     if request.method == 'POST':
         errors = []
@@ -68,7 +79,7 @@ def create():
             for e in errors:
                 flash(e, 'danger')
             return render_template('tasks/create.html', cases=cases, lawyers=lawyers,
-                                   form=request.form, priorities=PRIORITIES)
+                                   clients=clients, form=request.form, priorities=PRIORITIES)
 
         deadline = None
         if request.form.get('deadline'):
@@ -91,7 +102,7 @@ def create():
 
     pre_case = request.args.get('case_id', type=int)
     return render_template('tasks/create.html', cases=cases, lawyers=lawyers,
-                           form=request.args, priorities=PRIORITIES, pre_case_id=pre_case)
+                           clients=clients, form=request.args, priorities=PRIORITIES, pre_case_id=pre_case)
 
 
 @tasks_bp.route('/<int:id>')

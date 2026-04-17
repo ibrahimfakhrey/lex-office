@@ -46,7 +46,17 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">شعار المكتب</label>
-                    <input type="file" name="logo" class="form-control" accept="image/*">
+                    {% if tenant.logo_path %}
+                    <div class="mb-2">
+                        <img src="{{ url_for('static', filename=tenant.logo_path) }}" alt="شعار المكتب" style="max-height:80px; border-radius:6px; border:1px solid #dee2e6;">
+                        <small class="text-muted d-block mt-1">الشعار الحالي</small>
+                    </div>
+                    {% endif %}
+                    <input type="file" name="logo" class="form-control" accept="image/*" id="logoInput">
+                    <div id="logoPreview" class="mt-2" style="display:none;">
+                        <img id="logoPreviewImg" src="" alt="معاينة" style="max-height:80px; border-radius:6px; border:1px solid #dee2e6;">
+                        <small class="text-muted d-block mt-1">معاينة الشعار الجديد</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -81,4 +91,17 @@
 
     <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle me-1"></i> حفظ الإعدادات</button>
 </form>
+
+{% block scripts %}
+<script>
+document.getElementById('logoInput').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const preview = document.getElementById('logoPreview');
+    const img = document.getElementById('logoPreviewImg');
+    img.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+});
+</script>
+{% endblock %}
 {% endblock %}

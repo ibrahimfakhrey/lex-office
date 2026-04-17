@@ -11,6 +11,9 @@
         <a href="{{ url_for('clients.edit', id=client.id) }}" class="btn btn-outline-primary btn-sm">
             <i class="bi bi-pencil me-1"></i> تعديل
         </a>
+        <a href="{{ url_for('clients.print_profile', id=client.id) }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-printer me-1"></i> طباعة الملف
+        </a>
         <a href="{{ url_for('clients.index') }}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-right me-1"></i> العودة
         </a>
@@ -193,7 +196,9 @@
                 <ul class="list-unstyled mb-3">
                     {% for doc in documents %}
                     <li class="d-flex justify-content-between align-items-center mb-2">
-                        <span><i class="bi bi-file-earmark-text me-1"></i> {{ doc.file_name }}</span>
+                        <span><i class="bi bi-file-earmark-text me-1"></i>
+                            <span class="filename-cell" title="{{ doc.file_name }}">{{ doc.file_name }}</span>
+                        </span>
                         <small class="text-muted">{{ doc.document_type }}</small>
                     </li>
                     {% endfor %}
@@ -212,12 +217,49 @@
                         </select>
                     </div>
                     <div class="mb-2">
-                        <input type="file" name="file" class="form-control form-control-sm" required>
+                        <input type="file" name="file" class="form-control form-control-sm" id="clientFileInput" required>
+                        <div id="clientFilePreview" class="mt-1" style="display:none;">
+                            <small class="text-muted"><i class="bi bi-file-earmark-check me-1"></i><span id="clientFileName"></span></small>
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-sm btn-outline-primary w-100">
                         <i class="bi bi-upload me-1"></i> رفع مستند
                     </button>
                 </form>
+            </div>
+        </div>
+
+        <!-- Powers of Attorney -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-file-earmark-text me-1"></i> التوكيلات</span>
+                <a href="{{ url_for('poa.create') }}?client_id={{ client.id }}" class="btn btn-sm btn-outline-primary">إضافة توكيل</a>
+            </div>
+            <div class="card-body p-0">
+                {% set poas = client.powers_of_attorney.order_by('created_at').all() %}
+                {% if poas %}
+                <ul class="list-unstyled mb-0">
+                    {% for poa in poas %}
+                    {% set cs = poa.computed_status %}
+                    <li class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                        <div>
+                            <a href="{{ url_for('poa.show', id=poa.id) }}" class="fw-semibold text-decoration-none">
+                                {{ poa.notarization_number or 'توكيل' }} — {{ {'general':'عام','special':'خاص','litigation':'تقاضي','real_estate':'عقاري'}.get(poa.poa_type, poa.poa_type) }}
+                            </a>
+                            {% if poa.file_path %}
+                            <a href="{{ url_for('static', filename=poa.file_path) }}" target="_blank" class="ms-2 text-muted small"><i class="bi bi-paperclip"></i></a>
+                            {% endif %}
+                            <div class="small text-muted">{{ poa.issue_date.strftime('%Y-%m-%d') if poa.issue_date else '' }}</div>
+                        </div>
+                        <span class="badge bg-{{ 'danger' if cs == 'expired' else 'warning' if cs == 'expiring_soon' else 'success' }}">
+                            {{ 'منتهي' if cs == 'expired' else 'ينتهي قريباً' if cs == 'expiring_soon' else 'ساري' }}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="p-3 text-center text-muted small">لا توجد توكيلات</div>
+                {% endif %}
             </div>
         </div>
 
@@ -250,4 +292,20 @@
         </form>
     </div>
 </div>
+
+{% block scripts %}
+<script>
+document.getElementById('clientFileInput').addEventListener('change', function() {
+    const file = this.files[0];
+    const preview = document.getElementById('clientFilePreview');
+    const nameEl = document.getElementById('clientFileName');
+    if (file) {
+        nameEl.textContent = file.name;
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}
 {% endblock %}

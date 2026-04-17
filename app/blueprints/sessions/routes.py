@@ -138,8 +138,19 @@ def record_result(id):
                 )
                 db.session.add(next_sess)
 
+        # When result is judgment, update case status and redirect to record the judgment
+        if sess.result == 'judgment':
+            case = Case.query.get(sess.case_id)
+            if case and case.status not in ('closed',):
+                case.status = 'awaiting_judgment'
+
         db.session.commit()
         flash('تم تسجيل نتيجة الجلسة بنجاح', 'success')
+
+        if sess.result == 'judgment':
+            flash('يرجى تسجيل بيانات الحكم', 'info')
+            return redirect(url_for('judgments.create', case_id=sess.case_id))
+
         return redirect(url_for('sessions.show', id=sess.id))
 
     return render_template('sessions/record_result.html', session=sess, session_results=SESSION_RESULTS)

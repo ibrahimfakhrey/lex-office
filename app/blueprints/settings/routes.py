@@ -38,11 +38,12 @@ def update_office():
     logo = request.files.get('logo')
     if logo and logo.filename:
         filename = secure_filename(logo.filename)
-        upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'logos')
+        upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'logos')
         os.makedirs(upload_dir, exist_ok=True)
-        logo_path = os.path.join(upload_dir, f'tenant_{g.tenant_id}_{filename}')
-        logo.save(logo_path)
-        tenant.logo_path = logo_path
+        logo_filename = f'tenant_{g.tenant_id}_{filename}'
+        logo.save(os.path.join(upload_dir, logo_filename))
+        tenant.logo_path = f'uploads/logos/{logo_filename}'
+        flash('تم رفع الشعار بنجاح', 'success')
 
     db.session.commit()
     flash('تم تحديث إعدادات المكتب بنجاح', 'success')

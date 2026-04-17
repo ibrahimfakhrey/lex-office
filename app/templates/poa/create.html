@@ -7,7 +7,7 @@
     <a href="{{ url_for('poa.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
 </div>
 
-<form method="POST">
+<form method="POST" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="card mb-3">
         <div class="card-header">بيانات التوكيل</div>
@@ -18,7 +18,7 @@
                     <select name="client_id" class="form-select" required>
                         <option value="">-- اختر العميل --</option>
                         {% for c in clients %}
-                        <option value="{{ c.id }}">{{ c.full_name }}</option>
+                        <option value="{{ c.id }}" {% if pre_client_id and c.id == pre_client_id %}selected{% endif %}>{{ c.full_name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -51,6 +51,11 @@
                 <div class="col-md-12">
                     <label class="form-label">نطاق التوكيل</label>
                     <textarea name="scope" class="form-control" rows="3" placeholder="وصف صلاحيات التوكيل..."></textarea>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">صورة / ملف التوكيل</label>
+                    <input type="file" name="poa_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                    <small class="text-muted">PDF أو صورة — سيظهر في ملف الموكل أيضاً</small>
                 </div>
             </div>
         </div>

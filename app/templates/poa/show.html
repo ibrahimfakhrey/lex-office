@@ -65,6 +65,29 @@
         </div>
     </div>
     <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">ملف التوكيل</div>
+            <div class="card-body">
+                {% if poa.file_path %}
+                <div class="mb-3">
+                    {% set ext = poa.file_path.rsplit('.', 1)[-1].lower() %}
+                    {% if ext in ['jpg','jpeg','png'] %}
+                    <img src="{{ url_for('static', filename=poa.file_path) }}" class="img-fluid rounded mb-2" style="max-height:200px;">
+                    {% endif %}
+                    <a href="{{ url_for('static', filename=poa.file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="bi bi-download me-1"></i> تحميل الملف
+                    </a>
+                </div>
+                {% endif %}
+                <form method="POST" action="{{ url_for('poa.upload_file', id=poa.id) }}" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="file" name="poa_file" class="form-control form-control-sm mb-2" accept=".pdf,.jpg,.jpeg,.png">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary w-100">
+                        <i class="bi bi-upload me-1"></i> {{ 'استبدال الملف' if poa.file_path else 'رفع ملف التوكيل' }}
+                    </button>
+                </form>
+            </div>
+        </div>
         <div class="card">
             <div class="card-body small text-muted">
                 <div class="d-flex justify-content-between mb-1">
@@ -77,6 +100,10 @@
                     <a href="{{ url_for('cases.show', id=poa.case.id) }}">{{ poa.case.case_number }}</a>
                 </div>
                 {% endif %}
+                <div class="d-flex justify-content-between">
+                    <span>ملف الموكل</span>
+                    <a href="{{ url_for('clients.show', id=poa.client_id) }}">عرض الموكل</a>
+                </div>
             </div>
         </div>
     </div>

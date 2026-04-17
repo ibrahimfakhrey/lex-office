@@ -8,7 +8,7 @@ from app.models.subscription import SubscriptionPlan
 from app.models.user import User, Role, Invitation
 from app.models.case import Court
 from app.utils.helpers import generate_token
-from app.services.email_service import send_invitation_email
+from app.services.email_service import send_invitation_email, send_subscription_receipt
 
 onboarding_bp = Blueprint('onboarding', __name__, template_folder='../../templates/onboarding')
 
@@ -84,6 +84,15 @@ def choose_plan():
         tenant.subscription_status = 'trial'
         tenant.trial_ends_at = datetime.utcnow() + timedelta(days=14)
         db.session.commit()
+
+        # Send subscription receipt email
+        user = g.current_user
+        send_subscription_receipt(
+            email=user.email,
+            plan_name_ar=plan.name_ar,
+            office_name=tenant.name,
+            trial_ends_at=tenant.trial_ends_at.strftime('%Y-%m-%d'),
+        )
 
         flash(f'تم اختيار خطة {plan.name_ar} - تجربة مجانية 14 يوم', 'success')
         return redirect(url_for('onboarding.invite_team'))

@@ -60,7 +60,8 @@ class Case(db.Model):
 
     @property
     def total_paid(self):
-        return sum(p.amount for p in self.case_payments)
+        payments_sum = sum(p.amount for p in self.case_payments)
+        return payments_sum + (self.retainer_paid or 0)
 
     @property
     def total_expenses(self):

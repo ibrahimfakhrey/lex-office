@@ -34,13 +34,24 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">القضية</label>
-                    <select name="case_id" class="form-select">
-                        <option value="">-- اختياري --</option>
-                        {% for c in cases %}
-                        <option value="{{ c.id }}" {% if form.get('case_id', pre_case_id|string if pre_case_id else '') == c.id|string %}selected{% endif %}>{{ c.case_number or '-' }} - {{ c.subject[:30] if c.subject else '' }}</option>
+                <div class="col-md-3">
+                    <label class="form-label">الموكل</label>
+                    <select id="taskClientPicker" class="form-select">
+                        <option value="">— اختر الموكل —</option>
+                        {% for cl in clients %}
+                        <option value="{{ cl.id }}">{{ cl.full_name }}</option>
                         {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">القضية</label>
+                    <select name="case_id" id="taskCasePicker" class="form-select">
+                        <option value="">-- اختياري --</option>
+                        {% if pre_case_id %}
+                        {% for c in cases %}
+                        {% if c.id == pre_case_id %}<option value="{{ c.id }}" selected>{{ c.case_number or '-' }} — {{ (c.subject or '')[:30] }}</option>{% endif %}
+                        {% endfor %}
+                        {% endif %}
                     </select>
                 </div>
                 <div class="col-md-6">
@@ -59,4 +70,25 @@
         <a href="{{ url_for('tasks.index') }}" class="btn btn-outline-secondary">إلغاء</a>
     </div>
 </form>
+
+{% block scripts %}
+<script>
+document.getElementById('taskClientPicker').addEventListener('change', async function () {
+    const clientId = this.value;
+    const casePicker = document.getElementById('taskCasePicker');
+    casePicker.innerHTML = '<option value="">-- جارٍ التحميل... --</option>';
+
+    if (!clientId) {
+        casePicker.innerHTML = '<option value="">-- اختياري --</option>';
+        return;
+    }
+
+    const res  = await fetch(`/cases/api/by-client/${clientId}`);
+    const data = await res.json();
+
+    casePicker.innerHTML = '<option value="">-- اختر القضية --</option>' +
+        (data.length ? data.map(c => `<option value="${c.id}">${c.label}</option>`).join('') : '<option value="">لا توجد قضايا</option>');
+});
+</script>
+{% endblock %}
 {% endblock %}

@@ -323,4 +323,34 @@
 
 </div>
 
+<!-- ── POA Expiry Alert ── -->
+{% if expiring_poas %}
+<div class="dash-card mt-3">
+    <div class="dash-card-head">
+        <div class="head-label"><i class="bi bi-file-earmark-x-fill" style="color:#f87171;"></i> توكيلات تنتهي قريباً أو منتهية</div>
+        <a href="{{ url_for('poa.index') }}" style="font-size:0.75rem;color:#a78bfa;text-decoration:none;">عرض الكل</a>
+    </div>
+    <ul class="dash-list">
+        {% for poa in expiring_poas %}
+        {% set days = poa.days_until_expiry %}
+        <li class="dash-list-item">
+            <div>
+                <div class="item-main">
+                    <a href="{{ url_for('poa.show', id=poa.id) }}" style="color:inherit;text-decoration:none;">
+                        {{ poa.client.full_name if poa.client else '-' }} — {{ poa.notarization_number or 'توكيل' }}
+                    </a>
+                </div>
+                <div class="item-sub">انتهاء: {{ poa.expiry_date.strftime('%Y-%m-%d') }}</div>
+            </div>
+            {% if days is not none and days < 0 %}
+            <span class="item-badge" style="background:rgba(239,68,68,0.2);color:#f87171;">منتهي منذ {{ (-days) }} يوم</span>
+            {% elif days is not none %}
+            <span class="item-badge" style="background:rgba(245,158,11,0.15);color:#fbbf24;">{{ days }} يوم متبقي</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
 {% endblock %}

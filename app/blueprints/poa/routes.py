@@ -1,6 +1,8 @@
 """Power of Attorney management routes."""
+import os
 from datetime import datetime
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g, send_file, current_app
+from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.utils.decorators import login_required, role_required, permission_required, manager_only
 from app.models.power_of_attorney import PowerOfAttorney
@@ -37,11 +39,45 @@ def create():
             notary_office=request.form.get('notary_office', '').strip(),
         )
         db.session.add(poa)
+        db.session.flush()  # get poa.id before saving file
+
+        # Handle POA file upload
+        file = request.files.get('poa_file')
+        if file and file.filename:
+            filename = secure_filename(file.filename)
+            upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'poa', str(g.tenant_id))
+            os.makedirs(upload_dir, exist_ok=True)
+            saved_name = f'poa_{poa.id}_{filename}'
+            file.save(os.path.join(upload_dir, saved_name))
+            poa.file_path = f'uploads/poa/{g.tenant_id}/{saved_name}'
+
         db.session.commit()
         flash('تم إضافة التوكيل بنجاح', 'success')
         return redirect(url_for('poa.show', id=poa.id))
 
-    return render_template('poa/create.html', clients=clients)
+    pre_client = request.args.get('client_id', type=int)
+    return render_template('poa/create.html', clients=clients, pre_client_id=pre_client)
+
+
+@poa_bp.route('/<int:id>/upload-file', methods=['POST'])
+@login_required
+def upload_file(id):
+    """Upload or replace the POA document file."""
+    poa = PowerOfAttorney.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
+    file = request.files.get('poa_file')
+    if not file or not file.filename:
+        flash('يرجى اختيار ملف', 'danger')
+        return redirect(url_for('poa.show', id=poa.id))
+
+    filename = secure_filename(file.filename)
+    upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'poa', str(g.tenant_id))
+    os.makedirs(upload_dir, exist_ok=True)
+    saved_name = f'poa_{poa.id}_{filename}'
+    file.save(os.path.join(upload_dir, saved_name))
+    poa.file_path = f'uploads/poa/{g.tenant_id}/{saved_name}'
+    db.session.commit()
+    flash('تم رفع ملف التوكيل بنجاح', 'success')
+    return redirect(url_for('poa.show', id=poa.id))
 
 
 @poa_bp.route('/<int:id>')

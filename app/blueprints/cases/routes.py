@@ -1,6 +1,6 @@
 """Case management routes: Full CRUD with RBAC, filters, and case lifecycle."""
 from datetime import datetime
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g, jsonify
 from app.extensions import db
 from app.utils.decorators import login_required, permission_required
 from app.models.case import Case, Court
@@ -37,6 +37,18 @@ def _get_form_context():
         case_types=CASE_TYPES, statuses=CASE_STATUSES, priorities=PRIORITIES,
         capacities=CAPACITIES, fee_types=FEE_TYPES, payment_schedules=PAYMENT_SCHEDULES,
     )
+
+
+@cases_bp.route('/api/by-client/<int:client_id>')
+@permission_required('cases', 'view')
+def api_by_client(client_id):
+    """Return JSON list of cases for a given client (used by cascading dropdowns)."""
+    cases = Case.query.filter_by(tenant_id=g.tenant_id, client_id=client_id).order_by(Case.case_number).all()
+    return jsonify([{
+        'id': c.id,
+        'label': f"{c.case_number or '-'} — {(c.subject or '')[:40]}",
+        'client_id': c.client_id,
+    } for c in cases])
 
 
 @cases_bp.route('/')

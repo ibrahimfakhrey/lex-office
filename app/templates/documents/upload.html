@@ -36,21 +36,24 @@
                     <input type="date" name="doc_date" class="form-control" dir="ltr" value="{{ form.get('doc_date', '') }}">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">القضية</label>
-                    <select name="case_id" class="form-select">
-                        <option value="">-- اختياري --</option>
-                        {% for c in cases %}
-                        <option value="{{ c.id }}" {% if form.get('case_id', pre_case_id|string if pre_case_id else '') == c.id|string %}selected{% endif %}>{{ c.case_number or '-' }} - {{ c.subject[:30] if c.subject else '' }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-6">
                     <label class="form-label">الموكل</label>
-                    <select name="client_id" class="form-select">
-                        <option value="">-- اختياري --</option>
+                    <select id="docClientPicker" class="form-select">
+                        <option value="">-- اختر الموكل أولاً --</option>
                         {% for cl in clients %}
                         <option value="{{ cl.id }}" {% if form.get('client_id', pre_client_id|string if pre_client_id else '') == cl.id|string %}selected{% endif %}>{{ cl.full_name }}</option>
                         {% endfor %}
+                    </select>
+                    <input type="hidden" name="client_id" id="docClientHidden" value="{{ form.get('client_id', pre_client_id or '') }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">القضية</label>
+                    <select name="case_id" id="docCasePicker" class="form-select">
+                        <option value="">-- اختياري --</option>
+                        {% if form.get('case_id') or pre_case_id %}
+                        {% for c in cases %}
+                        <option value="{{ c.id }}" {% if form.get('case_id', pre_case_id|string if pre_case_id else '') == c.id|string %}selected{% endif %}>{{ c.case_number or '-' }} — {{ (c.subject or '')[:30] }}</option>
+                        {% endfor %}
+                        {% endif %}
                     </select>
                 </div>
                 <div class="col-md-12">
@@ -65,4 +68,32 @@
         <a href="{{ url_for('documents.index') }}" class="btn btn-outline-secondary">إلغاء</a>
     </div>
 </form>
+
+{% block scripts %}
+<script>
+const docClient = document.getElementById('docClientPicker');
+const docCase   = document.getElementById('docCasePicker');
+const docHidden = document.getElementById('docClientHidden');
+
+docClient.addEventListener('change', async function () {
+    const clientId = this.value;
+    docHidden.value = clientId;
+    docCase.innerHTML = '<option value="">-- جارٍ التحميل... --</option>';
+
+    if (!clientId) {
+        docCase.innerHTML = '<option value="">-- اختياري --</option>';
+        return;
+    }
+
+    const res  = await fetch(`/cases/api/by-client/${clientId}`);
+    const data = await res.json();
+
+    docCase.innerHTML = '<option value="">-- اختر القضية --</option>' +
+        (data.length ? data.map(c => `<option value="${c.id}">${c.label}</option>`).join('') : '<option value="">لا توجد قضايا</option>');
+});
+
+// Pre-trigger if client already selected (re-render after validation error)
+if (docClient.value) docClient.dispatchEvent(new Event('change'));
+</script>
+{% endblock %}
 {% endblock %}

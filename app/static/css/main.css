@@ -729,3 +729,13 @@ hr {
     .sidebar, #sidebar, .topbar { display: none !important; }
     .main-content { margin: 0 !important; }
 }
+
+/* ─── File name truncation ───────────────── */
+.filename-cell {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: middle;
+}

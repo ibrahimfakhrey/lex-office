@@ -57,6 +57,26 @@ def send_invitation_email(email, invite_token, office_name, role_name):
     return send_email(email, subject, html)
 
 
+def send_subscription_receipt(email, plan_name_ar, office_name, trial_ends_at):
+    """Send subscription selection confirmation email."""
+    subject = f'تأكيد اشتراكك في LexOffice - {plan_name_ar}'
+    html = f"""
+    <div dir="rtl" style="font-family: Tajawal, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #2563eb;">LexOffice</h2>
+        <p>مرحباً،</p>
+        <p>تم اختيار خطة <strong>{plan_name_ar}</strong> بنجاح لمكتب <strong>{office_name}</strong>.</p>
+        <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin:0;"><strong>تفاصيل الاشتراك:</strong></p>
+            <p style="margin:8px 0 0;">الخطة: {plan_name_ar}</p>
+            <p style="margin:4px 0 0;">الفترة التجريبية تنتهي في: {trial_ends_at}</p>
+        </div>
+        <p>يمكنك البدء في استخدام النظام الآن. سيتم التواصل معك قبل انتهاء الفترة التجريبية.</p>
+        <p style="color: #64748b; font-size: 14px;">شكراً لاختيارك LexOffice.</p>
+    </div>
+    """
+    return send_email(email, subject, html)
+
+
 def send_password_reset_email(email, reset_token, name=''):
     """Send password reset email."""
     from flask import url_for
