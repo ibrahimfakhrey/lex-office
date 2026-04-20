@@ -14,7 +14,8 @@
     <div class="card-body py-2">
         <form method="GET" class="row g-2 align-items-center">
             <div class="col-md-5">
-                <input type="text" name="search" class="form-control" placeholder="بحث بالاسم، رقم الموكل، الرقم القومي، الهاتف..." value="{{ search }}">
+                <label for="clientSearch" class="visually-hidden">بحث في الموكلين</label>
+                <input type="text" name="search" id="clientSearch" class="form-control" placeholder="بحث بالاسم، رقم الموكل، الرقم القومي، الهاتف..." value="{{ search }}">
             </div>
             <div class="col-md-2">
                 <select name="type" class="form-select">
@@ -88,9 +89,9 @@
                         </td>
                         <td>
                             {% if client.is_active %}
-                            <span class="status-dot status-active"></span> نشط
+                            <span class="badge bg-success">نشط</span>
                             {% else %}
-                            <span class="status-dot status-closed"></span> غير نشط
+                            <span class="badge bg-secondary">غير نشط</span>
                             {% endif %}
                         </td>
                         <td>

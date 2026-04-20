@@ -82,16 +82,17 @@ def upload():
         if not name:
             name = filename
 
-        upload_base = current_app.config.get('UPLOAD_FOLDER') or os.path.join(current_app.root_path, 'static', 'uploads')
-        upload_dir = os.path.join(upload_base, 'documents', str(g.tenant_id))
+        upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'documents', str(g.tenant_id))
         os.makedirs(upload_dir, exist_ok=True)
         timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
         saved_filename = f'{timestamp}_{filename}'
-        file_path = os.path.join(upload_dir, saved_filename)
-        file.save(file_path)
+        abs_path = os.path.join(upload_dir, saved_filename)
+        file.save(abs_path)
 
         file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
-        file_size = os.path.getsize(file_path)
+        file_size = os.path.getsize(abs_path)
+        # Store relative path for url_for('static', filename=...)
+        file_path = f'uploads/documents/{g.tenant_id}/{saved_filename}'
 
         doc_date = None
         if request.form.get('doc_date'):
@@ -112,6 +113,20 @@ def upload():
         )
         db.session.add(document)
         db.session.commit()
+
+        from app.services.notification_service import notify_tenant_users
+        notify_tenant_users(
+            tenant_id=g.tenant_id,
+            notification_type='document_uploaded',
+            title=f'تم رفع مستند جديد: {name}',
+            body=f'النوع: {doc_type}',
+            related_type='document',
+            related_id=document.id,
+            actor_name=g.current_user.full_name,
+            exclude_user_id=g.current_user.id,
+        )
+        db.session.commit()
+
         flash('تم رفع المستند بنجاح', 'success')
         return redirect(url_for('documents.show', id=document.id))
 
@@ -136,8 +151,13 @@ def show(id):
 def download(id):
     """Download a document file."""
     document = Document.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
-    if os.path.exists(document.file_path):
-        return send_file(document.file_path, as_attachment=True,
+    # Support both relative (new) and absolute (legacy) paths
+    if os.path.isabs(document.file_path):
+        abs_path = document.file_path
+    else:
+        abs_path = os.path.join(current_app.root_path, 'static', document.file_path)
+    if os.path.exists(abs_path):
+        return send_file(abs_path, as_attachment=True,
                          download_name=f'{document.name}.{document.file_type}')
     flash('الملف غير موجود', 'danger')
     return redirect(url_for('documents.show', id=document.id))
@@ -162,7 +182,11 @@ def shared_view(token):
     document = Document.query.filter_by(share_token=token).first_or_404()
     if not document.is_share_active:
         return render_template('documents/shared_expired.html'), 410
-    return send_file(document.file_path, as_attachment=False, download_name=document.name)
+    if os.path.isabs(document.file_path):
+        abs_path = document.file_path
+    else:
+        abs_path = os.path.join(current_app.root_path, 'static', document.file_path)
+    return send_file(abs_path, as_attachment=False, download_name=document.name)
 
 
 @documents_bp.route('/<int:id>/delete', methods=['POST'])
@@ -171,11 +195,16 @@ def delete(id):
     """Delete a document."""
     document = Document.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
     # Try to delete the file
-    if document.file_path and os.path.exists(document.file_path):
-        try:
-            os.remove(document.file_path)
-        except OSError:
-            pass
+    if document.file_path:
+        if os.path.isabs(document.file_path):
+            abs_path = document.file_path
+        else:
+            abs_path = os.path.join(current_app.root_path, 'static', document.file_path)
+        if os.path.exists(abs_path):
+            try:
+                os.remove(abs_path)
+            except OSError:
+                pass
     db.session.delete(document)
     db.session.commit()
     flash('تم حذف المستند', 'warning')

@@ -3,8 +3,21 @@ import os
 import secrets
 import uuid
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from werkzeug.utils import secure_filename
 from flask import current_app
+
+EGYPT_TZ = ZoneInfo('Africa/Cairo')
+
+
+def egypt_today():
+    """Return today's date in Egypt timezone (Africa/Cairo)."""
+    return datetime.now(EGYPT_TZ).date()
+
+
+def egypt_now():
+    """Return current datetime in Egypt timezone."""
+    return datetime.now(EGYPT_TZ)
 
 
 def generate_otp():

@@ -81,6 +81,19 @@ def create():
         db.session.add(enforcement)
         db.session.commit()
 
+        from app.services.notification_service import notify_tenant_users
+        notify_tenant_users(
+            tenant_id=g.tenant_id,
+            notification_type='general',
+            title=f'تم إضافة ملف تنفيذ جديد: {enforcement.enforcement_number or "-"}',
+            body=f'المبلغ: {total_amount} ج.م',
+            related_type='enforcement',
+            related_id=enforcement.id,
+            actor_name=g.current_user.full_name,
+            exclude_user_id=g.current_user.id,
+        )
+        db.session.commit()
+
         flash('تم إضافة ملف التنفيذ بنجاح', 'success')
         return redirect(url_for('enforcement.show', id=enforcement.id))
 
@@ -126,6 +139,21 @@ def add_collection(id):
         enforcement.status = 'completed'
 
     db.session.commit()
+
+    from app.services.notification_service import notify_tenant_users
+    notify_tenant_users(
+        tenant_id=g.tenant_id,
+        notification_type='payment_received',
+        title=f'تم تحصيل مبلغ {amount} ج.م',
+        body=f'ملف التنفيذ: {enforcement.enforcement_number or "-"}',
+        priority='success',
+        related_type='enforcement',
+        related_id=enforcement.id,
+        actor_name=g.current_user.full_name,
+        exclude_user_id=g.current_user.id,
+    )
+    db.session.commit()
+
     flash('تم إضافة التحصيل بنجاح', 'success')
     return redirect(url_for('enforcement.show', id=enforcement.id))
 

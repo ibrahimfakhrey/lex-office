@@ -104,13 +104,21 @@ def _register_context_processors(app):
     @app.context_processor
     def inject_globals():
         from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+        from app.utils.helpers import egypt_today
         current_user = None
+        unread_count = 0
         try:
             verify_jwt_in_request(optional=True)
             user_id = get_jwt_identity()
             if user_id:
                 from app.models.user import User
                 current_user = User.query.get(int(user_id))
+                if current_user:
+                    from app.models.notification import Notification
+                    unread_count = Notification.query.filter_by(
+                        user_id=current_user.id, is_read=False
+                    ).count()
         except Exception:
             pass
-        return dict(current_user=current_user, now=datetime.utcnow)
+        return dict(current_user=current_user, now=datetime.utcnow,
+                    today=egypt_today(), unread_count=unread_count)

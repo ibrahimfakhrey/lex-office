@@ -3,6 +3,7 @@ from datetime import datetime, date
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from app.extensions import db
 from app.utils.decorators import login_required, permission_required
+from app.utils.helpers import egypt_today
 from app.models.task import Task
 from app.models.case import Case
 from app.models.user import User
@@ -52,7 +53,7 @@ def index():
 
     return render_template('tasks/index.html', tasks=tasks, status=status, priority=priority,
                            assigned_to=assigned_to, view=view, priorities=PRIORITIES,
-                           statuses=STATUSES, lawyers=lawyers, today=date.today())
+                           statuses=STATUSES, lawyers=lawyers, today=egypt_today())
 
 
 @tasks_bp.route('/create', methods=['GET', 'POST'])
@@ -97,6 +98,21 @@ def create():
         )
         db.session.add(task)
         db.session.commit()
+
+        from app.services.notification_service import notify_tenant_users
+        notify_tenant_users(
+            tenant_id=g.tenant_id,
+            notification_type='task_assigned',
+            title=f'تم إنشاء مهمة جديدة: {task.title}',
+            body=f'الأولوية: {task.priority} — الموعد: {task.deadline.strftime("%Y-%m-%d %H:%M") if task.deadline else "غير محدد"}',
+            priority='important' if task.priority == 'urgent' else 'info',
+            related_type='task',
+            related_id=task.id,
+            actor_name=g.current_user.full_name,
+            exclude_user_id=g.current_user.id,
+        )
+        db.session.commit()
+
         flash('تم إنشاء المهمة بنجاح', 'success')
         return redirect(url_for('tasks.show', id=task.id))
 
@@ -157,6 +173,20 @@ def update_status(id):
     if new_status in valid_statuses:
         task.status = new_status
         db.session.commit()
+
+        from app.services.notification_service import notify_tenant_users
+        notify_tenant_users(
+            tenant_id=g.tenant_id,
+            notification_type='general',
+            title=f'تم تحديث حالة المهمة: {task.title}',
+            body=f'الحالة الجديدة: {valid_statuses[new_status]}',
+            related_type='task',
+            related_id=task.id,
+            actor_name=g.current_user.full_name,
+            exclude_user_id=g.current_user.id,
+        )
+        db.session.commit()
+
         flash('تم تحديث حالة المهمة', 'success')
     else:
         flash('حالة غير صالحة', 'danger')

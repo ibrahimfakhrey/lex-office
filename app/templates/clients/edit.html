@@ -140,7 +140,8 @@
     <div class="card mb-3">
         <div class="card-header">ملاحظات داخلية</div>
         <div class="card-body">
-            <textarea name="internal_notes" class="form-control" rows="3">{{ client.internal_notes or '' }}</textarea>
+            <label class="form-label" for="internal_notes">ملاحظات داخلية</label>
+            <textarea name="internal_notes" id="internal_notes" class="form-control" rows="3">{{ client.internal_notes or '' }}</textarea>
         </div>
     </div>
 

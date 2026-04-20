@@ -17,27 +17,40 @@
     <!-- Flatpickr -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=4">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <div class="d-flex" id="app-wrapper">
         <!-- Sidebar -->
-        <nav id="sidebar" class="sidebar bg-dark text-white vh-100 position-fixed" style="width: 260px; z-index: 1040;">
-            <div class="p-3 border-bottom border-secondary">
+        <nav id="sidebar" class="sidebar bg-dark text-white position-fixed d-flex flex-column" style="width: 260px; height: 100vh; z-index: 1040;" role="navigation" aria-label="القائمة الرئيسية">
+            <!-- Brand -->
+            <div class="p-3 border-bottom border-secondary flex-shrink-0">
                 <h5 class="mb-0 fw-bold">
+                    {% if current_user and current_user.tenant and current_user.tenant.logo_path %}
+                    <img src="{{ url_for('static', filename=current_user.tenant.logo_path) }}"
+                         alt="شعار المكتب" style="max-height:36px; max-width:180px;" class="me-2" loading="lazy">
+                    {% else %}
                     <i class="bi bi-briefcase-fill me-2"></i>LexOffice
+                    {% endif %}
                 </h5>
-                <small class="text-muted">نظام إدارة مكتب المحاماة</small>
+                <small class="text-muted">{{ current_user.tenant.name if current_user and current_user.tenant else 'نظام إدارة مكتب المحاماة' }}</small>
             </div>
 
+            <!-- User Info -->
             {% if current_user %}
-            <div class="p-3 border-bottom border-secondary">
+            <div class="p-3 border-bottom border-secondary flex-shrink-0">
                 <div class="d-flex align-items-center">
+                    {% if current_user.avatar_path %}
+                    <img src="{{ url_for('static', filename=current_user.avatar_path) }}"
+                         alt="صورة" class="rounded-circle me-2"
+                         style="width: 36px; height: 36px; object-fit: cover;" loading="lazy">
+                    {% else %}
                     <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2"
                          style="width: 36px; height: 36px;">
                         <span class="text-white fw-bold">{{ current_user.full_name[0] }}</span>
                     </div>
+                    {% endif %}
                     <div>
                         <div class="small fw-semibold">{{ current_user.full_name }}</div>
                         <div class="small text-muted">{{ current_user.role.name_ar if current_user.role else '' }}</div>
@@ -51,36 +64,50 @@
             {% if has_perm %}
             <li class="nav-item">
                 <a class="nav-link text-white {{ 'active bg-primary rounded' if request.path.startswith(path) }}"
-                   href="{{ url }}">
+                   href="{{ url }}"{% if request.path.startswith(path) %} aria-current="page"{% endif %}>
                     <i class="bi bi-{{ icon }} me-2"></i> {{ label }}
                 </a>
             </li>
             {% endif %}
             {% endmacro %}
 
-            <ul class="nav flex-column p-2">
-                {{ nav_item('/dashboard', url_for('dashboard.index'), 'grid-1x2-fill', 'لوحة التحكم', 'dashboard') }}
-                {{ nav_item('/clients', url_for('clients.index'), 'people-fill', 'الموكلون', 'clients') }}
-                {{ nav_item('/cases', url_for('cases.index'), 'folder-fill', 'القضايا', 'cases') }}
-                {{ nav_item('/sessions', url_for('sessions.index'), 'calendar-event-fill', 'الجلسات والتقويم', 'sessions') }}
-                {{ nav_item('/judgments', url_for('judgments.index'), 'bank2', 'سجل الأحكام', 'judgments') }}
-                {{ nav_item('/enforcement', url_for('enforcement.index'), 'lightning-fill', 'متابعة التنفيذ', 'enforcement') }}
-                {{ nav_item('/poa', url_for('poa.index'), 'file-earmark-text-fill', 'التوكيلات', 'poa') }}
-                {{ nav_item('/financial', url_for('financial.index'), 'cash-stack', 'النظام المالي', 'financial') }}
-                {{ nav_item('/tasks', url_for('tasks.index'), 'check2-square', 'المهام والمواعيد', 'tasks') }}
-                {{ nav_item('/documents', url_for('documents.index'), 'file-earmark-arrow-up-fill', 'المستندات', 'documents') }}
-                {{ nav_item('/templates', url_for('templates_legal.index'), 'file-ruled-fill', 'النماذج القانونية', 'templates') }}
+            <!-- Navigation (scrollable) -->
+            <div class="flex-grow-1 overflow-auto">
+                <ul class="nav flex-column p-2">
+                    {{ nav_item('/dashboard', url_for('dashboard.index'), 'grid-1x2-fill', 'لوحة التحكم', 'dashboard') }}
+                    {{ nav_item('/clients', url_for('clients.index'), 'people-fill', 'الموكلون', 'clients') }}
+                    {{ nav_item('/cases', url_for('cases.index'), 'folder-fill', 'القضايا', 'cases') }}
+                    {{ nav_item('/sessions', url_for('sessions.index'), 'calendar-event-fill', 'الجلسات والتقويم', 'sessions') }}
+                    {{ nav_item('/judgments', url_for('judgments.index'), 'bank2', 'سجل الأحكام', 'judgments') }}
+                    {{ nav_item('/enforcement', url_for('enforcement.index'), 'lightning-fill', 'متابعة التنفيذ', 'enforcement') }}
+                    {{ nav_item('/poa', url_for('poa.index'), 'file-earmark-text-fill', 'التوكيلات', 'poa') }}
+                    {{ nav_item('/financial', url_for('financial.index'), 'cash-stack', 'النظام المالي', 'financial') }}
+                    {{ nav_item('/tasks', url_for('tasks.index'), 'check2-square', 'المهام والمواعيد', 'tasks') }}
+                    {{ nav_item('/documents', url_for('documents.index'), 'file-earmark-arrow-up-fill', 'المستندات', 'documents') }}
+                    {{ nav_item('/templates', url_for('templates_legal.index'), 'file-ruled-fill', 'النماذج القانونية', 'templates') }}
 
-                {% if g.current_user.has_permission('reports', 'view')[0] or g.current_user.has_permission('settings', 'view')[0] %}
-                <li class="nav-item mt-3">
-                    <small class="text-muted px-3">إدارة</small>
-                </li>
-                {% endif %}
-                {{ nav_item('/reports', url_for('reports.index'), 'graph-up', 'التقارير', 'reports') }}
-                {{ nav_item('/settings', url_for('settings.index'), 'gear-fill', 'الإعدادات', 'settings') }}
-            </ul>
+                    {% if g.current_user.has_permission('reports', 'view')[0] or g.current_user.has_permission('settings', 'view')[0] %}
+                    <li class="nav-item mt-3">
+                        <small class="text-muted px-3">إدارة</small>
+                    </li>
+                    {% endif %}
+                    {{ nav_item('/reports', url_for('reports.index'), 'graph-up', 'التقارير', 'reports') }}
+                    {{ nav_item('/settings', url_for('settings.index'), 'gear-fill', 'الإعدادات', 'settings') }}
 
-            <div class="position-absolute bottom-0 w-100 p-3 border-top border-secondary">
+                    <li class="nav-item">
+                        <a class="nav-link text-white d-flex align-items-center {{ 'active bg-primary rounded' if request.path.startswith('/notifications') }}"
+                           href="{{ url_for('notifications.index') }}"{% if request.path.startswith('/notifications') %} aria-current="page"{% endif %}>
+                            <i class="bi bi-bell-fill me-2"></i> الإشعارات
+                            {% if unread_count > 0 %}
+                            <span class="badge bg-danger rounded-pill ms-auto">{{ unread_count if unread_count < 100 else '99+' }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Footer (always at bottom, never overlaps) -->
+            <div class="p-3 border-top border-secondary flex-shrink-0">
                 <div class="d-flex justify-content-between align-items-center">
                     <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light btn-sm">
                         <i class="bi bi-box-arrow-right me-1"></i> خروج
@@ -88,11 +115,13 @@
                     <button class="btn btn-outline-light btn-sm" id="darkModeToggle" title="الوضع الداكن">
                         <i class="bi bi-moon-fill"></i>
                     </button>
-                    <a href="{{ url_for('notifications.index') }}" class="btn btn-outline-light btn-sm position-relative">
+                    <a href="{{ url_for('notifications.index') }}" class="btn btn-outline-light btn-sm position-relative" title="الإشعارات">
                         <i class="bi bi-bell-fill"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge d-none">
-                            0
+                        {% if unread_count > 0 %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.6rem;">
+                            {{ unread_count if unread_count < 100 else '99+' }}
                         </span>
+                        {% endif %}
                     </a>
                 </div>
             </div>
@@ -106,7 +135,7 @@
             <!-- Top Bar -->
             <div class="bg-white border-bottom px-3 py-2 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-sm btn-outline-secondary d-md-none" id="sidebarToggle">
+                    <button class="btn btn-sm btn-outline-secondary d-md-none" id="sidebarToggle" aria-label="فتح القائمة الجانبية">
                         <i class="bi bi-list"></i>
                     </button>
                     <h5 class="mb-0">{% block page_title %}{% endblock %}</h5>
@@ -123,7 +152,7 @@
                 {% for category, message in messages %}
                 <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
                     {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="إغلاق"></button>
                 </div>
                 {% endfor %}
                 {% endif %}

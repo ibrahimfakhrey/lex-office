@@ -14,7 +14,8 @@
     <div class="card-body py-2">
         <form method="GET" class="row g-2 align-items-center">
             <div class="col-md-3">
-                <input type="text" name="search" class="form-control" placeholder="بحث برقم القضية، الموضوع، الخصم..." value="{{ search }}">
+                <label for="caseSearch" class="visually-hidden">بحث في القضايا</label>
+                <input type="text" name="search" id="caseSearch" class="form-control" placeholder="بحث برقم القضية، الموضوع، الخصم..." value="{{ search }}">
             </div>
             <div class="col-md-2">
                 <select name="status" class="form-select">

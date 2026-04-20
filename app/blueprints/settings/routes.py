@@ -158,11 +158,11 @@ def profile():
         avatar = request.files.get('avatar')
         if avatar and avatar.filename:
             filename = secure_filename(avatar.filename)
-            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'avatars')
+            upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'avatars')
             os.makedirs(upload_dir, exist_ok=True)
-            avatar_path = os.path.join(upload_dir, f'user_{user.id}_{filename}')
-            avatar.save(avatar_path)
-            user.avatar_path = avatar_path
+            avatar_filename = f'user_{user.id}_{filename}'
+            avatar.save(os.path.join(upload_dir, avatar_filename))
+            user.avatar_path = f'uploads/avatars/{avatar_filename}'
 
         db.session.commit()
         flash('تم تحديث الملف الشخصي', 'success')

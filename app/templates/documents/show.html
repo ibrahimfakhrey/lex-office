@@ -115,6 +115,19 @@
     </div>
 
     <div class="col-md-4">
+        <!-- Image Preview -->
+        {% if document.file_path and document.file_type in ['jpg','jpeg','png'] %}
+        <div class="card mb-3">
+            <div class="card-header">معاينة</div>
+            <div class="card-body text-center">
+                {% if document.file_path.startswith('uploads/') %}
+                <img src="{{ url_for('static', filename=document.file_path) }}"
+                     class="img-fluid rounded" style="max-height:300px;" alt="معاينة المستند" loading="lazy">
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         <div class="card">
             <div class="card-body small text-muted">
                 <div class="d-flex justify-content-between mb-1">

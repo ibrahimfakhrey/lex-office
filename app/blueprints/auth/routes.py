@@ -136,6 +136,35 @@ def verify_otp(user_id):
     return render_template('auth/verify_otp.html', user_id=user_id)
 
 
+@auth_bp.route('/resend-otp/<int:user_id>', methods=['POST'])
+@limiter.limit("3 per hour")
+def resend_otp(user_id):
+    """Resend OTP code to user's email."""
+    user = User.query.get_or_404(user_id)
+
+    # Prevent spamming: don't resend if last OTP was sent less than 60 seconds ago
+    if user.otp_expires_at:
+        remaining = (user.otp_expires_at - datetime.utcnow()).total_seconds()
+        if remaining > 540:  # 9 minutes = was sent less than 1 min ago
+            flash('يرجى الانتظار قبل إعادة الإرسال', 'warning')
+            return redirect(url_for('auth.verify_otp', user_id=user_id))
+
+    # Revoke old OTP and generate new one
+    otp = generate_otp()
+    user.otp_code = otp
+    user.otp_expires_at = datetime.utcnow() + timedelta(minutes=10)
+    user.otp_attempts = 0
+    db.session.commit()
+
+    sent = send_otp_email(user.email, otp, user.full_name)
+    if sent:
+        flash('تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني', 'success')
+    else:
+        flash(f'تم إنشاء رمز تحقق جديد (للتطوير: {otp})', 'info')
+
+    return redirect(url_for('auth.verify_otp', user_id=user_id))
+
+
 @auth_bp.route('/login', methods=['GET', 'POST'])
 @limiter.limit("30 per hour")
 def login():

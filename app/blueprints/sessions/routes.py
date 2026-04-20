@@ -3,6 +3,7 @@ from datetime import datetime, date, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from app.extensions import db
 from app.utils.decorators import login_required, permission_required
+from app.utils.helpers import egypt_today
 from app.models.session import Session
 from app.models.case import Case, Court
 from app.models.user import User
@@ -36,16 +37,16 @@ def index():
     elif status == 'completed':
         query = query.filter(Session.result.isnot(None))
     elif status == 'today':
-        query = query.filter(Session.session_date == date.today())
+        query = query.filter(Session.session_date == egypt_today())
     elif status == 'upcoming':
-        query = query.filter(Session.session_date > date.today())
+        query = query.filter(Session.session_date > egypt_today())
     if case_id:
         query = query.filter_by(case_id=int(case_id))
 
     sessions = query.order_by(Session.session_date.desc()).paginate(page=page, per_page=20)
     return render_template('sessions/index.html', sessions=sessions, filter_date=filter_date,
                            status=status, case_id=case_id, session_results=SESSION_RESULTS,
-                           today=date.today())
+                           today=egypt_today())
 
 
 @sessions_bp.route('/create', methods=['GET', 'POST'])
@@ -91,6 +92,20 @@ def create():
             responsible_lawyer_id=request.form.get('responsible_lawyer_id', type=int) or g.current_user.id,
         )
         db.session.add(sess)
+        db.session.commit()
+
+        from app.services.notification_service import notify_tenant_users
+        notify_tenant_users(
+            tenant_id=g.tenant_id,
+            notification_type='session_reminder',
+            title=f'تم إضافة جلسة جديدة بتاريخ {sess.session_date.strftime("%Y-%m-%d")}',
+            body=f'القضية: {sess.case.case_number if sess.case else "-"}',
+            priority='important',
+            related_type='session',
+            related_id=sess.id,
+            actor_name=g.current_user.full_name,
+            exclude_user_id=g.current_user.id,
+        )
         db.session.commit()
 
         flash('تم إضافة الجلسة بنجاح', 'success')
@@ -145,6 +160,20 @@ def record_result(id):
                 case.status = 'awaiting_judgment'
 
         db.session.commit()
+
+        from app.services.notification_service import notify_tenant_users
+        notify_tenant_users(
+            tenant_id=g.tenant_id,
+            notification_type='case_update',
+            title=f'تم تسجيل نتيجة جلسة: {sess.result or "-"}',
+            body=f'القضية: {sess.case.case_number if sess.case else "-"} - التاريخ: {sess.session_date.strftime("%Y-%m-%d")}',
+            related_type='session',
+            related_id=sess.id,
+            actor_name=g.current_user.full_name,
+            exclude_user_id=g.current_user.id,
+        )
+        db.session.commit()
+
         flash('تم تسجيل نتيجة الجلسة بنجاح', 'success')
 
         if sess.result == 'judgment':
@@ -199,7 +228,7 @@ def delete(id):
 def calendar():
     """Calendar view of sessions."""
     sessions = Session.query.filter_by(tenant_id=g.tenant_id).filter(
-        Session.session_date >= date.today() - timedelta(days=30)
+        Session.session_date >= egypt_today() - timedelta(days=30)
     ).order_by(Session.session_date).all()
 
     events = []

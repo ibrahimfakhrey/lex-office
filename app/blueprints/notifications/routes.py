@@ -59,6 +59,49 @@ def mark_read(id):
     return redirect(url_for('notifications.index'))
 
 
+@notifications_bp.route('/<int:id>/go', methods=['GET'])
+@login_required
+def go_to(id):
+    """Mark notification as read and redirect to the related resource."""
+    notification = Notification.query.filter_by(
+        id=id, tenant_id=g.tenant_id, user_id=g.current_user.id
+    ).first_or_404()
+
+    if not notification.is_read:
+        notification.mark_read()
+        db.session.commit()
+
+    # Build redirect URL based on related_type and related_id
+    target_url = _get_notification_url(notification)
+    return redirect(target_url)
+
+
+def _get_notification_url(notification):
+    """Resolve the destination URL for a notification."""
+    rt = notification.related_type
+    rid = notification.related_id
+
+    if rt and rid:
+        url_map = {
+            'client': 'clients.show',
+            'case': 'cases.show',
+            'session': 'sessions.show',
+            'judgment': 'judgments.show',
+            'enforcement': 'enforcement.show',
+            'poa': 'poa.show',
+            'payment': 'financial.show_payment',
+            'invoice': 'financial.show_invoice',
+            'expense': 'financial.show_expense',
+            'task': 'tasks.show',
+            'document': 'documents.show',
+        }
+        endpoint = url_map.get(rt)
+        if endpoint:
+            return url_for(endpoint, id=rid)
+
+    return url_for('notifications.index')
+
+
 @notifications_bp.route('/mark-all-read', methods=['POST'])
 @login_required
 def mark_all_read():

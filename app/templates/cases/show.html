@@ -131,7 +131,7 @@
                             <tr>
                                 <td>{{ j.judgment_date.strftime('%Y-%m-%d') if j.judgment_date else '-' }}</td>
                                 <td>{{ j.judgment_type or '-' }}</td>
-                                <td>{{ j.ruling[:50] if j.ruling else '-' }}</td>
+                                <td>{{ j.judgment_text[:50] if j.judgment_text else '-' }}</td>
                                 <td>{{ j.appeal_deadline.strftime('%Y-%m-%d') if j.appeal_deadline else '-' }}</td>
                             </tr>
                             {% endfor %}
@@ -174,11 +174,19 @@
                 {% if documents %}
                 <ul class="list-unstyled mb-0">
                     {% for d in documents %}
-                    <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                        <span><i class="bi bi-file-earmark-text me-1"></i>
-                            <span class="filename-cell" title="{{ d.title or d.file_name }}">{{ d.title or d.file_name }}</span>
-                        </span>
-                        <small class="text-muted">{{ d.created_at.strftime('%Y-%m-%d') }}</small>
+                    <li class="py-2 border-bottom">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span><i class="bi bi-file-earmark-text me-1"></i>
+                                <span class="filename-cell" title="{{ d.name }}">{{ d.name }}</span>
+                            </span>
+                            <small class="text-muted">{{ d.created_at.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        {% if d.file_path and d.file_type in ['jpg','jpeg','png'] %}
+                            {% if d.file_path.startswith('uploads/') %}
+                            <img src="{{ url_for('static', filename=d.file_path) }}"
+                                 class="img-fluid rounded mb-1" style="max-height:150px;">
+                            {% endif %}
+                        {% endif %}
                     </li>
                     {% endfor %}
                 </ul>

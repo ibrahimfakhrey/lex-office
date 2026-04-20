@@ -72,7 +72,7 @@
                 <div class="mb-3">
                     {% set ext = poa.file_path.rsplit('.', 1)[-1].lower() %}
                     {% if ext in ['jpg','jpeg','png'] %}
-                    <img src="{{ url_for('static', filename=poa.file_path) }}" class="img-fluid rounded mb-2" style="max-height:200px;">
+                    <img src="{{ url_for('static', filename=poa.file_path) }}" class="img-fluid rounded mb-2" style="max-height:200px;" alt="معاينة التوكيل" loading="lazy">
                     {% endif %}
                     <a href="{{ url_for('static', filename=poa.file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
                         <i class="bi bi-download me-1"></i> تحميل الملف

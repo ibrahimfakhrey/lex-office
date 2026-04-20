@@ -33,12 +33,13 @@ def setup_office():
         if logo and logo.filename:
             import os
             from werkzeug.utils import secure_filename
+            from flask import current_app
             filename = secure_filename(logo.filename)
-            upload_dir = os.path.join('app', 'static', 'uploads', 'logos')
+            upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'logos')
             os.makedirs(upload_dir, exist_ok=True)
-            logo_path = os.path.join(upload_dir, f'tenant_{g.tenant_id}_{filename}')
-            logo.save(logo_path)
-            tenant.logo_path = logo_path
+            logo_filename = f'tenant_{g.tenant_id}_{filename}'
+            logo.save(os.path.join(upload_dir, logo_filename))
+            tenant.logo_path = f'uploads/logos/{logo_filename}'
 
         # Handle courts (multi-select)
         courts = request.form.getlist('courts')
@@ -87,7 +88,7 @@ def choose_plan():
 
         # Send subscription receipt email
         user = g.current_user
-        send_subscription_receipt(
+        sent = send_subscription_receipt(
             email=user.email,
             plan_name_ar=plan.name_ar,
             office_name=tenant.name,
@@ -95,6 +96,8 @@ def choose_plan():
         )
 
         flash(f'تم اختيار خطة {plan.name_ar} - تجربة مجانية 14 يوم', 'success')
+        if not sent:
+            flash('لم يتم إرسال إيصال الاشتراك على البريد الإلكتروني. يرجى التحقق من إعدادات البريد', 'warning')
         return redirect(url_for('onboarding.invite_team'))
 
     return render_template('onboarding/choose_plan.html', plans=plans, tenant=tenant)

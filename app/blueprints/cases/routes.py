@@ -111,6 +111,8 @@ def create():
             ctx = _get_form_context()
             return render_template('cases/create.html', form=request.form, **ctx)
 
+        retainer_amount = request.form.get('retainer_paid', type=float) or 0
+
         case = Case(
             tenant_id=g.tenant_id,
             client_id=client_id,
@@ -128,12 +130,56 @@ def create():
             our_client_capacity=request.form.get('our_client_capacity', '') or None,
             fee_type=request.form.get('fee_type', '') or None,
             fee_amount=request.form.get('fee_amount', type=float) or None,
-            retainer_paid=request.form.get('retainer_paid', type=float) or 0,
+            retainer_paid=retainer_amount,
             payment_schedule=request.form.get('payment_schedule', '') or None,
             priority=request.form.get('priority', 'normal'),
             internal_notes=request.form.get('internal_notes', '').strip() or None,
         )
         db.session.add(case)
+        db.session.flush()
+
+        # Create Payment record for retainer if paid upfront
+        if retainer_amount > 0:
+            from app.models.financial import Payment
+            from app.utils.helpers import egypt_today
+            initial_payment = Payment(
+                tenant_id=g.tenant_id,
+                client_id=client_id,
+                case_id=case.id,
+                amount=retainer_amount,
+                payment_date=egypt_today(),
+                payment_method='cash',
+                notes='مقدم أتعاب عند فتح القضية',
+                recorded_by=g.current_user.id,
+            )
+            db.session.add(initial_payment)
+
+        db.session.commit()
+
+        from app.services.notification_service import notify_tenant_users, create_notification
+        notify_tenant_users(
+            tenant_id=g.tenant_id,
+            notification_type='case_update',
+            title=f'تم إضافة قضية جديدة: {case.case_number or case.subject or "قضية جديدة"}',
+            body=f'الموكل: {case.client.full_name if case.client else "-"}',
+            priority='important',
+            related_type='case',
+            related_id=case.id,
+            actor_name=g.current_user.full_name,
+            exclude_user_id=g.current_user.id,
+        )
+        # Notify assistant lawyer specifically if different
+        assistant_id = request.form.get('assistant_lawyer_id', type=int)
+        if assistant_id and assistant_id != g.current_user.id:
+            create_notification(
+                tenant_id=g.tenant_id,
+                user_id=assistant_id,
+                notification_type='case_update',
+                title=f'تم تعيينك محامي مساعد لقضية: {case.case_number or "قضية جديدة"}',
+                related_type='case',
+                related_id=case.id,
+                actor_name=g.current_user.full_name,
+            )
         db.session.commit()
 
         flash('تم إضافة القضية بنجاح', 'success')
@@ -206,6 +252,19 @@ def close(id):
     case.status = 'closed'
     case.closed_at = datetime.utcnow()
     db.session.commit()
+
+    from app.services.notification_service import notify_tenant_users
+    notify_tenant_users(
+        tenant_id=g.tenant_id,
+        notification_type='case_update',
+        title=f'تم إغلاق القضية: {case.case_number or "قضية"}',
+        related_type='case',
+        related_id=case.id,
+        actor_name=g.current_user.full_name,
+        exclude_user_id=g.current_user.id,
+    )
+    db.session.commit()
+
     flash('تم إغلاق القضية', 'warning')
     return redirect(url_for('cases.show', id=case.id))
 

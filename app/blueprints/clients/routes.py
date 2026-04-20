@@ -107,6 +107,19 @@ def create():
         db.session.add(client)
         db.session.commit()
 
+        from app.services.notification_service import notify_tenant_users
+        notify_tenant_users(
+            tenant_id=g.tenant_id,
+            notification_type='general',
+            title=f'تم إضافة موكل جديد: {client.full_name}',
+            body=f'رقم الملف: {client.client_number}',
+            related_type='client',
+            related_id=client.id,
+            actor_name=g.current_user.full_name,
+            exclude_user_id=g.current_user.id,
+        )
+        db.session.commit()
+
         flash('تم إضافة الموكل بنجاح', 'success')
         return redirect(url_for('clients.show', id=client.id))
 
@@ -180,8 +193,22 @@ def edit(id):
 def delete(id):
     """Soft-delete a client (manager only via RBAC)."""
     client = Client.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
+    client_name = client.full_name
     client.is_active = False
     db.session.commit()
+
+    from app.services.notification_service import notify_tenant_users
+    notify_tenant_users(
+        tenant_id=g.tenant_id,
+        notification_type='general',
+        title=f'تم حذف موكل: {client_name}',
+        related_type='client',
+        related_id=id,
+        actor_name=g.current_user.full_name,
+        exclude_user_id=g.current_user.id,
+    )
+    db.session.commit()
+
     flash('تم حذف الموكل', 'warning')
     return redirect(url_for('clients.index'))
 

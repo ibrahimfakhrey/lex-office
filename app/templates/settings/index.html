@@ -48,13 +48,13 @@
                     <label class="form-label">شعار المكتب</label>
                     {% if tenant.logo_path %}
                     <div class="mb-2">
-                        <img src="{{ url_for('static', filename=tenant.logo_path) }}" alt="شعار المكتب" style="max-height:80px; border-radius:6px; border:1px solid #dee2e6;">
+                        <img src="{{ url_for('static', filename=tenant.logo_path) }}" alt="شعار المكتب" style="max-height:80px; border-radius:6px; border:1px solid var(--border);" loading="lazy">
                         <small class="text-muted d-block mt-1">الشعار الحالي</small>
                     </div>
                     {% endif %}
                     <input type="file" name="logo" class="form-control" accept="image/*" id="logoInput">
                     <div id="logoPreview" class="mt-2" style="display:none;">
-                        <img id="logoPreviewImg" src="" alt="معاينة" style="max-height:80px; border-radius:6px; border:1px solid #dee2e6;">
+                        <img id="logoPreviewImg" src="" alt="معاينة" style="max-height:80px; border-radius:6px; border:1px solid var(--border);" loading="lazy">
                         <small class="text-muted d-block mt-1">معاينة الشعار الجديد</small>
                     </div>
                 </div>

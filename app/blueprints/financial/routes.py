@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from sqlalchemy import func, extract
 from app.extensions import db
 from app.utils.decorators import login_required, permission_required
+from app.utils.helpers import egypt_today
 from app.models.financial import Payment, Invoice, InvoiceItem, Expense
 from app.models.case import Case
 from app.models.client import Client
@@ -37,7 +38,7 @@ ITEM_TYPES = [
 @permission_required('financial', 'view')
 def index():
     """Financial overview dashboard."""
-    today = date.today()
+    today = egypt_today()
     current_month = today.month
     current_year = today.year
 
@@ -155,14 +156,22 @@ def create_payment():
             recorded_by=g.current_user.id,
         )
         db.session.add(payment)
-
-        # Update case retainer_paid if linked to a case
-        if payment.case_id:
-            case = Case.query.get(payment.case_id)
-            if case and case.retainer_paid is not None:
-                case.retainer_paid = float(case.retainer_paid or 0) + amount
-
         db.session.commit()
+
+        from app.services.notification_service import notify_tenant_users
+        notify_tenant_users(
+            tenant_id=g.tenant_id,
+            notification_type='payment_received',
+            title=f'تم تسجيل دفعة: {amount} ج.م',
+            body=f'الموكل: {payment.client.full_name if payment.client else "-"}',
+            priority='success',
+            related_type='payment',
+            related_id=payment.id,
+            actor_name=g.current_user.full_name,
+            exclude_user_id=g.current_user.id,
+        )
+        db.session.commit()
+
         flash('تم تسجيل الدفعة بنجاح', 'success')
         return redirect(url_for('financial.show_payment', id=payment.id))
 
@@ -273,6 +282,19 @@ def create_invoice():
 
         db.session.flush()
         invoice.calculate_totals()
+        db.session.commit()
+
+        from app.services.notification_service import notify_tenant_users
+        notify_tenant_users(
+            tenant_id=g.tenant_id,
+            notification_type='general',
+            title=f'تم إنشاء فاتورة جديدة: {invoice.invoice_number}',
+            body=f'الإجمالي: {float(invoice.total):.0f} ج.م — الموكل: {invoice.client.full_name if invoice.client else "-"}',
+            related_type='invoice',
+            related_id=invoice.id,
+            actor_name=g.current_user.full_name,
+            exclude_user_id=g.current_user.id,
+        )
         db.session.commit()
 
         flash('تم إنشاء الفاتورة بنجاح', 'success')
@@ -448,6 +470,20 @@ def create_expense():
         )
         db.session.add(expense)
         db.session.commit()
+
+        from app.services.notification_service import notify_tenant_users
+        notify_tenant_users(
+            tenant_id=g.tenant_id,
+            notification_type='general',
+            title=f'تم تسجيل مصروف: {amount} ج.م',
+            body=f'النوع: {expense_type}',
+            related_type='expense',
+            related_id=expense.id,
+            actor_name=g.current_user.full_name,
+            exclude_user_id=g.current_user.id,
+        )
+        db.session.commit()
+
         flash('تم تسجيل المصروف بنجاح', 'success')
         return redirect(url_for('financial.show_expense', id=expense.id))
 

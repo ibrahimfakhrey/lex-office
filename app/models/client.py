@@ -62,11 +62,11 @@ class Client(db.Model):
 
     @property
     def total_fees(self):
-        return sum(c.fee_amount or 0 for c in self.cases)
+        return sum(float(c.fee_amount or 0) for c in self.cases)
 
     @property
     def total_paid(self):
-        return sum(p.amount for p in self.payments)
+        return sum(float(p.amount) for p in self.payments)
 
     @property
     def balance(self):

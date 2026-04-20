@@ -52,6 +52,20 @@ def create():
             poa.file_path = f'uploads/poa/{g.tenant_id}/{saved_name}'
 
         db.session.commit()
+
+        from app.services.notification_service import notify_tenant_users
+        notify_tenant_users(
+            tenant_id=g.tenant_id,
+            notification_type='general',
+            title=f'تم إضافة توكيل جديد للموكل: {poa.client.full_name if poa.client else "-"}',
+            body=f'النوع: {poa.poa_type} — تاريخ الانتهاء: {poa.expiry_date.strftime("%Y-%m-%d") if poa.expiry_date else "غير محدد"}',
+            related_type='poa',
+            related_id=poa.id,
+            actor_name=g.current_user.full_name,
+            exclude_user_id=g.current_user.id,
+        )
+        db.session.commit()
+
         flash('تم إضافة التوكيل بنجاح', 'success')
         return redirect(url_for('poa.show', id=poa.id))
 

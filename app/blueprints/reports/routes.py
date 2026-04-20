@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, request, g
 from sqlalchemy import func, extract
 from app.extensions import db
 from app.utils.decorators import login_required, permission_required
+from app.utils.helpers import egypt_today
 from app.models.case import Case
 from app.models.session import Session
 from app.models.judgment import Judgment
@@ -18,7 +19,7 @@ reports_bp = Blueprint('reports', __name__, template_folder='../../templates/rep
 @permission_required('reports', 'view')
 def index():
     """Reports dashboard with quick stats."""
-    today = date.today()
+    today = egypt_today()
 
     total_cases = Case.query.filter_by(tenant_id=g.tenant_id).count()
     active_cases = Case.query.filter_by(tenant_id=g.tenant_id).filter(
@@ -48,8 +49,8 @@ def index():
 @permission_required('reports', 'view')
 def financial():
     """Financial report: income, expenses, profit by period."""
-    date_from = request.args.get('date_from', (date.today().replace(day=1)).strftime('%Y-%m-%d'))
-    date_to = request.args.get('date_to', date.today().strftime('%Y-%m-%d'))
+    date_from = request.args.get('date_from', (egypt_today().replace(day=1)).strftime('%Y-%m-%d'))
+    date_to = request.args.get('date_to', egypt_today().strftime('%Y-%m-%d'))
 
     start = datetime.strptime(date_from, '%Y-%m-%d').date()
     end = datetime.strptime(date_to, '%Y-%m-%d').date()
@@ -146,7 +147,7 @@ def workload():
 
         upcoming_sessions = Session.query.filter_by(
             responsible_lawyer_id=lawyer.id, tenant_id=g.tenant_id
-        ).filter(Session.session_date >= date.today(), Session.result.is_(None)).count()
+        ).filter(Session.session_date >= egypt_today(), Session.result.is_(None)).count()
 
         workload_data.append({
             'lawyer': lawyer,
@@ -164,8 +165,8 @@ def workload():
 @permission_required('reports', 'view')
 def sessions_report():
     """Sessions report with results breakdown."""
-    date_from = request.args.get('date_from', (date.today() - timedelta(days=30)).strftime('%Y-%m-%d'))
-    date_to = request.args.get('date_to', date.today().strftime('%Y-%m-%d'))
+    date_from = request.args.get('date_from', (egypt_today() - timedelta(days=30)).strftime('%Y-%m-%d'))
+    date_to = request.args.get('date_to', egypt_today().strftime('%Y-%m-%d'))
 
     start = datetime.strptime(date_from, '%Y-%m-%d').date()
     end = datetime.strptime(date_to, '%Y-%m-%d').date()

@@ -3,6 +3,7 @@ from datetime import datetime, date, timedelta
 from flask import Blueprint, render_template, g
 from app.extensions import db
 from app.utils.decorators import login_required, role_required, permission_required, manager_only
+from app.utils.helpers import egypt_today
 from app.models.case import Case
 from app.models.session import Session
 from app.models.task import Task, Appointment
@@ -18,7 +19,7 @@ dashboard_bp = Blueprint('dashboard', __name__, template_folder='../../templates
 @login_required
 def index():
     """Main dashboard with statistics and upcoming items."""
-    today = date.today()
+    today = egypt_today()
     tomorrow = today + timedelta(days=1)
     week_ahead = today + timedelta(days=7)
 

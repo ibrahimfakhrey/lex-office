@@ -105,6 +105,21 @@ def create():
             case.status = 'awaiting_judgment' if result in ('postponement',) else 'closed' if judgment_type == 'cassation' else case.status
 
         db.session.commit()
+
+        from app.services.notification_service import notify_tenant_users
+        notify_tenant_users(
+            tenant_id=g.tenant_id,
+            notification_type='appeal_deadline',
+            title=f'تم تسجيل حكم للقضية: {case.case_number or "-"}',
+            body=f'النتيجة: {result} — موعد الاستئناف: {appeal_deadline.strftime("%Y-%m-%d") if appeal_deadline else "غير محدد"}',
+            priority='important',
+            related_type='judgment',
+            related_id=judgment.id,
+            actor_name=g.current_user.full_name,
+            exclude_user_id=g.current_user.id,
+        )
+        db.session.commit()
+
         flash('تم تسجيل الحكم بنجاح', 'success')
         return redirect(url_for('judgments.show', id=judgment.id))
 

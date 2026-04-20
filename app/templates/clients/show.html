@@ -195,11 +195,22 @@
                 {% if documents %}
                 <ul class="list-unstyled mb-3">
                     {% for doc in documents %}
-                    <li class="d-flex justify-content-between align-items-center mb-2">
-                        <span><i class="bi bi-file-earmark-text me-1"></i>
-                            <span class="filename-cell" title="{{ doc.file_name }}">{{ doc.file_name }}</span>
-                        </span>
-                        <small class="text-muted">{{ doc.document_type }}</small>
+                    <li class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span><i class="bi bi-file-earmark-text me-1"></i>
+                                <span class="filename-cell" title="{{ doc.file_name }}">{{ doc.file_name }}</span>
+                            </span>
+                            <small class="text-muted">{{ doc.document_type }}</small>
+                        </div>
+                        {% if doc.file_path %}
+                            {% set ext = doc.file_path.rsplit('.', 1)[-1].lower() if '.' in doc.file_path else '' %}
+                            {% if ext in ['jpg','jpeg','png'] %}
+                            <img src="{{ url_for('static', filename='uploads/' + doc.file_path) }}"
+                                 class="img-fluid rounded mb-1" style="max-height:200px;" alt="معاينة المستند" loading="lazy">
+                            {% endif %}
+                            <a href="{{ url_for('static', filename='uploads/' + doc.file_path) }}" target="_blank"
+                               class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i> تحميل</a>
+                        {% endif %}
                     </li>
                     {% endfor %}
                 </ul>

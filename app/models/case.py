@@ -60,16 +60,15 @@ class Case(db.Model):
 
     @property
     def total_paid(self):
-        payments_sum = sum(p.amount for p in self.case_payments)
-        return payments_sum + (self.retainer_paid or 0)
+        return sum(float(p.amount) for p in self.case_payments)
 
     @property
     def total_expenses(self):
-        return sum(e.amount for e in self.expenses)
+        return sum(float(e.amount) for e in self.expenses)
 
     @property
     def remaining_balance(self):
-        return (self.fee_amount or 0) - self.total_paid
+        return float(self.fee_amount or 0) - self.total_paid
 
     def __repr__(self):
         return f'<Case {self.case_number} - {self.subject}>'
