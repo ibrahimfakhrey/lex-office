@@ -12,16 +12,16 @@
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
-            --primary: #6c47ff;
-            --primary-dark: #5535e0;
-            --accent: #a78bfa;
-            --dark: #0a0814;
-            --dark-2: #110e24;
-            --dark-3: #1a1535;
+            --primary: #1849A9;
+            --primary-dark: #0C2461;
+            --accent: #078FD2;
+            --dark: #050d26;
+            --dark-2: #081640;
+            --dark-3: #0C2461;
             --surface: rgba(255,255,255,0.04);
-            --border: rgba(108,71,255,0.22);
-            --text: #e8e3ff;
-            --muted: #9d94c4;
+            --border: rgba(24,73,169,0.22);
+            --text: #e8f0ff;
+            --muted: #8ba3c9;
             --success: #34d399;
         }
         html, body {
@@ -33,8 +33,8 @@
         }
         body {
             background:
-                radial-gradient(ellipse 80% 50% at 20% 10%, rgba(108,71,255,0.12) 0%, transparent 60%),
-                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(167,139,250,0.08) 0%, transparent 55%),
+                radial-gradient(ellipse 80% 50% at 20% 10%, rgba(24,73,169,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(7,143,210,0.08) 0%, transparent 55%),
                 var(--dark);
         }
 
@@ -57,7 +57,7 @@
             border-radius: 9px;
             display: grid; place-items: center;
             color: #fff; font-size: 1rem;
-            box-shadow: 0 3px 12px rgba(108,71,255,0.4);
+            box-shadow: 0 3px 12px rgba(24,73,169,0.4);
         }
         .ob-logo-text {
             font-size: 1.25rem; font-weight: 800;
@@ -88,7 +88,7 @@
             font-weight: 800; font-size: 1rem;
         }
         .w-dot-done  { background: linear-gradient(135deg, #10b981, #059669); color: #fff; box-shadow: 0 3px 12px rgba(16,185,129,0.35); }
-        .w-dot-active{ background: linear-gradient(135deg, var(--primary), #8b5cf6); color: #fff; box-shadow: 0 3px 14px rgba(108,71,255,0.45); }
+        .w-dot-active{ background: linear-gradient(135deg, var(--primary), #078FD2); color: #fff; box-shadow: 0 3px 14px rgba(24,73,169,0.45); }
         .w-dot-idle  { background: rgba(255,255,255,0.07); color: var(--muted); }
         .w-label { font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
         .w-label-done   { color: var(--success); }
@@ -146,10 +146,10 @@
         }
         .field input:focus, .field textarea:focus, .field select:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(108,71,255,0.15);
+            box-shadow: 0 0 0 3px rgba(24,73,169,0.15);
         }
         .field input::placeholder, .field textarea::placeholder { color: #4a4272; }
-        .field select option { background: #1a1535; color: var(--text); }
+        .field select option { background: #0C2461; color: var(--text); }
 
         /* ── UPLOAD ZONE ── */
         .upload-zone {
@@ -158,29 +158,29 @@
             padding: 1.5rem;
             text-align: center;
             cursor: pointer;
-            background: rgba(108,71,255,0.03);
+            background: rgba(24,73,169,0.03);
             position: relative;
             transition: border-color 0.2s, background 0.2s;
         }
-        .upload-zone:hover { border-color: var(--primary); background: rgba(108,71,255,0.07); }
+        .upload-zone:hover { border-color: var(--primary); background: rgba(24,73,169,0.07); }
         .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
         .upload-zone i { font-size: 2rem; color: var(--primary); display: block; margin-bottom: 0.4rem; }
-        .upload-zone span { font-size: 0.88rem; color: #c4b8ff; font-weight: 600; display: block; }
+        .upload-zone span { font-size: 0.88rem; color: #7abfe6; font-weight: 600; display: block; }
         .upload-zone small { font-size: 0.75rem; color: var(--muted); }
 
         /* ── BUTTONS ── */
         .btn-submit {
             width: 100%; padding: 0.9rem;
-            background: linear-gradient(135deg, var(--primary), #7c3aed);
+            background: linear-gradient(135deg, var(--primary), #0C2461);
             color: #fff; border: none; border-radius: 12px;
             font-size: 1rem; font-weight: 700;
             font-family: 'Cairo', 'Tajawal', sans-serif;
             cursor: pointer; margin-top: 0.8rem;
-            box-shadow: 0 6px 20px rgba(108,71,255,0.35);
+            box-shadow: 0 6px 20px rgba(24,73,169,0.35);
             display: flex; align-items: center; justify-content: center; gap: 0.5rem;
             transition: all 0.2s;
         }
-        .btn-submit:hover { box-shadow: 0 10px 28px rgba(108,71,255,0.5); transform: translateY(-2px); }
+        .btn-submit:hover { box-shadow: 0 10px 28px rgba(24,73,169,0.5); transform: translateY(-2px); }
 
         .back-link { text-align: center; margin-top: 1.2rem; }
         .back-link a { color: var(--muted); font-size: 0.85rem; text-decoration: none; transition: color 0.2s; }

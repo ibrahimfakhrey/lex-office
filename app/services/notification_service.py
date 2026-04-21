@@ -144,8 +144,8 @@ def _build_notification_email(title, body, actor_name=None):
     body_line = f'<p style="margin: 8px 0 0; color: #475569;">{body}</p>' if body else ''
     return f"""
     <div dir="rtl" style="font-family: Tajawal, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #6c47ff; margin-bottom: 16px;">LexOffice</h2>
-        <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; margin: 16px 0; border-right: 4px solid #6c47ff;">
+        <h2 style="color: #1849A9; margin-bottom: 16px;">LexOffice</h2>
+        <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; margin: 16px 0; border-right: 4px solid #1849A9;">
             <h3 style="margin: 0; color: #1e293b; font-size: 16px;">{title}</h3>
             {body_line}
         </div>
