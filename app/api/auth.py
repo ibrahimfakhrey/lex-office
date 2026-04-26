@@ -420,6 +420,19 @@ def api_accept_invite():
     return success_response(message='تم إنشاء حسابك بنجاح', status_code=201)
 
 
+# ---------- GET /auth/dev-otp (DEV ONLY) ----------
+@api_bp.route('/auth/dev-otp/<int:user_id>', methods=['GET'])
+def api_dev_otp(user_id):
+    """Return OTP for testing — only works in development mode."""
+    import os
+    if os.getenv('FLASK_ENV', 'development') != 'development':
+        return error_response('Not available', status_code=404)
+    user = User.query.get(user_id)
+    if not user or not user.otp_code:
+        return error_response('No OTP found', status_code=404)
+    return success_response(data={'otp': user.otp_code, 'user_id': user_id})
+
+
 # ---------- GET /auth/me ----------
 @api_bp.route('/auth/me', methods=['GET'])
 @api_login_required
