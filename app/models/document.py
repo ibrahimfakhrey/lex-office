@@ -43,6 +43,33 @@ class Document(db.Model):
             return f'{self.file_size / 1024:.1f} KB'
         return f'{self.file_size / (1024 * 1024):.1f} MB'
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tenant_id': self.tenant_id,
+            'client_id': self.client_id,
+            'client_name': self.client.full_name if self.client else None,
+            'case_id': self.case_id,
+            'case_number': self.case.case_number if self.case else None,
+            'session_id': self.session_id,
+            'doc_type': self.doc_type,
+            'name': self.name,
+            'file_path': self.file_path,
+            'file_type': self.file_type,
+            'file_size': self.file_size,
+            'doc_date': self.doc_date.isoformat() if self.doc_date else None,
+            'notes': self.notes,
+            'ai_summary': self.ai_summary,
+            'share_token': self.share_token,
+            'share_expires_at': self.share_expires_at.isoformat() if self.share_expires_at else None,
+            'uploaded_by': self.uploaded_by,
+            'uploader_name': self.uploader.full_name if self.uploader else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'is_share_active': self.is_share_active,
+            'file_size_display': self.file_size_display,
+        }
+
     def __repr__(self):
         return f'<Document {self.name}>'
 
@@ -62,6 +89,22 @@ class LegalTemplate(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tenant_id': self.tenant_id,
+            'name': self.name,
+            'name_ar': self.name_ar,
+            'template_type': self.template_type,
+            'output_format': self.output_format,
+            'template_content': self.template_content,
+            'auto_fill_fields': self.auto_fill_fields,
+            'thumbnail_path': self.thumbnail_path,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
 
     def __repr__(self):
         return f'<LegalTemplate {self.name}>'

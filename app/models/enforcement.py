@@ -47,6 +47,33 @@ class Enforcement(db.Model):
         total = sum(float(c.amount) for c in self.collections)
         self.collected_amount = total
 
+    def to_dict(self, include_related=False):
+        data = {
+            'id': self.id,
+            'tenant_id': self.tenant_id,
+            'judgment_id': self.judgment_id,
+            'case_id': self.case_id,
+            'client_id': self.client_id,
+            'enforcement_number': self.enforcement_number,
+            'enforcement_court': self.enforcement_court,
+            'executor_name': self.executor_name,
+            'enforcement_type': self.enforcement_type,
+            'total_amount': float(self.total_amount) if self.total_amount is not None else None,
+            'collected_amount': float(self.collected_amount) if self.collected_amount is not None else None,
+            'debtor_name': self.debtor_name,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'status': self.status,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'remaining_amount': float(self.remaining_amount),
+            'collection_percentage': float(self.collection_percentage),
+        }
+        if include_related:
+            data['collections'] = [c.to_dict() for c in self.collections]
+            data['actions'] = [a.to_dict() for a in self.actions]
+        return data
+
     def __repr__(self):
         return f'<Enforcement {self.enforcement_number}>'
 
@@ -62,6 +89,17 @@ class EnforcementCollection(db.Model):
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'enforcement_id': self.enforcement_id,
+            'amount': float(self.amount) if self.amount is not None else None,
+            'collection_date': self.collection_date.isoformat() if self.collection_date else None,
+            'collection_method': self.collection_method,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
 
 class EnforcementAction(db.Model):
     __tablename__ = 'enforcement_actions'
@@ -71,3 +109,12 @@ class EnforcementAction(db.Model):
     action_description = db.Column(db.Text, nullable=False)
     action_date = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'enforcement_id': self.enforcement_id,
+            'action_description': self.action_description,
+            'action_date': self.action_date.isoformat() if self.action_date else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }

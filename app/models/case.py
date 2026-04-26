@@ -12,6 +12,16 @@ class Court(db.Model):
     governorate = db.Column(db.String(100), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'name_en': self.name_en,
+            'court_type': self.court_type,
+            'governorate': self.governorate,
+            'is_active': self.is_active,
+        }
+
     def __repr__(self):
         return f'<Court {self.name}>'
 
@@ -69,6 +79,47 @@ class Case(db.Model):
     @property
     def remaining_balance(self):
         return float(self.fee_amount or 0) - self.total_paid
+
+    def to_dict(self, include_related=False):
+        data = {
+            'id': self.id,
+            'tenant_id': self.tenant_id,
+            'client_id': self.client_id,
+            'client_name': self.client.full_name if self.client else None,
+            'case_number': self.case_number,
+            'judicial_year': self.judicial_year,
+            'court_id': self.court_id,
+            'court_name': self.court.name if self.court else None,
+            'circuit': self.circuit,
+            'case_type': self.case_type,
+            'subject': self.subject,
+            'opponent_name': self.opponent_name,
+            'opponent_capacity': self.opponent_capacity,
+            'opponent_lawyer': self.opponent_lawyer,
+            'responsible_lawyer_id': self.responsible_lawyer_id,
+            'responsible_lawyer_name': self.responsible_lawyer.full_name if self.responsible_lawyer else None,
+            'assistant_lawyer_id': self.assistant_lawyer_id,
+            'our_client_capacity': self.our_client_capacity,
+            'fee_type': self.fee_type,
+            'fee_amount': float(self.fee_amount) if self.fee_amount is not None else None,
+            'retainer_paid': float(self.retainer_paid) if self.retainer_paid is not None else None,
+            'payment_schedule': self.payment_schedule,
+            'status': self.status,
+            'priority': self.priority,
+            'internal_notes': self.internal_notes,
+            'closed_at': self.closed_at.isoformat() if self.closed_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'total_paid': float(self.total_paid),
+            'total_expenses': float(self.total_expenses),
+            'remaining_balance': float(self.remaining_balance),
+        }
+        if include_related:
+            data['sessions_count'] = self.sessions.count()
+            data['judgments_count'] = self.judgments.count()
+            data['payments_count'] = self.case_payments.count()
+            data['documents_count'] = self.case_documents.count()
+        return data
 
     def __repr__(self):
         return f'<Case {self.case_number} - {self.subject}>'

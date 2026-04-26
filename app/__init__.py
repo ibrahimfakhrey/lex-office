@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from flask import Flask, redirect, url_for, request, g
+from flask import Flask, redirect, url_for, request, g, jsonify
 from config import config
 from app.extensions import db, migrate, jwt, mail, csrf, limiter
 
@@ -24,17 +24,23 @@ def create_app(config_name=None):
     csrf.init_app(app)
     limiter.init_app(app)
 
-    # JWT error handlers
+    # JWT error handlers — return JSON for API, redirect for web
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
+        if request.path.startswith('/api/'):
+            return jsonify({'success': False, 'error': 'token_expired', 'message': 'انتهت صلاحية الرمز'}), 401
         return redirect(url_for('auth.login'))
 
     @jwt.unauthorized_loader
     def missing_token_callback(error):
+        if request.path.startswith('/api/'):
+            return jsonify({'success': False, 'error': 'unauthorized', 'message': 'مطلوب تسجيل الدخول'}), 401
         return redirect(url_for('auth.login'))
 
     @jwt.invalid_token_loader
     def invalid_token_callback(error):
+        if request.path.startswith('/api/'):
+            return jsonify({'success': False, 'error': 'invalid_token', 'message': 'رمز غير صالح'}), 401
         return redirect(url_for('auth.login'))
 
     # Register blueprints
@@ -91,6 +97,10 @@ def _register_blueprints(app):
     app.register_blueprint(notifications_bp, url_prefix='/notifications')
     app.register_blueprint(reports_bp, url_prefix='/reports')
     app.register_blueprint(settings_bp, url_prefix='/settings')
+
+    # REST API v1
+    from app.api import api_bp
+    app.register_blueprint(api_bp, url_prefix='/api/v1')
 
     # Landing page
     @app.route('/')

@@ -72,6 +72,46 @@ class Client(db.Model):
     def balance(self):
         return self.total_fees - self.total_paid
 
+    def to_dict(self, include_related=False):
+        data = {
+            'id': self.id,
+            'tenant_id': self.tenant_id,
+            'client_number': self.client_number,
+            'client_type': self.client_type,
+            'full_name': self.full_name,
+            'full_name_en': self.full_name_en,
+            'national_id': self.national_id,
+            'commercial_reg': self.commercial_reg,
+            'date_of_birth': self.date_of_birth.isoformat() if self.date_of_birth else None,
+            'nationality': self.nationality,
+            'profession': self.profession,
+            'governorate': self.governorate,
+            'city': self.city,
+            'district': self.district,
+            'street': self.street,
+            'building_no': self.building_no,
+            'phone_primary': self.phone_primary,
+            'phone_secondary': self.phone_secondary,
+            'email': self.email,
+            'whatsapp': self.whatsapp,
+            'emergency_contact_name': self.emergency_contact_name,
+            'emergency_contact_phone': self.emergency_contact_phone,
+            'emergency_contact_relation': self.emergency_contact_relation,
+            'internal_notes': self.internal_notes,
+            'registered_by': self.registered_by,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'full_address': self.full_address,
+            'total_fees': float(self.total_fees),
+            'total_paid': float(self.total_paid),
+            'balance': float(self.balance),
+        }
+        if include_related:
+            data['cases_count'] = self.cases.count()
+            data['documents_count'] = self.documents.count()
+        return data
+
     def __repr__(self):
         return f'<Client {self.full_name}>'
 
@@ -89,3 +129,15 @@ class ClientDocument(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     uploader = db.relationship('User')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'client_id': self.client_id,
+            'document_type': self.document_type,
+            'file_path': self.file_path,
+            'file_name': self.file_name,
+            'file_type': self.file_type,
+            'uploaded_by': self.uploaded_by,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }

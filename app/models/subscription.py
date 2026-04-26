@@ -15,6 +15,18 @@ class SubscriptionPlan(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'name_ar': self.name_ar,
+            'max_lawyers': self.max_lawyers,
+            'price_monthly': float(self.price_monthly) if self.price_monthly is not None else None,
+            'price_yearly': float(self.price_yearly) if self.price_yearly is not None else None,
+            'features': self.features,
+            'is_active': self.is_active,
+        }
+
     def __repr__(self):
         return f'<SubscriptionPlan {self.name}>'
 

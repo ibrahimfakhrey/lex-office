@@ -28,5 +28,26 @@ class Tenant(db.Model):
     clients = db.relationship('Client', backref='tenant', lazy='dynamic')
     cases = db.relationship('Case', backref='tenant', lazy='dynamic')
 
+    def to_dict(self):
+        import json
+        return {
+            'id': self.id,
+            'name': self.name,
+            'logo_path': self.logo_path,
+            'address': self.address,
+            'bar_registration_no': self.bar_registration_no,
+            'primary_court': self.primary_court,
+            'courts': json.loads(self.courts) if self.courts else None,
+            'phone': self.phone,
+            'fax': self.fax,
+            'email': self.email,
+            'subscription_plan_id': self.subscription_plan_id,
+            'subscription_status': self.subscription_status,
+            'trial_ends_at': self.trial_ends_at.isoformat() if self.trial_ends_at else None,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
     def __repr__(self):
         return f'<Tenant {self.name}>'

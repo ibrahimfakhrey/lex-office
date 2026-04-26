@@ -21,6 +21,25 @@ class Payment(db.Model):
 
     recorder = db.relationship('User')
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tenant_id': self.tenant_id,
+            'client_id': self.client_id,
+            'client_name': self.client.full_name if self.client else None,
+            'case_id': self.case_id,
+            'case_number': self.case.case_number if self.case else None,
+            'amount': float(self.amount) if self.amount is not None else None,
+            'payment_date': self.payment_date.isoformat() if self.payment_date else None,
+            'payment_method': self.payment_method,
+            'reference_number': self.reference_number,
+            'receipt_file_path': self.receipt_file_path,
+            'notes': self.notes,
+            'recorded_by': self.recorded_by,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
     def __repr__(self):
         return f'<Payment {self.amount} - Client {self.client_id}>'
 
@@ -71,6 +90,33 @@ class Invoice(db.Model):
         self.tax_amount = after_discount * float(self.tax_rate or 0) / 100
         self.total = after_discount + float(self.tax_amount)
 
+    def to_dict(self, include_items=False):
+        data = {
+            'id': self.id,
+            'tenant_id': self.tenant_id,
+            'client_id': self.client_id,
+            'client_name': self.client.full_name if self.client else None,
+            'case_id': self.case_id,
+            'case_number': self.case.case_number if self.case else None,
+            'invoice_number': self.invoice_number,
+            'issue_date': self.issue_date.isoformat() if self.issue_date else None,
+            'status': self.status,
+            'subtotal': float(self.subtotal) if self.subtotal is not None else None,
+            'discount_type': self.discount_type,
+            'discount_value': float(self.discount_value) if self.discount_value is not None else None,
+            'tax_rate': float(self.tax_rate) if self.tax_rate is not None else None,
+            'tax_amount': float(self.tax_amount) if self.tax_amount is not None else None,
+            'total': float(self.total) if self.total is not None else None,
+            'notes': self.notes,
+            'sent_via': self.sent_via,
+            'sent_at': self.sent_at.isoformat() if self.sent_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+        if include_items:
+            data['items'] = [item.to_dict() for item in self.items]
+        return data
+
     def __repr__(self):
         return f'<Invoice {self.invoice_number}>'
 
@@ -84,6 +130,16 @@ class InvoiceItem(db.Model):
     item_type = db.Column(db.String(20), nullable=False)
     amount = db.Column(db.Numeric(12, 2), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'invoice_id': self.invoice_id,
+            'description': self.description,
+            'item_type': self.item_type,
+            'amount': float(self.amount) if self.amount is not None else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
 
 
 class Expense(db.Model):
@@ -104,3 +160,21 @@ class Expense(db.Model):
 
     client = db.relationship('Client')
     recorder = db.relationship('User')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tenant_id': self.tenant_id,
+            'case_id': self.case_id,
+            'case_number': self.case.case_number if self.case else None,
+            'client_id': self.client_id,
+            'client_name': self.client.full_name if self.client else None,
+            'expense_type': self.expense_type,
+            'amount': float(self.amount) if self.amount is not None else None,
+            'expense_date': self.expense_date.isoformat() if self.expense_date else None,
+            'description': self.description,
+            'receipt_file_path': self.receipt_file_path,
+            'recorded_by': self.recorded_by,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }

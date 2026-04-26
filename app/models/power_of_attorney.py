@@ -57,5 +57,30 @@ class PowerOfAttorney(db.Model):
             return 'expiring_soon'
         return 'active'
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tenant_id': self.tenant_id,
+            'client_id': self.client_id,
+            'client_name': self.client.full_name if self.client else None,
+            'case_id': self.case_id,
+            'poa_type': self.poa_type,
+            'issue_date': self.issue_date.isoformat() if self.issue_date else None,
+            'expiry_date': self.expiry_date.isoformat() if self.expiry_date else None,
+            'notary_office': self.notary_office,
+            'real_estate_registry': self.real_estate_registry,
+            'notarization_number': self.notarization_number,
+            'status': self.status,
+            'notification_30d_sent': self.notification_30d_sent,
+            'notification_7d_sent': self.notification_7d_sent,
+            'notification_1d_sent': self.notification_1d_sent,
+            'file_path': self.file_path,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'days_until_expiry': self.days_until_expiry,
+            'color_status': self.color_status,
+            'computed_status': self.computed_status,
+        }
+
     def __repr__(self):
         return f'<POA {self.poa_type} - Client {self.client_id}>'

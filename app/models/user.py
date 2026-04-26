@@ -14,6 +14,14 @@ class Role(db.Model):
     permissions = db.relationship('RolePermission', backref='role', lazy='dynamic')
     users = db.relationship('User', backref='role', lazy='dynamic')
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'name_ar': self.name_ar,
+            'description': self.description,
+        }
+
     def __repr__(self):
         return f'<Role {self.name}>'
 
@@ -110,6 +118,24 @@ class User(db.Model):
     def is_partner(self):
         return self.role and self.role.name == 'partner'
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tenant_id': self.tenant_id,
+            'email': self.email,
+            'full_name': self.full_name,
+            'full_name_en': self.full_name_en,
+            'phone': self.phone,
+            'role_id': self.role_id,
+            'role_name': self.role.name if self.role else None,
+            'role_name_ar': self.role.name_ar if self.role else None,
+            'is_active': self.is_active,
+            'mfa_enabled': self.mfa_enabled,
+            'last_login_at': self.last_login_at.isoformat() if self.last_login_at else None,
+            'avatar_path': self.avatar_path,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
     def __repr__(self):
         return f'<User {self.email}>'
 
@@ -138,3 +164,17 @@ class Invitation(db.Model):
     @property
     def is_accepted(self):
         return self.accepted_at is not None
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tenant_id': self.tenant_id,
+            'email': self.email,
+            'role_id': self.role_id,
+            'invited_by': self.invited_by,
+            'accepted_at': self.accepted_at.isoformat() if self.accepted_at else None,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+            'is_expired': self.is_expired,
+            'is_accepted': self.is_accepted,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
