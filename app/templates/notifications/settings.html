@@ -17,7 +17,6 @@
                         <th>نوع الإشعار</th>
                         <th class="text-center">داخل التطبيق</th>
                         <th class="text-center">بريد إلكتروني</th>
-                        <th class="text-center">رسالة نصية</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -32,10 +31,6 @@
                         <td class="text-center">
                             <input class="form-check-input" type="checkbox" name="{{ ntype }}_email"
                                    {% if not s or s.email_enabled %}checked{% endif %}>
-                        </td>
-                        <td class="text-center">
-                            <input class="form-check-input" type="checkbox" name="{{ ntype }}_sms"
-                                   {% if s and s.sms_enabled %}checked{% endif %}>
                         </td>
                     </tr>
                     {% endfor %}

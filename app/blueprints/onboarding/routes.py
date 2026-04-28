@@ -69,17 +69,16 @@ def setup_office():
 @login_required
 def choose_plan():
     """Step 2: Select subscription plan."""
-    plans = SubscriptionPlan.query.filter_by(is_active=True).all()
     tenant = Tenant.query.get(g.tenant_id)
 
     if request.method == 'POST':
-        plan_id = request.form.get('plan_id', type=int)
+        plan_name = request.form.get('plan_name', '')
         billing_cycle = request.form.get('billing_cycle', 'monthly')
 
-        plan = SubscriptionPlan.query.get(plan_id)
+        plan = SubscriptionPlan.query.filter_by(name=plan_name, is_active=True).first()
         if not plan:
             flash('الخطة غير موجودة', 'danger')
-            return render_template('onboarding/choose_plan.html', plans=plans, tenant=tenant)
+            return render_template('onboarding/choose_plan.html', tenant=tenant)
 
         tenant.subscription_plan_id = plan.id
         tenant.subscription_status = 'trial'
@@ -100,7 +99,7 @@ def choose_plan():
             flash('لم يتم إرسال إيصال الاشتراك على البريد الإلكتروني. يرجى التحقق من إعدادات البريد', 'warning')
         return redirect(url_for('onboarding.invite_team'))
 
-    return render_template('onboarding/choose_plan.html', plans=plans, tenant=tenant)
+    return render_template('onboarding/choose_plan.html', tenant=tenant)
 
 
 @onboarding_bp.route('/invite-team', methods=['GET', 'POST'])

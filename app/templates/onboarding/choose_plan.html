@@ -1,94 +1,138 @@
 {% extends "base_onboarding.html" %}
 {% block title %}اختيار الخطة - LexOffice{% endblock %}
 {% block step_label %}الخطوة ٢ من ٣ — اختيار الخطة{% endblock %}
-{% block panel_width %}960px{% endblock %}
+{% block panel_width %}1160px{% endblock %}
 
 {% block extra_head %}
 <style>
-.plans-wrap {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.2rem;
+.plans-table-wrap {
+    overflow-x: auto;
     margin-bottom: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #E2E8F0;
 }
-.plan-card {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(24,73,169,0.2);
-    border-radius: 20px;
-    padding: 2rem 1.5rem 1.5rem;
-    position: relative;
-    display: flex; flex-direction: column;
-    transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+.plans-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+    min-width: 750px;
 }
-.plan-card:hover {
-    border-color: rgba(24,73,169,0.45);
-    transform: translateY(-4px);
-    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+.plans-table th,
+.plans-table td {
+    padding: 0.7rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid #E2E8F0;
+    vertical-align: middle;
 }
-.plan-featured {
-    border-color: rgba(24,73,169,0.55) !important;
-    background: rgba(24,73,169,0.09);
-    box-shadow: 0 0 0 1px rgba(24,73,169,0.35), 0 20px 50px rgba(24,73,169,0.12);
-    transform: translateY(-6px);
-}
-.plan-featured:hover { transform: translateY(-10px); }
-
-.plan-badge {
-    position: absolute;
-    top: -15px; left: 50%; transform: translateX(-50%);
-    background: linear-gradient(135deg, #1849A9, #078FD2);
-    color: #fff; font-size: 0.73rem; font-weight: 700;
-    padding: 0.28rem 1.1rem; border-radius: 100px;
-    white-space: nowrap;
-    box-shadow: 0 4px 14px rgba(24,73,169,0.45);
-}
-
-.plan-top { text-align: center; margin-bottom: 1.2rem; }
-.plan-name-ar { font-size: 1.3rem; font-weight: 900; color: #fff; margin-bottom: 0.15rem; }
-.plan-name-en { font-size: 0.72rem; color: #8ba3c9; font-weight: 500; letter-spacing: 0.5px; }
-
-.plan-price-row { text-align: center; margin-bottom: 0.25rem; }
-.plan-amount { font-size: 2.8rem; font-weight: 900; color: #fff; line-height: 1; }
-.plan-cur { font-size: 0.85rem; color: #078FD2; font-weight: 700; vertical-align: top; margin-top: 0.6rem; display: inline-block; }
-.plan-per { font-size: 0.75rem; color: #8ba3c9; margin-right: 2px; }
-.plan-yearly { text-align: center; font-size: 0.73rem; color: #8ba3c9; margin-bottom: 1.2rem; }
-.plan-yearly em { color: #34d399; font-style: normal; font-weight: 700; }
-
-.plan-divider { height: 1px; background: rgba(24,73,169,0.15); margin-bottom: 1.2rem; }
-
-.plan-features { list-style: none; padding: 0; margin: 0 0 1.5rem; flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
-.feat-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; }
-.feat-row.off { opacity: 0.38; }
-.feat-row i { font-size: 0.85rem; flex-shrink: 0; }
-.feat-row .icon-ok { color: #34d399; }
-.feat-row .icon-no { color: #6b7280; }
-.feat-row .icon-info { color: #1849A9; }
-.feat-row span { color: #7abfe6; }
-.feat-row strong { color: #fff; }
-
-.plan-btn {
-    width: 100%; padding: 0.8rem;
-    border-radius: 11px; border: none;
-    font-size: 0.88rem; font-weight: 700;
-    font-family: 'Cairo','Tajawal',sans-serif;
-    cursor: pointer; transition: all 0.2s;
-}
-.plan-btn-primary {
-    background: linear-gradient(135deg, #1849A9, #0C2461);
+.plans-table thead th {
+    background: #16A34A;
     color: #fff;
-    box-shadow: 0 5px 18px rgba(24,73,169,0.4);
+    font-weight: 700;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    padding: 0.85rem 1rem;
 }
-.plan-btn-primary:hover { box-shadow: 0 8px 25px rgba(24,73,169,0.58); transform: translateY(-1px); }
-.plan-btn-ghost {
-    background: rgba(24,73,169,0.08);
-    color: #078FD2;
-    border: 1px solid rgba(24,73,169,0.28);
+.plans-table thead th:first-child {
+    text-align: right;
+    border-radius: 0 8px 0 0;
 }
-.plan-btn-ghost:hover { background: rgba(24,73,169,0.16); color: #7abfe6; }
+.plans-table thead th:last-child {
+    border-radius: 8px 0 0 0;
+}
+.plans-table thead th small {
+    display: block;
+    font-weight: 500;
+    font-size: 0.72rem;
+    opacity: 0.85;
+    margin-top: 2px;
+}
+.plans-table tbody td:first-child {
+    text-align: right;
+    font-weight: 700;
+    color: #0C2461;
+    background: #f8fafc;
+    white-space: nowrap;
+}
+.plans-table tbody tr:last-child td { border-bottom: none; }
+.plans-table tbody tr:hover td { background: rgba(7,143,210,0.03); }
+.plans-table tbody tr:hover td:first-child { background: #f1f5f9; }
+
+.plans-table .price-cell {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #0C2461;
+}
+.plans-table .price-cell small {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #64748B;
+}
+.plans-table .custom-cell {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #16A34A;
+}
+.plans-table .check-icon { color: #16A34A; font-size: 1rem; }
+.plans-table .x-icon { color: #cbd5e1; font-size: 0.9rem; }
+.plans-table .detail-text {
+    font-size: 0.78rem;
+    color: #334155;
+    line-height: 1.5;
+}
+
+.btn-row td {
+    padding: 1rem !important;
+    background: #f8fafc !important;
+}
+.btn-row td:first-child { background: #f8fafc !important; }
+
+.plan-select-btn {
+    display: inline-block;
+    padding: 0.55rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: 'Cairo','Tajawal',sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+.plan-select-primary {
+    background: linear-gradient(135deg, #0C2461, #1849A9);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(12,36,97,0.2);
+}
+.plan-select-primary:hover { box-shadow: 0 6px 20px rgba(12,36,97,0.3); transform: translateY(-1px); }
+.plan-select-outline {
+    background: #fff;
+    color: #1849A9;
+    border: 1.5px solid #1849A9;
+}
+.plan-select-outline:hover { background: rgba(24,73,169,0.05); }
+.plan-select-green {
+    background: linear-gradient(135deg, #16A34A, #15803D);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(22,163,74,0.2);
+}
+.plan-select-green:hover { box-shadow: 0 6px 20px rgba(22,163,74,0.3); transform: translateY(-1px); }
+
+.discount-banner {
+    background: linear-gradient(135deg, #16A34A, #15803D);
+    color: #fff;
+    text-align: center;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    border-radius: 0 0 12px 12px;
+    margin-top: -1px;
+}
+
+.col-featured { background: rgba(22,163,74,0.03); }
 
 @media(max-width:720px){
-    .plans-wrap { grid-template-columns: 1fr; }
-    .plan-featured { transform: none; }
+    .ob-panel { padding: 1.2rem; }
+    .plans-table { font-size: 0.76rem; }
+    .plans-table th, .plans-table td { padding: 0.5rem 0.6rem; }
 }
 </style>
 {% endblock %}
@@ -112,90 +156,198 @@
     </div>
 </div>
 
-<div class="ob-panel" style="max-width:960px;">
+<div class="ob-panel" style="max-width:1160px;">
     <div class="ob-title">
         <h2>اختر خطة الاشتراك</h2>
         <p>جميع الخطط تشمل تجربة مجانية <strong>14 يوماً</strong> — لا بطاقة ائتمان مطلوبة</p>
     </div>
 
-    <div class="plans-wrap">
-        {% for plan in plans %}
-        <div class="plan-card {% if plan.name == 'Professional' %}plan-featured{% endif %}">
-            {% if plan.name == 'Professional' %}
-            <div class="plan-badge">⭐ الأكثر شيوعاً</div>
-            {% endif %}
-
-            <div class="plan-top">
-                <div class="plan-name-ar">{{ plan.name_ar }}</div>
-                <div class="plan-name-en">{{ plan.name }}</div>
-            </div>
-
-            <div class="plan-price-row">
-                <span class="plan-cur">ج.م</span>
-                <span class="plan-amount">{{ plan.price_monthly|int }}</span>
-                <span class="plan-per">/ شهرياً</span>
-            </div>
-            <div class="plan-yearly">
-                أو {{ plan.price_yearly|int }} ج.م سنوياً —
-                <em>خصم شهرين 🎉</em>
-            </div>
-
-            <div class="plan-divider"></div>
-
-            <ul class="plan-features">
-                <li class="feat-row">
-                    <i class="bi bi-people-fill icon-info"></i>
-                    {% if plan.max_lawyers == -1 %}
-                    <span>مستخدمون <strong>غير محدودين</strong></span>
-                    {% else %}
-                    <span>حتى <strong>{{ plan.max_lawyers }}</strong> مستخدمين</span>
-                    {% endif %}
-                </li>
-                {% if plan.features %}
-                <li class="feat-row">
-                    <i class="bi bi-folder2-open icon-info"></i>
-                    {% if plan.features.get('max_cases', 0) == -1 %}
-                    <span>قضايا <strong>غير محدودة</strong></span>
-                    {% else %}
-                    <span>حتى <strong>{{ plan.features.get('max_cases', 0) }}</strong> قضية</span>
-                    {% endif %}
-                </li>
-                <li class="feat-row">
-                    <i class="bi bi-hdd-fill icon-info"></i>
-                    <span><strong>{{ plan.features.get('max_storage_gb', 0) }}</strong> جيجا تخزين</span>
-                </li>
-                {% set features_map = [
-                    ('enforcement',           'bi-hammer',           'إدارة التنفيذ'),
-                    ('templates',             'bi-file-earmark-text','قوالب المستندات'),
-                    ('ai_summary',            'bi-robot',            'ملخصات بالذكاء الاصطناعي'),
-                    ('sms_notifications',     'bi-chat-dots-fill',   'إشعارات SMS'),
-                    ('whatsapp_notifications','bi-whatsapp',         'إشعارات واتساب'),
-                    ('advanced_reports',      'bi-bar-chart-line',   'تقارير متقدمة'),
-                    ('api_access',            'bi-code-slash',       'وصول API'),
-                ] %}
-                {% for key, icon, label in features_map %}
-                <li class="feat-row {% if not plan.features.get(key) %}off{% endif %}">
-                    {% if plan.features.get(key) %}
-                    <i class="bi bi-check-circle-fill icon-ok"></i>
-                    {% else %}
-                    <i class="bi bi-x-circle icon-no"></i>
-                    {% endif %}
-                    <span>{{ label }}</span>
-                </li>
-                {% endfor %}
-                {% endif %}
-            </ul>
-
-            <form method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="plan_id" value="{{ plan.id }}">
-                <input type="hidden" name="billing_cycle" value="monthly">
-                <button type="submit" class="plan-btn {% if plan.name == 'Professional' %}plan-btn-primary{% else %}plan-btn-ghost{% endif %}">
-                    ابدأ التجربة المجانية
-                </button>
-            </form>
+    <div class="plans-table-wrap">
+        <table class="plans-table">
+            <thead>
+                <tr>
+                    <th>الميزة / النظام</th>
+                    <th>باقة: المحامي الفردي<small>(Basic)</small></th>
+                    <th>باقة: فريق النمو<small>(Starter)</small></th>
+                    <th class="col-featured">باقة: المكاتب الكبرى<small>(Professional)</small></th>
+                    <th>باقة: المؤسسات<small>(Business)</small></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>السعر الشهري</td>
+                    <td class="price-cell">297 <small>ج.م</small></td>
+                    <td class="price-cell">497 <small>ج.م</small></td>
+                    <td class="price-cell col-featured">697 <small>ج.م</small></td>
+                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
+                </tr>
+                <tr>
+                    <td>المستخدمين (المحامين)</td>
+                    <td class="detail-text">محامي 1</td>
+                    <td class="detail-text">حتى 3 محامين</td>
+                    <td class="detail-text col-featured">حتى 6 محامين</td>
+                    <td class="detail-text">غير محدود</td>
+                </tr>
+                <tr>
+                    <td>إدارة القضايا والجلسات</td>
+                    <td class="detail-text">حتى 50 قضية</td>
+                    <td class="detail-text">غير محدود</td>
+                    <td class="detail-text col-featured">غير محدود</td>
+                    <td class="detail-text">غير محدود</td>
+                </tr>
+                <tr>
+                    <td>التخزين السحابي</td>
+                    <td class="detail-text">3 جيجابايت</td>
+                    <td class="detail-text">5 جيجابايت</td>
+                    <td class="detail-text col-featured">10 جيجابايت</td>
+                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
+                </tr>
+                <tr>
+                    <td>إدارة الموكلين والتوكيلات</td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td class="col-featured"><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                </tr>
+                <tr>
+                    <td>الأجندة والتقويم الرقمي</td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td class="col-featured"><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                </tr>
+                <tr>
+                    <td>إدارة المهام (Tasks)</td>
+                    <td class="detail-text">مهام شخصية فقط</td>
+                    <td class="detail-text">توزيع مهام + متابعة تنفيذ</td>
+                    <td class="detail-text col-featured">توزيع مهام + متابعة تنفيذ</td>
+                    <td class="detail-text">إدارة أقسام وصلاحيات متعددة</td>
+                </tr>
+                <tr>
+                    <td>سجل الأحكام والاستئناف</td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td class="col-featured"><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                </tr>
+                <tr>
+                    <td>متابعة التنفيذ</td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td class="col-featured"><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                </tr>
+                <tr>
+                    <td>النظام المالي (إيصالات/فواتير)</td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td class="col-featured"><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
+                </tr>
+                <tr>
+                    <td>إدارة المصاريف والأتعاب</td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td class="col-featured"><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
+                </tr>
+                <tr>
+                    <td>النماذج القانونية الجاهزة</td>
+                    <td class="detail-text">نموذج واحد</td>
+                    <td class="detail-text">3 نماذج</td>
+                    <td class="detail-text col-featured">5 نماذج</td>
+                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
+                </tr>
+                <tr>
+                    <td>قنوات التنبيهات</td>
+                    <td class="detail-text">إشعارات داخل النظام (In-app)</td>
+                    <td class="detail-text">إشعارات داخل النظام (In-app)</td>
+                    <td class="detail-text col-featured">البريد الإلكتروني + إشعارات داخل النظام (In-app)</td>
+                    <td class="detail-text">واتساب + الكل</td>
+                </tr>
+                <tr>
+                    <td>الذكاء الاصطناعي (AI)</td>
+                    <td><i class="bi bi-x-circle x-icon"></i></td>
+                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td class="detail-text col-featured">تلخيص مستندات + تذكارات ذكية</td>
+                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
+                </tr>
+                <tr>
+                    <td>لوحة التحكم (Dashboard)</td>
+                    <td class="detail-text">3 عناصر (Widgets)</td>
+                    <td class="detail-text">5 عناصر (Widgets)</td>
+                    <td class="detail-text col-featured">7 عناصر كاملة (Widgets)</td>
+                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
+                </tr>
+                <tr>
+                    <td>التقارير والتحليلات</td>
+                    <td><i class="bi bi-x-circle x-icon"></i></td>
+                    <td class="detail-text">تقارير أساسية</td>
+                    <td class="detail-text col-featured">متقدمة BI — 6 تقارير</td>
+                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
+                </tr>
+                <tr>
+                    <td>الدعم الفني</td>
+                    <td class="detail-text">تذاكر دعم</td>
+                    <td class="detail-text">تذاكر دعم</td>
+                    <td class="detail-text col-featured">أولوية رد</td>
+                    <td class="detail-text">مدير حساب مخصص 24/7</td>
+                </tr>
+                <tr>
+                    <td>الاستضافة</td>
+                    <td class="detail-text">سحابة مشتركة</td>
+                    <td class="detail-text">سحابة مشتركة</td>
+                    <td class="detail-text col-featured">سحابة مشتركة</td>
+                    <td class="detail-text">سيرفر خاص (Dedicated)</td>
+                </tr>
+                <tr>
+                    <td>الربط التقني (API)</td>
+                    <td><i class="bi bi-x-circle x-icon"></i></td>
+                    <td><i class="bi bi-x-circle x-icon"></i></td>
+                    <td class="col-featured"><i class="bi bi-x-circle x-icon"></i></td>
+                    <td class="detail-text">متاح للربط مع أنظمة أخرى</td>
+                </tr>
+                <!-- Plan selection buttons -->
+                <tr class="btn-row">
+                    <td></td>
+                    <td>
+                        <form method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="plan_name" value="Basic">
+                            <input type="hidden" name="billing_cycle" value="monthly">
+                            <button type="submit" class="plan-select-btn plan-select-outline">ابدأ التجربة المجانية</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="plan_name" value="Starter">
+                            <input type="hidden" name="billing_cycle" value="monthly">
+                            <button type="submit" class="plan-select-btn plan-select-outline">ابدأ التجربة المجانية</button>
+                        </form>
+                    </td>
+                    <td class="col-featured">
+                        <form method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="plan_name" value="Professional">
+                            <input type="hidden" name="billing_cycle" value="monthly">
+                            <button type="submit" class="plan-select-btn plan-select-green">ابدأ التجربة المجانية</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="plan_name" value="Business">
+                            <input type="hidden" name="billing_cycle" value="monthly">
+                            <button type="submit" class="plan-select-btn plan-select-primary">تواصل معنا</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="discount-banner">
+            خصم 50% على الاشتراك السنوي في الباقتين الأولى
         </div>
-        {% endfor %}
     </div>
 
     <div class="back-link">
