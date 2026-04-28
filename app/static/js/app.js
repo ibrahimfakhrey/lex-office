@@ -6,8 +6,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const darkToggle = document.getElementById('darkModeToggle');
     const html = document.documentElement;
 
-    // Apply saved theme on load (default: dark)
-    const saved = localStorage.getItem('theme') || 'dark';
+    // Apply saved theme on load (default: light)
+    const saved = localStorage.getItem('theme') || 'light';
     html.setAttribute('data-bs-theme', saved);
     if (darkToggle) {
         darkToggle.innerHTML = saved === 'dark'
