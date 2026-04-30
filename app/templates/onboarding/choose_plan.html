@@ -25,7 +25,7 @@
     vertical-align: middle;
 }
 .plans-table thead th {
-    background: #16A34A;
+    background: linear-gradient(135deg, #1849A9, #0C2461);
     color: #fff;
     font-weight: 700;
     font-size: 0.82rem;
@@ -70,9 +70,36 @@
 .plans-table .custom-cell {
     font-size: 0.8rem;
     font-weight: 600;
-    color: #16A34A;
+    color: #078FD2;
 }
-.plans-table .check-icon { color: #16A34A; font-size: 1rem; }
+.yearly-cell {
+    line-height: 1.4;
+}
+.yearly-cell .yearly-old {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-decoration: line-through;
+}
+.yearly-cell .yearly-new {
+    display: block;
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #F97316;
+}
+.yearly-cell .yearly-save {
+    display: inline-block;
+    font-size: 0.66rem;
+    font-weight: 700;
+    background: rgba(249,115,22,0.12);
+    color: #F97316;
+    padding: 1px 7px;
+    border-radius: 6px;
+    border: 1px solid rgba(249,115,22,0.3);
+    margin-top: 2px;
+}
+.plans-table .check-icon { color: #078FD2; font-size: 1rem; }
 .plans-table .x-icon { color: #cbd5e1; font-size: 0.9rem; }
 .plans-table .detail-text {
     font-size: 0.78rem;
@@ -110,14 +137,14 @@
 }
 .plan-select-outline:hover { background: rgba(24,73,169,0.05); }
 .plan-select-green {
-    background: linear-gradient(135deg, #16A34A, #15803D);
+    background: linear-gradient(135deg, #078FD2, #1849A9);
     color: #fff;
-    box-shadow: 0 4px 14px rgba(22,163,74,0.2);
+    box-shadow: 0 4px 14px rgba(24,73,169,0.25);
 }
-.plan-select-green:hover { box-shadow: 0 6px 20px rgba(22,163,74,0.3); transform: translateY(-1px); }
+.plan-select-green:hover { box-shadow: 0 6px 20px rgba(24,73,169,0.35); transform: translateY(-1px); }
 
 .discount-banner {
-    background: linear-gradient(135deg, #16A34A, #15803D);
+    background: linear-gradient(135deg, #078FD2, #1849A9);
     color: #fff;
     text-align: center;
     padding: 0.75rem 1rem;
@@ -127,7 +154,7 @@
     margin-top: -1px;
 }
 
-.col-featured { background: rgba(22,163,74,0.03); }
+.col-featured { background: rgba(7,143,210,0.04); }
 
 @media(max-width:720px){
     .ob-panel { padding: 1.2rem; }
@@ -182,8 +209,27 @@
                     <td class="custom-cell">تخصيص حسب الاتفاق</td>
                 </tr>
                 <tr>
+                    <td>السعر السنوي <small style="color:#F97316;font-weight:700;display:block;font-size:0.68rem">خصم 50%</small></td>
+                    <td class="yearly-cell">
+                        <span class="yearly-old">3,564 ج.م</span>
+                        <span class="yearly-new">1,782 ج.م</span>
+                        <span class="yearly-save">وفّر 50%</span>
+                    </td>
+                    <td class="yearly-cell">
+                        <span class="yearly-old">5,964 ج.م</span>
+                        <span class="yearly-new">2,982 ج.م</span>
+                        <span class="yearly-save">وفّر 50%</span>
+                    </td>
+                    <td class="yearly-cell col-featured">
+                        <span class="yearly-old">8,364 ج.م</span>
+                        <span class="yearly-new">4,182 ج.م</span>
+                        <span class="yearly-save">وفّر 50%</span>
+                    </td>
+                    <td class="custom-cell">تواصل معنا للتفاصيل</td>
+                </tr>
+                <tr>
                     <td>المستخدمين (المحامين)</td>
-                    <td class="detail-text">محامي 1</td>
+                    <td class="detail-text">محامي واحد</td>
                     <td class="detail-text">حتى 3 محامين</td>
                     <td class="detail-text col-featured">حتى 6 محامين</td>
                     <td class="detail-text">غير محدود</td>
@@ -191,7 +237,7 @@
                 <tr>
                     <td>إدارة القضايا والجلسات</td>
                     <td class="detail-text">حتى 50 قضية</td>
-                    <td class="detail-text">غير محدود</td>
+                    <td class="detail-text">حتى 200 قضية</td>
                     <td class="detail-text col-featured">غير محدود</td>
                     <td class="detail-text">غير محدود</td>
                 </tr>
@@ -200,7 +246,7 @@
                     <td class="detail-text">3 جيجابايت</td>
                     <td class="detail-text">5 جيجابايت</td>
                     <td class="detail-text col-featured">10 جيجابايت</td>
-                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
+                    <td class="detail-text">غير محدود</td>
                 </tr>
                 <tr>
                     <td>إدارة الموكلين والتوكيلات</td>
@@ -268,9 +314,9 @@
                 <tr>
                     <td>الذكاء الاصطناعي (AI)</td>
                     <td><i class="bi bi-x-circle x-icon"></i></td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
+                    <td class="detail-text">مساعد ذكي أساسي</td>
                     <td class="detail-text col-featured">تلخيص مستندات + تذكارات ذكية</td>
-                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
+                    <td class="custom-cell">تخصيص متقدم حسب الاتفاق</td>
                 </tr>
                 <tr>
                     <td>لوحة التحكم (Dashboard)</td>
@@ -305,7 +351,7 @@
                     <td><i class="bi bi-x-circle x-icon"></i></td>
                     <td><i class="bi bi-x-circle x-icon"></i></td>
                     <td class="col-featured"><i class="bi bi-x-circle x-icon"></i></td>
-                    <td class="detail-text">متاح للربط مع أنظمة أخرى</td>
+                    <td class="detail-text">ربط API كامل مع أنظمة أخرى</td>
                 </tr>
                 <!-- Plan selection buttons -->
                 <tr class="btn-row">
@@ -346,7 +392,7 @@
             </tbody>
         </table>
         <div class="discount-banner">
-            خصم 50% على الاشتراك السنوي في الباقتين الأولى
+            🔥 خصم 50% على جميع الاشتراكات السنوية — عرض لفترة محدودة
         </div>
     </div>
 
