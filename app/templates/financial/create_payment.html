@@ -40,7 +40,7 @@
                     <input type="date" name="payment_date" class="form-control" dir="ltr" value="{{ form.get('payment_date', '') }}" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">��ريقة الدفع <span class="text-danger">*</span></label>
+                    <label class="form-label">طريقة الدفع <span class="text-danger">*</span></label>
                     <select name="payment_method" class="form-select" required>
                         <option value="">-- اختر --</option>
                         {% for val, label in payment_methods %}

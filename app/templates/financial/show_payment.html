@@ -33,7 +33,7 @@
                         <div>{{ method_map.get(payment.payment_method, payment.payment_method) }}</div>
                     </div>
                     <div class="col-md-6">
-                        <small class="text-muted">��لموكل</small>
+                        <small class="text-muted">الموكل</small>
                         <div>
                             {% if payment.client %}
                             <a href="{{ url_for('clients.show', id=payment.client_id) }}">{{ payment.client.full_name }}</a>

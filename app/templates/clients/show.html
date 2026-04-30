@@ -132,7 +132,7 @@
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-briefcase me-1"></i> القضايا ({{ cases|length }})</span>
-                <a href="{{ url_for('cases.create') }}?client_id={{ client.id }}" class="btn btn-sm btn-outline-primary">إضافة قض��ة</a>
+                <a href="{{ url_for('cases.create') }}?client_id={{ client.id }}" class="btn btn-sm btn-outline-primary">إضافة قضية</a>
             </div>
             <div class="card-body p-0">
                 {% if cases %}
@@ -155,7 +155,7 @@
                 </div>
                 {% else %}
                 <div class="empty-state py-3">
-                    <p class="mb-0 small text-muted">لا توجد ��ضايا</p>
+                    <p class="mb-0 small text-muted">لا توجد قضايا</p>
                 </div>
                 {% endif %}
             </div>
