@@ -1,0 +1,62 @@
+{% extends 'admin/base.html' %}
+{% block title %}إعدادات SMTP{% endblock %}
+{% block page_title %}إعدادات البريد الإلكتروني (SMTP){% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('admin.settings_general') }}" class="text-decoration-none small text-muted">
+        <i class="bi bi-arrow-right"></i> العودة للإعدادات
+    </a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-envelope-at"></i> تكوين خادم البريد</div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row g-3">
+                        {% for key, label, default in keys %}
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">{{ label }}</label>
+                            {% if key == 'smtp_password' %}
+                            <input type="password" name="{{ key }}" class="form-control" placeholder="•••••••• (اتركه فارغاً للإبقاء على القيمة الحالية)">
+                            {% elif key == 'smtp_use_tls' %}
+                            <select name="{{ key }}" class="form-select">
+                                <option value="true" {{ 'selected' if values[key] == 'true' }}>نعم</option>
+                                <option value="false" {{ 'selected' if values[key] == 'false' }}>لا</option>
+                            </select>
+                            {% elif key == 'smtp_port' %}
+                            <input type="number" name="{{ key }}" value="{{ values[key] }}" class="form-control">
+                            {% else %}
+                            <input name="{{ key }}" value="{{ values[key] }}" class="form-control">
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3">
+                        <i class="bi bi-check2"></i> حفظ
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-send-check"></i> اختبار</div>
+            <div class="card-body">
+                <p class="text-muted small">أرسل رسالة اختبار للتأكد من صحة الإعدادات</p>
+                <form method="POST" action="{{ url_for('admin.settings_smtp_test') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="email" name="test_email" class="form-control mb-2" placeholder="البريد المستلم" value="{{ g.current_admin.email }}">
+                    <button type="submit" class="btn btn-outline-info w-100">
+                        <i class="bi bi-send"></i> إرسال رسالة اختبار
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

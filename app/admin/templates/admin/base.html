@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LexOffice Admin{% endblock %} | Manasety</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        :root {
+            --primary: #1849A9;
+            --primary-dark: #0C2461;
+            --accent: #078FD2;
+            --gold: #f4c542;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark-bg: #071333;
+            --dark-surface: #0a1d4a;
+            --dark-text: #e8f0ff;
+            --dark-muted: #8ba3c9;
+            --border: rgba(24, 73, 169, 0.15);
+        }
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            min-height: 100vh;
+        }
+        .admin-sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 260px;
+            height: 100vh;
+            background: linear-gradient(180deg, #081b4b 0%, #0C2461 35%, #143575 100%);
+            z-index: 1040;
+            overflow-y: auto;
+        }
+        .admin-sidebar .brand {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .admin-sidebar .brand h5 {
+            margin: 0;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .admin-sidebar .brand small {
+            color: var(--dark-muted);
+            font-size: 0.7rem;
+        }
+        .admin-sidebar .nav-item {
+            margin: 2px 12px;
+        }
+        .admin-sidebar .nav-link {
+            color: rgba(255,255,255,0.65);
+            padding: 0.6rem 0.9rem;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+        }
+        .admin-sidebar .nav-link:hover {
+            background: rgba(7,143,210,0.1);
+            color: #fff;
+        }
+        .admin-sidebar .nav-link.active {
+            background: linear-gradient(135deg, rgba(7,143,210,0.18) 0%, rgba(24,73,169,0.12) 100%);
+            color: #fff;
+            font-weight: 700;
+            border-right: 3px solid var(--accent);
+        }
+        .admin-sidebar .nav-link i {
+            font-size: 1rem;
+            width: 22px;
+            text-align: center;
+            opacity: 0.7;
+        }
+        .admin-main {
+            margin-right: 260px;
+            min-height: 100vh;
+        }
+        .admin-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+            background: var(--dark-surface);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .admin-topbar h5 {
+            margin: 0;
+            font-weight: 700;
+        }
+        .admin-content {
+            padding: 24px;
+        }
+        .card {
+            background: var(--dark-surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            color: var(--dark-text);
+        }
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid var(--border);
+            font-weight: 700;
+        }
+        .form-control, .form-select {
+            background: rgba(255,255,255,0.04);
+            border: 1.5px solid var(--border);
+            color: var(--dark-text);
+            border-radius: 10px;
+        }
+        .form-control:focus, .form-select:focus {
+            background: rgba(255,255,255,0.06);
+            border-color: var(--accent);
+            color: var(--dark-text);
+            box-shadow: 0 0 0 3px rgba(7,143,210,0.15);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border: none;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1d54be 0%, #0e2a6e 100%);
+        }
+        .table {
+            color: var(--dark-text);
+        }
+        .table thead th {
+            color: var(--dark-muted);
+            border-color: var(--border);
+            font-weight: 600;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .table tbody td {
+            border-color: var(--border);
+            font-size: 0.88rem;
+            vertical-align: middle;
+        }
+        .badge-soft-success { background: rgba(16,185,129,0.15); color: #34d399; }
+        .badge-soft-warning { background: rgba(245,158,11,0.15); color: #fbbf24; }
+        .badge-soft-danger  { background: rgba(239,68,68,0.15); color: #f87171; }
+        .badge-soft-info    { background: rgba(7,143,210,0.15); color: var(--accent); }
+        .badge-soft-secondary { background: rgba(148,163,184,0.15); color: #94a3b8; }
+        .stat-card {
+            border-radius: 16px;
+            padding: 20px;
+            background: var(--dark-surface);
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .stat-card .label {
+            color: var(--dark-muted);
+            font-size: 0.78rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 800;
+            margin: 8px 0 0;
+        }
+        .auth-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: radial-gradient(ellipse at top right, rgba(24,73,169,0.18) 0%, transparent 60%),
+                        radial-gradient(ellipse at bottom left, rgba(7,143,210,0.12) 0%, transparent 50%),
+                        var(--dark-bg);
+        }
+        .auth-card {
+            max-width: 440px;
+            width: 100%;
+            border-radius: 18px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% block layout %}
+    <div class="d-flex">
+        <nav class="admin-sidebar">
+            <div class="brand">
+                <h5>⚖️ LexOffice Admin</h5>
+                <small>Manasety Super Admin Panel</small>
+            </div>
+            <ul class="nav flex-column p-2">
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'admin.index' }}" href="{{ url_for('admin.index') }}">
+                        <i class="bi bi-grid-1x2-fill"></i> لوحة التحكم
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint and 'tenant' in (request.endpoint or '') }}" href="{{ url_for('admin.tenants_list') }}">
+                        <i class="bi bi-building-fill"></i> المكاتب
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint and 'plan' in (request.endpoint or '') }}" href="{{ url_for('admin.plans_list') }}">
+                        <i class="bi bi-stack"></i> الخطط
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint and 'feature' in (request.endpoint or '') }}" href="{{ url_for('admin.features_matrix') }}">
+                        <i class="bi bi-toggles2"></i> الميزات
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint and 'billing' in (request.endpoint or '') }}" href="{{ url_for('admin.billing_invoices') }}">
+                        <i class="bi bi-receipt"></i> الفواتير
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.notification') }}" href="{{ url_for('admin.notifications_send') }}">
+                        <i class="bi bi-bell-fill"></i> الإشعارات
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint and 'audit' in (request.endpoint or '') }}" href="{{ url_for('admin.audit_log') }}">
+                        <i class="bi bi-shield-check"></i> سجل العمليات
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <small class="text-muted px-3" style="font-size:0.65rem; letter-spacing:1.5px; text-transform:uppercase">إدارة</small>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.settings') }}" href="{{ url_for('admin.settings_general') }}">
+                        <i class="bi bi-gear-fill"></i> الإعدادات
+                    </a>
+                </li>
+            </ul>
+            <div class="p-3 mt-auto">
+                <a href="{{ url_for('admin.logout') }}" class="btn btn-outline-light btn-sm w-100">
+                    <i class="bi bi-box-arrow-right"></i> خروج
+                </a>
+            </div>
+        </nav>
+
+        <main class="admin-main flex-grow-1">
+            <div class="admin-topbar">
+                <h5>{% block page_title %}{% endblock %}</h5>
+                <div>
+                    {% if g.current_admin %}
+                        <span class="badge badge-soft-info">{{ g.current_admin.full_name }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="admin-content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    {% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

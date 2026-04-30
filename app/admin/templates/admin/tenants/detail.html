@@ -1,0 +1,414 @@
+{% extends 'admin/base.html' %}
+{% block title %}{{ tenant.name }}{% endblock %}
+{% block page_title %}{{ tenant.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <a href="{{ url_for('admin.tenants_list') }}" class="text-decoration-none small text-muted">
+            <i class="bi bi-arrow-right"></i> العودة للقائمة
+        </a>
+        <h4 class="mt-2 mb-0">
+            {{ tenant.name }}
+            {% if tenant.subscription_status == 'active' %}<span class="badge badge-soft-success ms-2">نشط</span>
+            {% elif tenant.subscription_status == 'trial' %}<span class="badge badge-soft-info ms-2">تجريبي</span>
+            {% elif tenant.subscription_status == 'suspended' %}<span class="badge badge-soft-warning ms-2">معلق</span>
+            {% elif tenant.subscription_status == 'cancelled' %}<span class="badge badge-soft-danger ms-2">ملغي</span>
+            {% endif %}
+        </h4>
+        <small class="text-muted">ID: {{ tenant.id }} • تم التسجيل في {{ tenant.created_at.strftime('%Y-%m-%d') if tenant.created_at }}</small>
+    </div>
+    <div>
+        {% if tenant.subscription_status == 'suspended' %}
+            <form method="POST" action="{{ url_for('admin.tenant_unsuspend', tenant_id=tenant.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-outline-success" onclick="return confirm('إعادة تفعيل المكتب؟')">
+                    <i class="bi bi-play-circle"></i> إعادة تفعيل
+                </button>
+            </form>
+        {% else %}
+            <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#suspendModal">
+                <i class="bi bi-pause-circle"></i> تعليق
+            </button>
+        {% endif %}
+        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#extendModal">
+            <i class="bi bi-clock"></i> تمديد
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#changePlanModal">
+            <i class="bi bi-stack"></i> تغيير الخطة
+        </button>
+        {% if tenant.subscription_status != 'cancelled' %}
+        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
+            <i class="bi bi-x-circle"></i> إلغاء الاشتراك
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Tab navigation -->
+<ul class="nav nav-tabs mb-3" style="border-color: var(--border)">
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if active_tab == 'overview' }}" href="{{ url_for('admin.tenant_detail', tenant_id=tenant.id) }}">
+            <i class="bi bi-info-circle"></i> الأساسيات
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if active_tab == 'usage' }}" href="{{ url_for('admin.tenant_usage', tenant_id=tenant.id) }}">
+            <i class="bi bi-bar-chart"></i> الاستخدام
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if active_tab == 'billing' }}" href="{{ url_for('admin.tenant_billing', tenant_id=tenant.id) }}">
+            <i class="bi bi-receipt"></i> الفواتير
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if active_tab == 'features' }}" href="{{ url_for('admin.tenant_features', tenant_id=tenant.id) }}">
+            <i class="bi bi-toggles2"></i> الميزات
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if active_tab == 'audit' }}" href="{{ url_for('admin.tenant_audit', tenant_id=tenant.id) }}">
+            <i class="bi bi-shield-check"></i> سجل العمليات
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if active_tab == 'notes' }}" href="{{ url_for('admin.tenant_notes', tenant_id=tenant.id) }}">
+            <i class="bi bi-journal-text"></i> ملاحظات الدعم
+        </a>
+    </li>
+</ul>
+
+<!-- Tab content -->
+<div class="tab-content">
+
+{% if active_tab == 'overview' %}
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-info-circle"></i> المعلومات الأساسية
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.tenant_edit', tenant_id=tenant.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="form-label small">اسم المكتب</label><input name="name" value="{{ tenant.name }}" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label small">البريد الإلكتروني</label><input name="email" value="{{ tenant.email or '' }}" type="email" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label small">رقم الهاتف</label><input name="phone" value="{{ tenant.phone or '' }}" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label small">رقم النقابة</label><input name="bar_registration_no" value="{{ tenant.bar_registration_no or '' }}" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label small">البلد</label><input name="country" value="{{ tenant.country or '' }}" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label small">المدينة</label><input name="city" value="{{ tenant.city or '' }}" class="form-control"></div>
+                        <div class="col-12"><label class="form-label small">العنوان</label><textarea name="address" class="form-control" rows="2">{{ tenant.address or '' }}</textarea></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm mt-3">حفظ التعديلات</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-stack"></i> الاشتراك</div>
+            <div class="card-body">
+                <div class="mb-2"><span class="text-muted small">الخطة:</span> <strong>{{ tenant.subscription_plan.name_ar if tenant.subscription_plan else 'بدون' }}</strong></div>
+                <div class="mb-2"><span class="text-muted small">الحالة:</span> <strong>{{ tenant.subscription_status }}</strong></div>
+                <div class="mb-2"><span class="text-muted small">تاريخ التسجيل:</span> <strong>{{ tenant.created_at.strftime('%Y-%m-%d') if tenant.created_at }}</strong></div>
+                {% if tenant.trial_ends_at %}<div class="mb-2"><span class="text-muted small">انتهاء التجربة:</span> <strong>{{ tenant.trial_ends_at.strftime('%Y-%m-%d') }}</strong></div>{% endif %}
+                {% if tenant.subscription_ends_at %}<div class="mb-2"><span class="text-muted small">انتهاء الاشتراك:</span> <strong>{{ tenant.subscription_ends_at.strftime('%Y-%m-%d') }}</strong></div>{% endif %}
+                <hr>
+                <div class="mb-2"><span class="text-muted small">المقاعد المفعلة:</span> <strong>{{ active_users }}</strong> / {{ total_users }}</div>
+                {% if tenant.suspension_reason %}
+                <div class="alert alert-warning small mt-2 mb-0"><strong>سبب التعليق:</strong> {{ tenant.suspension_reason }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if active_tab == 'usage' %}
+<div class="row g-3">
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card"><div class="label">عدد القضايا</div><div class="value text-success">{{ usage.cases }}</div></div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card"><div class="label">عدد الموكلين</div><div class="value" style="color: var(--accent)">{{ usage.clients }}</div></div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card"><div class="label">عدد الجلسات</div><div class="value text-warning">{{ usage.sessions }}</div></div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card"><div class="label">المستخدمين النشطين</div><div class="value">{{ usage.active_users }} / {{ usage.users }}</div></div>
+    </div>
+</div>
+<div class="card mt-3">
+    <div class="card-header"><i class="bi bi-clock-history"></i> آخر 10 عمليات تسجيل دخول</div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead><tr><th>المستخدم</th><th>البريد</th><th>الدور</th><th>آخر دخول</th></tr></thead>
+            <tbody>
+                {% for u in recent_logins %}
+                <tr>
+                    <td>{{ u.full_name }}</td><td class="small">{{ u.email }}</td>
+                    <td><span class="badge badge-soft-info">{{ u.role.name_ar if u.role else '—' }}</span></td>
+                    <td class="small">{{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="text-center text-muted py-3">لا توجد عمليات دخول</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if active_tab == 'billing' %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between">
+        <span><i class="bi bi-receipt"></i> الفواتير ({{ payments|length }})</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr><th>رقم</th><th>الخطة</th><th>المبلغ</th><th>النوع</th><th>الحالة</th><th>الفترة</th><th>تاريخ الإصدار</th></tr>
+            </thead>
+            <tbody>
+                {% for p in payments %}
+                <tr>
+                    <td class="small">{{ p.invoice_number or ('#' + p.id|string) }}</td>
+                    <td>{{ p.plan.name_ar if p.plan else '—' }}</td>
+                    <td class="text-success fw-bold">{{ p.amount }} ج.م</td>
+                    <td><span class="badge badge-soft-secondary">{{ p.payment_type }}</span></td>
+                    <td>
+                        {% if p.status == 'paid' %}<span class="badge badge-soft-success">مدفوعة</span>
+                        {% elif p.status == 'pending' %}<span class="badge badge-soft-info">قيد الدفع</span>
+                        {% elif p.status == 'overdue' %}<span class="badge badge-soft-danger">متأخرة</span>
+                        {% elif p.status == 'refunded' %}<span class="badge badge-soft-warning">مستردة</span>
+                        {% else %}<span class="badge badge-soft-secondary">{{ p.status }}</span>{% endif %}
+                    </td>
+                    <td class="small">{{ p.period_start.strftime('%Y-%m-%d') if p.period_start }} → {{ p.period_end.strftime('%Y-%m-%d') if p.period_end }}</td>
+                    <td class="small">{{ p.created_at.strftime('%Y-%m-%d') if p.created_at }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-4">لا توجد فواتير</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if active_tab == 'features' %}
+<div class="card">
+    <div class="card-header"><i class="bi bi-toggles2"></i> الميزات الفعالة</div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead><tr><th>المفتاح</th><th>قيمة الخطة</th><th>المصدر</th><th>الحالة</th><th>صالح حتى</th><th>السبب</th><th></th></tr></thead>
+            <tbody>
+                {% for f in feature_view %}
+                <tr>
+                    <td class="font-monospace small">{{ f.key }}</td>
+                    <td class="small">{{ f.plan_value }}</td>
+                    <td>
+                        {% if f.source == 'override' %}
+                            <span class="badge badge-soft-warning">Override</span>
+                        {% else %}
+                            <span class="badge badge-soft-secondary">من الخطة</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if f.effective %}<span class="badge badge-soft-success">مفعلة</span>{% else %}<span class="badge badge-soft-danger">معطلة</span>{% endif %}
+                    </td>
+                    <td class="small">
+                        {% if f.override and f.override.expires_at %}{{ f.override.expires_at.strftime('%Y-%m-%d') }}{% else %}—{% endif %}
+                    </td>
+                    <td class="small text-muted">{{ f.override.reason if f.override else '' }}</td>
+                    <td>
+                        {% if f.override %}
+                        <form method="POST" action="{{ url_for('admin.tenant_feature_remove', tenant_id=tenant.id, override_id=f.override.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-xs btn-outline-warning" onclick="return confirm('إزالة الـ Override؟')"><i class="bi bi-x"></i></button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-3">لا توجد ميزات معرّفة بعد</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer">
+        <form method="POST" action="{{ url_for('admin.tenant_feature_toggle', tenant_id=tenant.id) }}" class="row g-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-3"><input name="feature_key" class="form-control form-control-sm" placeholder="مفتاح الميزة (e.g. ai_summary)" required></div>
+            <div class="col-md-2">
+                <select name="enabled" class="form-select form-select-sm">
+                    <option value="1">مفعلة</option>
+                    <option value="0">معطلة</option>
+                </select>
+            </div>
+            <div class="col-md-2"><input type="date" name="expires_at" class="form-control form-control-sm" placeholder="تنتهي في"></div>
+            <div class="col-md-3"><input name="reason" class="form-control form-control-sm" placeholder="سبب (اختياري)"></div>
+            <div class="col-md-2"><button class="btn btn-primary btn-sm w-100"><i class="bi bi-plus"></i> إضافة Override</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if active_tab == 'audit' %}
+<div class="card">
+    <div class="card-header"><i class="bi bi-shield-check"></i> سجل عمليات الأدمن على هذا المكتب</div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead><tr><th>الوقت</th><th>الأدمن</th><th>الإجراء</th><th>الوصف</th><th>IP</th></tr></thead>
+            <tbody>
+                {% for log in audit_logs %}
+                <tr>
+                    <td class="small">{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ log.admin.full_name if log.admin else '—' }}</td>
+                    <td><span class="badge badge-soft-info font-monospace">{{ log.action_type }}</span></td>
+                    <td class="small">{{ log.description or '' }}</td>
+                    <td class="small text-muted">{{ log.ip_address or '' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center text-muted py-3">لا توجد سجلات</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if active_tab == 'notes' %}
+<div class="card">
+    <div class="card-header"><i class="bi bi-journal-text"></i> الملاحظات الداخلية ({{ notes|length }})</div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.tenant_add_note', tenant_id=tenant.id) }}" class="mb-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <textarea name="note" class="form-control mb-2" rows="3" placeholder="اكتب ملاحظة..." required></textarea>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> إضافة ملاحظة</button>
+        </form>
+        <hr>
+        {% for n in notes %}
+        <div class="border-start border-3 ps-3 mb-3" style="border-color: var(--accent) !important;">
+            <div class="d-flex justify-content-between">
+                <small class="text-muted">{{ n.creator.full_name if n.creator else '—' }} • {{ n.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                <form method="POST" action="{{ url_for('admin.tenant_delete_note', tenant_id=tenant.id, note_id=n.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-xs btn-outline-danger" onclick="return confirm('حذف الملاحظة؟')"><i class="bi bi-trash"></i></button>
+                </form>
+            </div>
+            <p class="mb-0 mt-1">{{ n.note }}</p>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-3">لا توجد ملاحظات</div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+</div>
+
+<!-- ────────── Modals ────────── -->
+
+<!-- Suspend Modal -->
+<div class="modal fade" id="suspendModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('admin.tenant_suspend', tenant_id=tenant.id) }}" class="modal-content" style="background: var(--dark-surface)">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-header"><h5 class="modal-title">تعليق المكتب</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <p class="text-warning">سيتم منع جميع المستخدمين من الدخول.</p>
+                <label class="form-label small">السبب</label>
+                <textarea name="reason" class="form-control" rows="3" required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="btn btn-warning btn-sm">تعليق</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('admin.tenant_cancel', tenant_id=tenant.id) }}" class="modal-content" style="background: var(--dark-surface)">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-header"><h5 class="modal-title">إلغاء الاشتراك</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <p class="text-danger">هذا الإجراء سيلغي الاشتراك تماماً.</p>
+                <label class="form-label small">السبب</label>
+                <textarea name="reason" class="form-control" rows="3" required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="btn btn-danger btn-sm">إلغاء الاشتراك</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Extend Modal -->
+<div class="modal fade" id="extendModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('admin.tenant_extend', tenant_id=tenant.id) }}" class="modal-content" style="background: var(--dark-surface)">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-header"><h5 class="modal-title">تمديد الاشتراك / التجربة</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <label class="form-label small">عدد الأيام</label>
+                <input type="number" name="days" class="form-control mb-2" value="7" min="1" max="365" required>
+                <label class="form-label small">تمديد:</label>
+                <select name="target" class="form-select">
+                    <option value="subscription">الاشتراك</option>
+                    <option value="trial">الفترة التجريبية</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="btn btn-info btn-sm">تمديد</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Change Plan Modal -->
+<div class="modal fade" id="changePlanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('admin.tenant_change_plan', tenant_id=tenant.id) }}" class="modal-content" style="background: var(--dark-surface)">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-header"><h5 class="modal-title">تغيير الخطة</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <label class="form-label small">اختر الخطة الجديدة</label>
+                <select name="plan_id" class="form-select" required>
+                    {% for p in plans %}
+                    <option value="{{ p.id }}" {{ 'selected' if tenant.subscription_plan_id == p.id }}>{{ p.name_ar }} ({{ p.price_monthly }} ج.م / شهر)</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" class="btn btn-primary btn-sm">حفظ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.btn-xs { padding: 0.15rem 0.4rem; font-size: 0.7rem; }
+.nav-tabs .nav-link {
+    color: var(--dark-muted);
+    border: none;
+    padding: 0.6rem 1rem;
+    font-size: 0.88rem;
+}
+.nav-tabs .nav-link:hover { color: var(--dark-text); border: none; }
+.nav-tabs .nav-link.active {
+    color: var(--accent);
+    background: transparent;
+    border-bottom: 2px solid var(--accent);
+    font-weight: 600;
+}
+</style>
+{% endblock %}

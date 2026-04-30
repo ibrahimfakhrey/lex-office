@@ -1,0 +1,104 @@
+{% extends 'admin/base.html' %}
+{% block title %}مصفوفة الميزات{% endblock %}
+{% block page_title %}مصفوفة الميزات × الخطط{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <p class="text-muted mb-0 small">عرض شامل لكل الميزات عبر كل الخطط — اضغط أي توجل لتفعيل/تعطيل الميزة فوراً</p>
+    <a href="{{ url_for('admin.plans_list') }}" class="btn btn-sm btn-outline-light">
+        <i class="bi bi-arrow-right"></i> العودة للخطط
+    </a>
+</div>
+
+{% if not plans %}
+<div class="card text-center py-5">
+    <p class="text-muted">لا توجد خطط بعد. <a href="{{ url_for('admin.plans_create') }}">إنشاء خطة جديدة</a></p>
+</div>
+{% else %}
+
+{% for group_key, group_label in groups.items() %}
+{% if features_by_group[group_key] %}
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-folder"></i> {{ group_label }}</div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th style="min-width: 220px">الميزة</th>
+                    {% for p in plans %}
+                    <th class="text-center">
+                        <div>{{ p.name_ar }}</div>
+                        <small class="text-muted">{{ p.price_monthly }} ج.م</small>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in features_by_group[group_key] %}
+                <tr>
+                    <td>
+                        <strong>{{ f.label }}</strong>
+                        <div><small class="text-muted font-monospace">{{ f.key }}</small></div>
+                    </td>
+                    {% for p in plans %}
+                    {% set cell = grid[f.key].cells[p.id] %}
+                    <td class="text-center">
+                        {% if f.group == 'limits' %}
+                            <form method="POST" action="{{ url_for('admin.feature_limit', plan_id=p.id) }}" class="d-inline-block">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="key" value="{{ f.key }}">
+                                <input type="number" name="value" value="{{ cell if cell is not none else '' }}" class="form-control form-control-sm text-center" style="width: 100px; display: inline-block" onchange="this.form.submit()">
+                            </form>
+                        {% else %}
+                            <label class="form-check form-switch d-inline-block m-0">
+                                <input class="form-check-input feature-toggle" type="checkbox"
+                                       data-plan="{{ p.id }}" data-key="{{ f.key }}" {{ 'checked' if cell }}>
+                            </label>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<div class="alert alert-info small">
+    <i class="bi bi-info-circle"></i>
+    تغيير أي ميزة يطبق فوراً على جميع المكاتب على هذه الخطة (ما عدا المكاتب التي لديها Override).
+</div>
+{% endif %}
+
+<script>
+document.querySelectorAll('.feature-toggle').forEach(el => {
+    el.addEventListener('change', async (e) => {
+        const planId = e.target.dataset.plan;
+        const key = e.target.dataset.key;
+        const enabled = e.target.checked ? '1' : '0';
+        const csrf = '{{ csrf_token() }}';
+
+        const fd = new FormData();
+        fd.append('csrf_token', csrf);
+        fd.append('key', key);
+        fd.append('enabled', enabled);
+
+        try {
+            const res = await fetch(`/admin/features/plan/${planId}/toggle`, {
+                method: 'POST', body: fd, credentials: 'same-origin'
+            });
+            const data = await res.json();
+            if (!data.success) {
+                alert('فشل التحديث');
+                e.target.checked = !e.target.checked;
+            }
+        } catch (err) {
+            alert('خطأ في الاتصال');
+            e.target.checked = !e.target.checked;
+        }
+    });
+});
+</script>
+{% endblock %}

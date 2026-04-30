@@ -18,7 +18,15 @@ class Tenant(db.Model):
     subscription_plan_id = db.Column(db.Integer, db.ForeignKey('subscription_plans.id'), nullable=True)
     subscription_status = db.Column(db.String(20), default='trial')
     trial_ends_at = db.Column(db.DateTime, nullable=True)
+    subscription_ends_at = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
+    suspension_reason = db.Column(db.Text, nullable=True)
+    suspended_at = db.Column(db.DateTime, nullable=True)
+    cancelled_at = db.Column(db.DateTime, nullable=True)
+    country = db.Column(db.String(80), nullable=True)
+    city = db.Column(db.String(120), nullable=True)
+    # organic / referral / paid_ad / direct
+    acquisition_source = db.Column(db.String(40), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -44,7 +52,14 @@ class Tenant(db.Model):
             'subscription_plan_id': self.subscription_plan_id,
             'subscription_status': self.subscription_status,
             'trial_ends_at': self.trial_ends_at.isoformat() if self.trial_ends_at else None,
+            'subscription_ends_at': self.subscription_ends_at.isoformat() if self.subscription_ends_at else None,
             'is_active': self.is_active,
+            'suspension_reason': self.suspension_reason,
+            'suspended_at': self.suspended_at.isoformat() if self.suspended_at else None,
+            'cancelled_at': self.cancelled_at.isoformat() if self.cancelled_at else None,
+            'country': self.country,
+            'city': self.city,
+            'acquisition_source': self.acquisition_source,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }

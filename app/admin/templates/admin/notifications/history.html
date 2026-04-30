@@ -1,0 +1,60 @@
+{% extends 'admin/base.html' %}
+{% block title %}سجل الإشعارات{% endblock %}
+{% block page_title %}سجل الإشعارات الجماعية{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+    <p class="text-muted mb-0 small">جميع الإشعارات الجماعية المرسلة من قبل الأدمن</p>
+    <div>
+        <a href="{{ url_for('admin.notifications_send') }}" class="btn btn-sm btn-outline-light">
+            <i class="bi bi-send"></i> رسالة فردية
+        </a>
+        <a href="{{ url_for('admin.notifications_broadcast') }}" class="btn btn-sm btn-primary">
+            <i class="bi bi-broadcast"></i> رسالة جماعية جديدة
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">السجل ({{ pagination.total }})</div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>التاريخ</th>
+                    <th>العنوان</th>
+                    <th>الجمهور</th>
+                    <th>القنوات</th>
+                    <th>المرسل لهم</th>
+                    <th>المقروء</th>
+                    <th>أرسل بواسطة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bc in pagination.items %}
+                <tr>
+                    <td class="small">{{ bc.created_at.strftime('%Y-%m-%d %H:%M') if bc.created_at }}</td>
+                    <td><strong>{{ bc.title }}</strong></td>
+                    <td>
+                        {% if bc.audience_type == 'all' %}<span class="badge badge-soft-info">جميع المكاتب</span>
+                        {% elif bc.audience_type == 'plan' %}<span class="badge badge-soft-secondary">خطة معينة</span>
+                        {% elif bc.audience_type == 'status' %}<span class="badge badge-soft-secondary">حالة: {{ bc.audience_filter.status if bc.audience_filter else '' }}</span>
+                        {% else %}{{ bc.audience_type }}{% endif %}
+                    </td>
+                    <td>
+                        {% for ch in (bc.channels or []) %}
+                        <span class="badge badge-soft-info">{{ ch }}</span>
+                        {% endfor %}
+                    </td>
+                    <td><strong style="color: var(--accent)">{{ bc.sent_count }}</strong></td>
+                    <td>{{ bc.read_count }}</td>
+                    <td class="small">{{ bc.creator.full_name if bc.creator else '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-4">لم يتم إرسال أي إشعار جماعي بعد</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends 'admin/base.html' %}
+{% block title %}الخطط{% endblock %}
+{% block page_title %}إدارة الخطط{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <p class="text-muted mb-0 small">إدارة خطط الاشتراك المتاحة في النظام</p>
+    <div>
+        <a href="{{ url_for('admin.features_matrix') }}" class="btn btn-sm btn-outline-info">
+            <i class="bi bi-grid-3x3"></i> مصفوفة الميزات
+        </a>
+        <a href="{{ url_for('admin.plans_create') }}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-lg"></i> خطة جديدة
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    {% for plan in plans %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 {{ 'border-success' if plan.status == 'active' else 'border-warning' if plan.status == 'archived' else 'border-secondary' }}" style="border-width: 2px !important;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0 fw-bold">{{ plan.name_ar }}</h5>
+                    <small class="text-muted">{{ plan.name }}</small>
+                </div>
+                <div>
+                    {% if plan.status == 'active' %}<span class="badge badge-soft-success">نشطة</span>
+                    {% elif plan.status == 'archived' %}<span class="badge badge-soft-warning">مؤرشفة</span>
+                    {% else %}<span class="badge badge-soft-secondary">مسودة</span>{% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                {% if plan.description %}
+                <p class="text-muted small mb-3">{{ plan.description }}</p>
+                {% endif %}
+                <div class="d-flex justify-content-between align-items-baseline mb-2">
+                    <span class="text-muted small">شهرياً</span>
+                    <span class="fw-bold" style="color: var(--accent); font-size: 1.4rem">{{ plan.price_monthly }} <small style="font-size:0.7rem">ج.م</small></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-baseline mb-2">
+                    <span class="text-muted small">سنوياً</span>
+                    <span class="fw-bold text-success">{{ plan.price_yearly }} <small style="font-size:0.7rem">ج.م</small></span>
+                </div>
+                <hr style="border-color: var(--border)">
+                <div class="d-flex justify-content-between mb-1 small">
+                    <span class="text-muted">الحد الأقصى للمحامين</span>
+                    <strong>{{ plan.max_lawyers if plan.max_lawyers != -1 else 'غير محدود' }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-1 small">
+                    <span class="text-muted">حد التخزين</span>
+                    <strong>{{ plan.max_storage_gb }} GB{% if not plan.max_storage_gb %}—{% endif %}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-1 small">
+                    <span class="text-muted">المكاتب على هذه الخطة</span>
+                    <strong style="color: var(--accent)">{{ counts.get(plan.id, 0) }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-1 small">
+                    <span class="text-muted">عامة (Public)</span>
+                    <strong>{{ 'نعم' if plan.is_public else 'لا' }}</strong>
+                </div>
+                <div class="d-flex justify-content-between small">
+                    <span class="text-muted">اشتراك ذاتي</span>
+                    <strong>{{ 'نعم' if plan.self_service else 'لا' }}</strong>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('admin.plans_edit', plan_id=plan.id) }}" class="btn btn-sm btn-outline-light">
+                    <i class="bi bi-pencil"></i> تعديل
+                </a>
+                {% if plan.status != 'archived' %}
+                <form method="POST" action="{{ url_for('admin.plans_archive', plan_id=plan.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm btn-outline-warning" onclick="return confirm('أرشفة الخطة؟ المكاتب الحالية ستحتفظ بها لكن لن تكون متاحة لأي تسجيل جديد.')">
+                        <i class="bi bi-archive"></i> أرشفة
+                    </button>
+                </form>
+                {% endif %}
+                {% if plan.status == 'draft' and counts.get(plan.id, 0) == 0 %}
+                <form method="POST" action="{{ url_for('admin.plans_delete', plan_id=plan.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-sm btn-outline-danger" onclick="return confirm('حذف الخطة نهائياً؟')">
+                        <i class="bi bi-trash"></i> حذف
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="card text-center py-5">
+            <p class="text-muted">لا توجد خطط بعد. <a href="{{ url_for('admin.plans_create') }}" class="text-decoration-none">إنشاء أول خطة</a></p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

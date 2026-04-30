@@ -1,0 +1,103 @@
+{% extends 'admin/base.html' %}
+{% block title %}لوحة التحكم{% endblock %}
+{% block page_title %}لوحة التحكم الرئيسية{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="label">المكاتب النشطة</span>
+                <i class="bi bi-building-fill text-success"></i>
+            </div>
+            <div class="value text-success">{{ kpis.total_active }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="label">في الفترة التجريبية</span>
+                <i class="bi bi-clock-history" style="color: var(--accent)"></i>
+            </div>
+            <div class="value" style="color: var(--accent)">{{ kpis.total_trial }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="label">المعلقة</span>
+                <i class="bi bi-pause-circle-fill text-warning"></i>
+            </div>
+            <div class="value text-warning">{{ kpis.total_suspended }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="label">الملغاة</span>
+                <i class="bi bi-x-circle-fill text-danger"></i>
+            </div>
+            <div class="value text-danger">{{ kpis.total_cancelled }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="label">معدل الإلغاء (Churn) هذا الشهر</span>
+                <i class="bi bi-graph-down" style="color: var(--danger)"></i>
+            </div>
+            <div class="value">{{ kpis.churn_rate }}<span style="font-size:1.2rem">%</span></div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="label">اشتراكات جديدة هذا الشهر</span>
+                <i class="bi bi-plus-circle-fill" style="color: var(--accent)"></i>
+            </div>
+            <div class="value" style="color: var(--accent)">{{ kpis.new_this_month }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="label">قاربت على الانتهاء (7 أيام)</span>
+                <i class="bi bi-hourglass-split text-warning"></i>
+            </div>
+            <div class="value text-warning">{{ kpis.expiring_soon }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="label">الفواتير المتأخرة</span>
+                <i class="bi bi-exclamation-octagon-fill text-danger"></i>
+            </div>
+            <div class="value text-danger">{{ kpis.overdue_invoices }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="stat-card">
+            <div class="label mb-2">إيرادات هذا الشهر</div>
+            <div class="value text-success">{{ '%.0f' | format(kpis.monthly_revenue) }} <span style="font-size:1rem">ج.م</span></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="stat-card">
+            <div class="label mb-2">إجمالي المكاتب</div>
+            <div class="value">{{ kpis.total_tenants }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info mt-4 small">
+    <i class="bi bi-info-circle"></i>
+    Phase 1 جاهز. الميزات القادمة: قائمة المكاتب التفصيلية، إدارة الخطط، الفواتير، الميزات القابلة للتحكم، الإشعارات.
+</div>
+{% endblock %}

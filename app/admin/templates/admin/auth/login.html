@@ -1,0 +1,45 @@
+{% extends 'admin/base.html' %}
+{% block title %}تسجيل الدخول{% endblock %}
+
+{% block layout %}
+<div class="auth-wrapper">
+    <div class="card auth-card">
+        <div class="card-body p-4 p-md-5">
+            <div class="text-center mb-4">
+                <div style="font-size:2.5rem">⚖️</div>
+                <h3 class="mt-2 mb-1" style="background:linear-gradient(135deg, #fff 0%, var(--accent) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-weight:800">LexOffice Admin</h3>
+                <p class="text-muted small">Manasety Super Admin Panel</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">البريد الإلكتروني</label>
+                    <input type="email" name="email" value="{{ email or '' }}" class="form-control" autofocus required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">كلمة المرور</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> تسجيل الدخول
+                </button>
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('admin.forgot_password') }}" class="text-decoration-none small text-muted">نسيت كلمة المرور؟</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

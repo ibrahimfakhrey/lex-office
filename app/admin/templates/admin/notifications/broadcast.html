@@ -1,0 +1,154 @@
+{% extends 'admin/base.html' %}
+{% block title %}إشعار جماعي{% endblock %}
+{% block page_title %}إرسال إشعار جماعي{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('admin.notifications_send') }}" class="text-decoration-none small text-muted">
+        <i class="bi bi-arrow-right"></i> الرجوع للإشعار الفردي
+    </a>
+</div>
+
+{% if preview %}
+<div class="alert alert-warning">
+    <strong><i class="bi bi-eye"></i> معاينة قبل الإرسال:</strong>
+    سيتم إرسال هذا الإشعار إلى <strong>{{ preview.count }}</strong> مكتب
+    {% if preview.audience_type == 'plan' %}على الخطة المحددة
+    {% elif preview.audience_type == 'status' %}بالحالة المحددة
+    {% else %}(جميع المكاتب){% endif %}
+    عبر القنوات: <strong>{{ preview.channels|join(', ') }}</strong>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-eye"></i> معاينة الإشعار</div>
+    <div class="card-body">
+        <h5 class="mb-2">{{ preview.title }}</h5>
+        <div class="text-muted">{{ preview.body }}</div>
+        <hr>
+        <small class="text-muted">الأولوية: <span class="badge badge-soft-{{ preview.priority }}">{{ preview.priority }}</span></small>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-list-ul"></i> أول 20 مكتب من الجمهور المستهدف</div>
+    <div class="card-body">
+        <div class="row g-2">
+            {% for t in preview.tenants %}
+            <div class="col-md-6 col-lg-4">
+                <div class="badge badge-soft-info p-2 d-block text-start">{{ t.name }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if preview.count > 20 %}
+        <div class="text-center text-muted small mt-2">... و{{ preview.count - 20 }} مكتب آخر</div>
+        {% endif %}
+    </div>
+</div>
+
+<form method="POST" class="text-center">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="title" value="{{ form.title }}">
+    <input type="hidden" name="body" value="{{ form.body }}">
+    <input type="hidden" name="priority" value="{{ form.priority }}">
+    <input type="hidden" name="audience_type" value="{{ form.audience_type }}">
+    {% if form.plan_id %}<input type="hidden" name="plan_id" value="{{ form.plan_id }}">{% endif %}
+    {% if form.status %}<input type="hidden" name="status" value="{{ form.status }}">{% endif %}
+    {% for ch in form.getlist('channels') %}<input type="hidden" name="channels" value="{{ ch }}">{% endfor %}
+    <input type="hidden" name="action" value="send">
+    <a href="{{ url_for('admin.notifications_broadcast') }}" class="btn btn-outline-light">إلغاء</a>
+    <button type="submit" class="btn btn-success">
+        <i class="bi bi-broadcast"></i> تأكيد الإرسال إلى {{ preview.count }} مكتب
+    </button>
+</form>
+
+{% else %}
+
+<div class="card">
+    <div class="card-header"><i class="bi bi-broadcast"></i> إعداد الإشعار الجماعي</div>
+    <div class="card-body">
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="mb-3">
+                <label class="form-label small fw-semibold">العنوان *</label>
+                <input name="title" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-semibold">المحتوى *</label>
+                <textarea name="body" class="form-control" rows="5" required></textarea>
+            </div>
+
+            <hr>
+            <h6 class="mb-3">الجمهور المستهدف</h6>
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="audience_type" value="all" id="aud_all" checked>
+                    <label class="form-check-label" for="aud_all">كل المكاتب</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="audience_type" value="plan" id="aud_plan">
+                    <label class="form-check-label" for="aud_plan">خطة معينة</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="audience_type" value="status" id="aud_status">
+                    <label class="form-check-label" for="aud_status">حالة معينة</label>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">الخطة (إذا اخترت "خطة معينة")</label>
+                    <select name="plan_id" class="form-select">
+                        <option value="">—</option>
+                        {% for p in plans %}
+                        <option value="{{ p.id }}">{{ p.name_ar }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">الحالة (إذا اخترت "حالة معينة")</label>
+                    <select name="status" class="form-select">
+                        <option value="">—</option>
+                        <option value="active">نشط</option>
+                        <option value="trial">تجريبي</option>
+                        <option value="suspended">معلق</option>
+                        <option value="cancelled">ملغي</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr>
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">الأولوية</label>
+                    <select name="priority" class="form-select">
+                        <option value="info">معلومة</option>
+                        <option value="success">نجاح</option>
+                        <option value="warning">تحذير</option>
+                        <option value="urgent">عاجل</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">قنوات الإرسال</label>
+                    <div class="d-flex gap-3 pt-1">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="channels" value="in_app" id="bch_inapp" checked>
+                            <label class="form-check-label small" for="bch_inapp">داخل التطبيق</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="channels" value="email" id="bch_email">
+                            <label class="form-check-label small" for="bch_email">بريد إلكتروني</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" name="action" value="preview" class="btn btn-outline-info">
+                <i class="bi bi-eye"></i> معاينة قبل الإرسال
+            </button>
+        </form>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}

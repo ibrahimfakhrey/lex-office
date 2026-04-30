@@ -1,0 +1,57 @@
+{% extends 'admin/base.html' %}
+{% block title %}إدارة الأدمن{% endblock %}
+{% block page_title %}قائمة الأدمن{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('admin.settings_general') }}" class="text-decoration-none small text-muted">
+        <i class="bi bi-arrow-right"></i> العودة للإعدادات
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-shield-lock"></i> حسابات الأدمن ({{ admins|length }})
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>الاسم</th>
+                    <th>البريد</th>
+                    <th>الدور</th>
+                    <th>MFA</th>
+                    <th>آخر دخول</th>
+                    <th>تاريخ الإنشاء</th>
+                    <th>الحالة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in admins %}
+                <tr>
+                    <td>{{ a.id }}</td>
+                    <td><strong>{{ a.full_name }}</strong></td>
+                    <td class="small">{{ a.email }}</td>
+                    <td><span class="badge badge-soft-info">{{ a.role }}</span></td>
+                    <td>
+                        {% if a.mfa_enabled %}<span class="badge badge-soft-success">مفعل</span>
+                        {% else %}<span class="badge badge-soft-warning">معطل</span>{% endif %}
+                    </td>
+                    <td class="small">{{ a.last_login_at.strftime('%Y-%m-%d %H:%M') if a.last_login_at else '—' }}</td>
+                    <td class="small">{{ a.created_at.strftime('%Y-%m-%d') if a.created_at }}</td>
+                    <td>
+                        {% if a.is_active %}<span class="badge badge-soft-success">نشط</span>
+                        {% else %}<span class="badge badge-soft-danger">معطل</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer small text-muted">
+        <i class="bi bi-info-circle"></i> لإضافة أدمن جديد، استخدم الأمر:
+        <code style="background: var(--dark-bg); padding: 4px 8px; border-radius: 4px">flask --app flask_app create-admin</code>
+    </div>
+</div>
+{% endblock %}

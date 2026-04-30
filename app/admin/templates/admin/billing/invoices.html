@@ -1,0 +1,142 @@
+{% extends 'admin/base.html' %}
+{% block title %}الفواتير{% endblock %}
+{% block page_title %}إدارة الفواتير{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">إجمالي المدفوع</div>
+            <div class="value text-success">{{ '%.0f' | format(totals.paid) }} <small style="font-size:1rem">ج.م</small></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">المعلق / الغير مدفوع</div>
+            <div class="value text-warning">{{ '%.0f' | format(totals.unpaid) }} <small style="font-size:1rem">ج.م</small></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">الفواتير المتأخرة</div>
+            <div class="value text-danger">{{ totals.overdue_count }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-2">
+            <div class="col-md-3">
+                <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm" placeholder="ابحث برقم الفاتورة أو اسم المكتب...">
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">كل الحالات</option>
+                    <option value="paid" {{ 'selected' if filters.status == 'paid' }}>مدفوعة</option>
+                    <option value="pending" {{ 'selected' if filters.status == 'pending' }}>قيد الدفع</option>
+                    <option value="unpaid" {{ 'selected' if filters.status == 'unpaid' }}>غير مدفوعة</option>
+                    <option value="overdue" {{ 'selected' if filters.status == 'overdue' }}>متأخرة</option>
+                    <option value="refunded" {{ 'selected' if filters.status == 'refunded' }}>مستردة</option>
+                    <option value="cancelled" {{ 'selected' if filters.status == 'cancelled' }}>ملغية</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="type" class="form-select form-select-sm">
+                    <option value="">كل الأنواع</option>
+                    <option value="monthly" {{ 'selected' if filters.type == 'monthly' }}>شهري</option>
+                    <option value="yearly" {{ 'selected' if filters.type == 'yearly' }}>سنوي</option>
+                    <option value="upgrade" {{ 'selected' if filters.type == 'upgrade' }}>ترقية</option>
+                    <option value="custom" {{ 'selected' if filters.type == 'custom' }}>مخصصة</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_from" value="{{ filters.date_from }}" class="form-control form-control-sm" placeholder="من">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_to" value="{{ filters.date_to }}" class="form-control form-control-sm" placeholder="إلى">
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-funnel"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between">
+        <span>الفواتير ({{ pagination.total }})</span>
+        <div>
+            <a href="{{ url_for('admin.billing_export', **request.args) }}" class="btn btn-sm btn-outline-light">
+                <i class="bi bi-download"></i> CSV
+            </a>
+            <a href="{{ url_for('admin.billing_invoice_create') }}" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus-lg"></i> فاتورة يدوية
+            </a>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>رقم الفاتورة</th>
+                    <th>المكتب</th>
+                    <th>الخطة</th>
+                    <th>المبلغ</th>
+                    <th>النوع</th>
+                    <th>الحالة</th>
+                    <th>تاريخ الإصدار</th>
+                    <th>الاستحقاق</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in pagination.items %}
+                <tr>
+                    <td class="font-monospace small">{{ inv.invoice_number or ('#' ~ inv.id) }}</td>
+                    <td>
+                        <a href="{{ url_for('admin.tenant_detail', tenant_id=inv.tenant_id) }}" class="text-decoration-none small fw-semibold" style="color: var(--accent)">
+                            {{ inv.tenant.name if inv.tenant else '—' }}
+                        </a>
+                    </td>
+                    <td class="small">{{ inv.plan.name_ar if inv.plan else '—' }}</td>
+                    <td class="fw-bold text-success">{{ inv.amount }} ج.م</td>
+                    <td><span class="badge badge-soft-secondary">{{ inv.payment_type }}</span></td>
+                    <td>
+                        {% if inv.status == 'paid' %}<span class="badge badge-soft-success">مدفوعة</span>
+                        {% elif inv.status == 'pending' %}<span class="badge badge-soft-info">قيد الدفع</span>
+                        {% elif inv.status == 'unpaid' %}<span class="badge badge-soft-warning">غير مدفوعة</span>
+                        {% elif inv.status == 'overdue' %}<span class="badge badge-soft-danger">متأخرة</span>
+                        {% elif inv.status == 'refunded' %}<span class="badge badge-soft-warning">مستردة</span>
+                        {% elif inv.status == 'cancelled' %}<span class="badge badge-soft-secondary">ملغية</span>
+                        {% else %}<span class="badge badge-soft-secondary">{{ inv.status }}</span>{% endif %}
+                    </td>
+                    <td class="small">{{ inv.issue_date or (inv.created_at.date() if inv.created_at else '—') }}</td>
+                    <td class="small">{{ inv.due_date or '—' }}</td>
+                    <td>
+                        <a href="{{ url_for('admin.billing_invoice_detail', invoice_id=inv.id) }}" class="btn btn-xs btn-outline-light" title="تفاصيل">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="9" class="text-center text-muted py-4">لا توجد فواتير</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <div class="card-footer text-center">
+        {% set qs = request.args.to_dict() %}
+        {% if 'page' in qs %}{% set _ = qs.pop('page') %}{% endif %}
+        {% if pagination.has_prev %}<a href="{{ url_for('admin.billing_invoices', page=pagination.prev_num, **qs) }}" class="btn btn-sm btn-outline-light">السابق</a>{% endif %}
+        <span class="mx-3 small">صفحة {{ pagination.page }} من {{ pagination.pages }}</span>
+        {% if pagination.has_next %}<a href="{{ url_for('admin.billing_invoices', page=pagination.next_num, **qs) }}" class="btn btn-sm btn-outline-light">التالي</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.btn-xs { padding: 0.15rem 0.4rem; font-size: 0.75rem; }
+</style>
+{% endblock %}

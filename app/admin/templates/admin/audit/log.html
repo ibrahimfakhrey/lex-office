@@ -1,0 +1,108 @@
+{% extends 'admin/base.html' %}
+{% block title %}سجل العمليات{% endblock %}
+{% block page_title %}سجل عمليات الأدمن{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-2">
+            <div class="col-md-3">
+                <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm" placeholder="ابحث في الوصف أو الإجراء...">
+            </div>
+            <div class="col-md-2">
+                <select name="action_type" class="form-select form-select-sm">
+                    <option value="">كل الإجراءات</option>
+                    {% for at in action_types %}
+                    <option value="{{ at }}" {{ 'selected' if filters.action_type == at }}>{{ at }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="entity_type" class="form-select form-select-sm">
+                    <option value="">كل الكيانات</option>
+                    {% for et in entity_types %}
+                    <option value="{{ et }}" {{ 'selected' if filters.entity_type == et }}>{{ et }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="admin_id" class="form-select form-select-sm">
+                    <option value="">كل الأدمن</option>
+                    {% for a in admins %}
+                    <option value="{{ a.id }}" {{ 'selected' if filters.admin_id == a.id }}>{{ a.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1"><input type="date" name="date_from" value="{{ filters.date_from }}" class="form-control form-control-sm"></div>
+            <div class="col-md-1"><input type="date" name="date_to" value="{{ filters.date_to }}" class="form-control form-control-sm"></div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-funnel"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>سجل العمليات ({{ pagination.total }})</span>
+        <a href="{{ url_for('admin.audit_export', **request.args) }}" class="btn btn-sm btn-outline-light"><i class="bi bi-download"></i> CSV</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>الوقت</th>
+                    <th>الأدمن</th>
+                    <th>الإجراء</th>
+                    <th>الكيان</th>
+                    <th>الوصف</th>
+                    <th>IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in pagination.items %}
+                <tr>
+                    <td class="small text-nowrap">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at }}</td>
+                    <td class="small">{{ log.admin.full_name if log.admin else '—' }}</td>
+                    <td>
+                        <span class="badge badge-soft-info font-monospace small">{{ log.action_type }}</span>
+                    </td>
+                    <td class="small">
+                        {% if log.entity_type %}
+                            {% if log.entity_type == 'Tenant' and log.entity_id %}
+                                <a href="{{ url_for('admin.tenant_detail', tenant_id=log.entity_id) }}" class="text-decoration-none" style="color: var(--accent)">
+                                    {{ log.entity_type }}#{{ log.entity_id }}
+                                </a>
+                            {% elif log.entity_type == 'Plan' and log.entity_id %}
+                                <a href="{{ url_for('admin.plans_edit', plan_id=log.entity_id) }}" class="text-decoration-none" style="color: var(--accent)">
+                                    {{ log.entity_type }}#{{ log.entity_id }}
+                                </a>
+                            {% elif log.entity_type == 'Invoice' and log.entity_id %}
+                                <a href="{{ url_for('admin.billing_invoice_detail', invoice_id=log.entity_id) }}" class="text-decoration-none" style="color: var(--accent)">
+                                    {{ log.entity_type }}#{{ log.entity_id }}
+                                </a>
+                            {% else %}
+                                {{ log.entity_type }}{% if log.entity_id %}#{{ log.entity_id }}{% endif %}
+                            {% endif %}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="small">{{ log.description or '' }}</td>
+                    <td class="small text-muted">{{ log.ip_address or '' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center text-muted py-4">لا توجد سجلات</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <div class="card-footer text-center">
+        {% set qs = request.args.to_dict() %}
+        {% if 'page' in qs %}{% set _ = qs.pop('page') %}{% endif %}
+        {% if pagination.has_prev %}<a href="{{ url_for('admin.audit_log', page=pagination.prev_num, **qs) }}" class="btn btn-sm btn-outline-light">السابق</a>{% endif %}
+        <span class="mx-3 small">صفحة {{ pagination.page }} من {{ pagination.pages }}</span>
+        {% if pagination.has_next %}<a href="{{ url_for('admin.audit_log', page=pagination.next_num, **qs) }}" class="btn btn-sm btn-outline-light">التالي</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

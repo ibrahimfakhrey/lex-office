@@ -56,7 +56,7 @@ def create_app(config_name=None):
         from app.models import (
             tenant, user, subscription, client, case, session,
             judgment, enforcement, power_of_attorney, financial,
-            task, document, notification, audit
+            task, document, notification, audit, admin
         )
 
     return app
@@ -101,6 +101,14 @@ def _register_blueprints(app):
     # REST API v1
     from app.api import api_bp
     app.register_blueprint(api_bp, url_prefix='/api/v1')
+
+    # Super Admin Panel — uses ADMIN_URL_MODE env var (prefix or subdomain)
+    from app.admin import admin_bp
+    app.register_blueprint(admin_bp)
+
+    # Admin CLI commands (flask create-admin, flask list-admins)
+    from app.admin.cli import register_admin_cli
+    register_admin_cli(app)
 
     # Landing page
     @app.route('/')

@@ -47,3 +47,18 @@ playwright/.cache/
 # IDE
 .vscode/
 .idea/
+
+# Flutter mobile app (separate project)
+lexoffice_mobile/
+
+# Misc files
+"Ibrahim Fakhry"
+"Visual Identity.rar"
+"Visual Identity/"
+"Visual_Identity_extracted/"
+a.pdf
+*.mp4
+*.pdf
+
+# Claude config
+.claude/

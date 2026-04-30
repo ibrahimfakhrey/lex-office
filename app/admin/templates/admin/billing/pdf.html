@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>{{ invoice.invoice_number or invoice.id }}</title>
+<style>
+@page { size: A4; margin: 1.5cm; }
+body { font-family: 'Tajawal', Arial, sans-serif; color: #0C2461; line-height: 1.6; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1849A9; padding-bottom: 16px; margin-bottom: 24px; }
+.brand { font-size: 24px; font-weight: 800; color: #1849A9; }
+.brand small { display:block; font-size: 11px; color: #666; font-weight: 500; }
+.invoice-no { text-align: left; }
+.invoice-no h1 { margin: 0 0 4px 0; color: #1849A9; font-size: 22px; }
+.invoice-no .num { font-size: 16px; color: #555; }
+.parties { display: flex; justify-content: space-between; margin-bottom: 28px; }
+.party h3 { font-size: 12px; color: #888; text-transform: uppercase; margin: 0 0 6px; letter-spacing: 1px; }
+.party p { margin: 2px 0; font-size: 13px; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+th { background: #f1f5f9; color: #1849A9; padding: 10px; text-align: right; font-size: 12px; font-weight: 700; }
+td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+.total-row { background: #f8fafc; font-weight: bold; }
+.total-row td { font-size: 15px; color: #1849A9; }
+.notes { background: #fffbea; border: 1px solid #fde68a; padding: 12px; border-radius: 6px; font-size: 12px; margin-bottom: 20px; }
+.footer { text-align: center; color: #888; font-size: 11px; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 40px; }
+.status { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+.status-paid { background: #d1fae5; color: #065f46; }
+.status-pending { background: #dbeafe; color: #1e40af; }
+.status-overdue { background: #fee2e2; color: #991b1b; }
+.status-refunded { background: #fef3c7; color: #92400e; }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="brand">
+        ⚖️ LexOffice
+        <small>Manasety — منصة إدارة المكاتب القانونية</small>
+    </div>
+    <div class="invoice-no">
+        <h1>فاتورة</h1>
+        <div class="num">{{ invoice.invoice_number or '#' ~ invoice.id }}</div>
+    </div>
+</div>
+
+<div class="parties">
+    <div class="party">
+        <h3>المرسل</h3>
+        <p><strong>Manasety</strong></p>
+        <p>منصة إدارة المكاتب القانونية</p>
+        <p>support@manasety.ai</p>
+    </div>
+    <div class="party">
+        <h3>المرسل إليه</h3>
+        <p><strong>{{ invoice.tenant.name if invoice.tenant else '—' }}</strong></p>
+        <p>{{ invoice.tenant.email or '—' }}</p>
+        <p>{{ invoice.tenant.phone or '' }}</p>
+    </div>
+    <div class="party">
+        <h3>تفاصيل</h3>
+        <p>تاريخ الإصدار: {{ invoice.issue_date or invoice.created_at.date() }}</p>
+        <p>تاريخ الاستحقاق: {{ invoice.due_date or '—' }}</p>
+        <p>الحالة: <span class="status status-{{ invoice.status }}">{{ invoice.status }}</span></p>
+    </div>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>الوصف</th>
+            <th>الفترة</th>
+            <th>المبلغ</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+                {% if invoice.plan %}اشتراك {{ invoice.plan.name_ar }} ({{ invoice.payment_type }}){% else %}{{ invoice.payment_type or 'فاتورة مخصصة' }}{% endif %}
+            </td>
+            <td>
+                {% if invoice.period_start and invoice.period_end %}
+                {{ invoice.period_start }} → {{ invoice.period_end }}
+                {% else %}—{% endif %}
+            </td>
+            <td>{{ invoice.amount }} ج.م</td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="2" style="text-align: left">الإجمالي</td>
+            <td>{{ invoice.amount }} ج.م</td>
+        </tr>
+    </tbody>
+</table>
+
+{% if invoice.notes %}
+<div class="notes">
+    <strong>ملاحظات:</strong> {{ invoice.notes }}
+</div>
+{% endif %}
+
+{% if invoice.status == 'refunded' %}
+<div class="notes" style="background: #fef3c7; border-color: #f59e0b;">
+    <strong>تم استرداد {{ invoice.refund_amount }} ج.م في {{ invoice.refunded_at.strftime('%Y-%m-%d') if invoice.refunded_at }}</strong>
+    {% if invoice.refund_reason %}<br>السبب: {{ invoice.refund_reason }}{% endif %}
+</div>
+{% endif %}
+
+<div class="footer">
+    شكراً لاختيارك LexOffice — Manasety © {{ invoice.created_at.year if invoice.created_at else '2026' }}
+</div>
+
+</body>
+</html>
