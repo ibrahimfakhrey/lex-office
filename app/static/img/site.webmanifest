@@ -1,0 +1,24 @@
+{
+  "name": "LexOffice — منصة إدارة المكاتب القانونية",
+  "short_name": "LexOffice",
+  "icons": [
+    {
+      "src": "/static/img/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/img/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "theme_color": "#1849A9",
+  "background_color": "#0C2461",
+  "display": "standalone",
+  "start_url": "/",
+  "lang": "ar",
+  "dir": "rtl"
+}

@@ -122,9 +122,10 @@ def _register_context_processors(app):
     @app.context_processor
     def inject_globals():
         from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
-        from app.utils.helpers import egypt_today
+        from app.utils.helpers import egypt_today, generate_chatwoot_token
         current_user = None
         unread_count = 0
+        chatwoot_hash = None
         try:
             verify_jwt_in_request(optional=True)
             user_id = get_jwt_identity()
@@ -136,7 +137,13 @@ def _register_context_processors(app):
                     unread_count = Notification.query.filter_by(
                         user_id=current_user.id, is_read=False
                     ).count()
+                    chatwoot_hash = generate_chatwoot_token(current_user.id)
         except Exception:
             pass
-        return dict(current_user=current_user, now=datetime.utcnow,
-                    today=egypt_today(), unread_count=unread_count)
+        return dict(
+            current_user=current_user,
+            now=datetime.utcnow,
+            today=egypt_today(),
+            unread_count=unread_count,
+            chatwoot_hash=chatwoot_hash,
+        )

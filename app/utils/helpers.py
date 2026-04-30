@@ -2,10 +2,31 @@
 import os
 import secrets
 import uuid
+import hmac
+import hashlib
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from werkzeug.utils import secure_filename
 from flask import current_app
+
+
+# Chatwoot — keep secret out of templates; can be overridden via env var
+CHATWOOT_HMAC_SECRET = os.getenv(
+    'CHATWOOT_HMAC_SECRET', '9PnUTv46GiNEm3emodWoCKv9'
+)
+
+
+def generate_chatwoot_token(user_id) -> str:
+    """Generate HMAC-SHA256 identifier hash for Chatwoot identity verification.
+
+    Pass this as `identifier_hash` to chatwootSDK.setUser() so the user sees
+    their previous conversations and Chatwoot trusts the identity.
+    """
+    return hmac.new(
+        CHATWOOT_HMAC_SECRET.encode(),
+        str(user_id).encode(),
+        hashlib.sha256,
+    ).hexdigest()
 
 EGYPT_TZ = ZoneInfo('Africa/Cairo')
 

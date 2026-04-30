@@ -10,6 +10,8 @@
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='img/site.webmanifest') }}">
+    <meta name="theme-color" content="#1849A9">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1088,6 +1090,28 @@
             nav.style.boxShadow = 'none';
         }
     });
+</script>
+
+<!-- ── Chatwoot Live Chat (Manasety Support) ────────────────────── -->
+<script>
+    window.chatwootSettings = {
+        position: "left",
+        type: "expanded_bubble",
+        launcherTitle: "واجهت مشكلة؟ تحدث معنا"
+    };
+    (function(d, t) {
+        var BASE_URL = "https://chatwoot.manasety.ai";
+        var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
+        g.src = BASE_URL + "/packs/js/sdk.js";
+        g.async = true;
+        s.parentNode.insertBefore(g, s);
+        g.onload = function() {
+            window.chatwootSDK.run({
+                websiteToken: '9PnUTv46GiNEm3emodWoCKv9',
+                baseUrl: BASE_URL
+            });
+        };
+    })(document, "script");
 </script>
 </body>
 </html>
