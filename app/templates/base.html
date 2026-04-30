@@ -25,7 +25,7 @@
     <!-- Flatpickr -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=4">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=5">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -33,16 +33,32 @@
         <!-- Sidebar -->
         <nav id="sidebar" class="sidebar bg-dark text-white position-fixed d-flex flex-column" style="width: 260px; height: 100vh; z-index: 1040;" role="navigation" aria-label="القائمة الرئيسية">
             <!-- Brand -->
-            <div class="p-3 border-bottom border-secondary flex-shrink-0">
-                <h5 class="mb-0 fw-bold">
-                    {% if current_user and current_user.tenant and current_user.tenant.logo_path %}
-                    <img src="{{ url_for('static', filename=current_user.tenant.logo_path) }}"
-                         alt="شعار المكتب" style="max-height:36px; max-width:180px;" class="me-2" loading="lazy">
+            <div class="sidebar-brand flex-shrink-0">
+                {% if current_user and current_user.tenant %}
+                    {% set tenant_name = current_user.tenant.name %}
+                    {% if current_user.tenant.logo_path %}
+                    <div class="brand-logo">
+                        <img src="{{ url_for('static', filename=current_user.tenant.logo_path) }}"
+                             alt="شعار المكتب" loading="lazy">
+                    </div>
                     {% else %}
-                    <i class="bi bi-briefcase-fill me-2"></i>LexOffice
+                    <div class="brand-logo brand-logo-placeholder">
+                        <span>{{ tenant_name[0] if tenant_name else 'م' }}</span>
+                    </div>
                     {% endif %}
-                </h5>
-                <small class="text-muted">{{ current_user.tenant.name if current_user and current_user.tenant else 'نظام إدارة مكتب المحاماة' }}</small>
+                    <div class="brand-text">
+                        <h6 class="brand-name">{{ tenant_name }}</h6>
+                        <small class="brand-sub">LexOffice</small>
+                    </div>
+                {% else %}
+                    <div class="brand-logo brand-logo-placeholder">
+                        <i class="bi bi-briefcase-fill"></i>
+                    </div>
+                    <div class="brand-text">
+                        <h6 class="brand-name">LexOffice</h6>
+                        <small class="brand-sub">نظام إدارة المكاتب</small>
+                    </div>
+                {% endif %}
             </div>
 
 
