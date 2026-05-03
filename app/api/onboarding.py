@@ -127,6 +127,10 @@ def api_choose_plan():
     tenant.subscription_plan_id = plan.id
     tenant.subscription_status = 'trial'
     tenant.trial_ends_at = datetime.utcnow() + timedelta(days=14)
+    db.session.flush()
+
+    from app.services.billing_service import create_subscription_invoice
+    create_subscription_invoice(tenant, plan, billing_cycle=billing_cycle, commit=False)
     db.session.commit()
 
     # Send subscription receipt email

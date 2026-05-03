@@ -9,6 +9,7 @@ from app.models.user import User, Role, Invitation
 from app.models.case import Court
 from app.utils.helpers import generate_token
 from app.services.email_service import send_invitation_email, send_subscription_receipt
+from app.services.billing_service import create_subscription_invoice
 
 onboarding_bp = Blueprint('onboarding', __name__, template_folder='../../templates/onboarding')
 
@@ -83,6 +84,9 @@ def choose_plan():
         tenant.subscription_plan_id = plan.id
         tenant.subscription_status = 'trial'
         tenant.trial_ends_at = datetime.utcnow() + timedelta(days=14)
+        db.session.flush()
+
+        create_subscription_invoice(tenant, plan, billing_cycle=billing_cycle, commit=False)
         db.session.commit()
 
         # Send subscription receipt email

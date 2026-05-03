@@ -55,6 +55,36 @@ def register_admin_cli(app):
         click.echo(click.style(f'✓ Admin created: {email} (id={admin.id}, role={role})', fg='green'))
         click.echo(click.style('  Login at: http://127.0.0.1:5000/admin/login', fg='cyan'))
 
+    @app.cli.command('backfill-invoices')
+    @with_appcontext
+    def backfill_invoices():
+        """Create an unpaid invoice for any tenant on a plan that has no invoices yet.
+
+        Idempotent — skips tenants that already have at least one SubscriptionPayment row.
+        """
+        from app.models.tenant import Tenant
+        from app.models.subscription import SubscriptionPayment
+        from app.services.billing_service import create_subscription_invoice
+
+        tenants = Tenant.query.filter(Tenant.subscription_plan_id.isnot(None)).all()
+        created = 0
+        skipped = 0
+        for tenant in tenants:
+            existing = SubscriptionPayment.query.filter_by(tenant_id=tenant.id).first()
+            if existing:
+                skipped += 1
+                continue
+            invoice = create_subscription_invoice(
+                tenant, tenant.subscription_plan, billing_cycle='monthly', commit=False,
+            )
+            if invoice:
+                created += 1
+                click.echo(f'  + {tenant.name} → {invoice.invoice_number}')
+        if created:
+            db.session.commit()
+        click.echo(click.style(f'\n✓ Created {created} invoices, skipped {skipped} (already had invoices)', fg='green'))
+
+
     @app.cli.command('list-admins')
     @with_appcontext
     def list_admins():

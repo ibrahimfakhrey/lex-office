@@ -494,14 +494,29 @@ def tenant_change_plan(tenant_id):
     old_plan_name = tenant.subscription_plan.name if tenant.subscription_plan else None
     tenant.subscription_plan_id = new_plan_id
 
+    from app.services.billing_service import create_subscription_invoice
+    billing_cycle = (request.form.get('billing_cycle') or 'monthly').lower()
+    payment_type = 'upgrade' if old_plan_id else billing_cycle
+    invoice = create_subscription_invoice(
+        tenant, new_plan, billing_cycle=billing_cycle,
+        payment_type=payment_type,
+        created_by_admin=g.current_admin.id,
+        commit=False,
+    )
+
     log_action(
         'TENANT_PLAN_CHANGED', entity_type='Tenant', entity_id=tenant_id,
         old_value={'plan_id': old_plan_id, 'plan_name': old_plan_name},
-        new_value={'plan_id': new_plan_id, 'plan_name': new_plan.name},
+        new_value={'plan_id': new_plan_id, 'plan_name': new_plan.name,
+                   'invoice_id': invoice.id if invoice else None,
+                   'invoice_number': invoice.invoice_number if invoice else None},
         description=f'Plan changed from {old_plan_name} to {new_plan.name}',
     )
     db.session.commit()
-    flash(f'تم تغيير الخطة إلى: {new_plan.name_ar}', 'success')
+    msg = f'تم تغيير الخطة إلى: {new_plan.name_ar}'
+    if invoice:
+        msg += f' وأنشأنا فاتورة جديدة: {invoice.invoice_number}'
+    flash(msg, 'success')
     return redirect(url_for('admin.tenant_detail', tenant_id=tenant_id))
 
 

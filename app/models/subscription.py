@@ -69,6 +69,9 @@ class SubscriptionPayment(db.Model):
     refunded_at = db.Column(db.DateTime, nullable=True)
     refund_amount = db.Column(db.Numeric(10, 2), nullable=True)
     refund_reason = db.Column(db.Text, nullable=True)
+    paid_amount = db.Column(db.Numeric(10, 2), nullable=True)
+    attached_invoice_path = db.Column(db.String(500), nullable=True)
+    attached_invoice_filename = db.Column(db.String(255), nullable=True)
     notes = db.Column(db.Text, nullable=True)
     receipt_sent = db.Column(db.Boolean, default=False)
     created_by_admin = db.Column(db.Integer, db.ForeignKey('admin_users.id'), nullable=True)
@@ -99,6 +102,9 @@ class SubscriptionPayment(db.Model):
             'refunded_at': self.refunded_at.isoformat() if self.refunded_at else None,
             'refund_amount': float(self.refund_amount) if self.refund_amount else None,
             'refund_reason': self.refund_reason,
+            'paid_amount': float(self.paid_amount) if self.paid_amount is not None else None,
+            'attached_invoice_path': self.attached_invoice_path,
+            'attached_invoice_filename': self.attached_invoice_filename,
             'notes': self.notes,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }

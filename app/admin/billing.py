@@ -1,11 +1,14 @@
 """Billing — invoices, manual creation, refunds, grace period."""
+import os
 from datetime import datetime, timedelta, date
 import csv
 import io
 
 from flask import (
     render_template, request, redirect, url_for, flash, abort, Response, g,
+    send_from_directory, current_app,
 )
+from werkzeug.utils import secure_filename
 from sqlalchemy import or_, func
 from app.extensions import db
 from app.admin import admin_bp
@@ -89,8 +92,14 @@ def billing_invoices():
         func.coalesce(func.sum(SubscriptionPayment.amount), 0)
     ).filter(SubscriptionPayment.status == 'paid').scalar() or 0)
     unpaid_total = float(db.session.query(
-        func.coalesce(func.sum(SubscriptionPayment.amount), 0)
-    ).filter(SubscriptionPayment.status.in_(['pending', 'unpaid', 'overdue'])).scalar() or 0)
+        func.coalesce(
+            func.sum(
+                SubscriptionPayment.amount
+                - func.coalesce(SubscriptionPayment.paid_amount, 0)
+            ),
+            0,
+        )
+    ).filter(SubscriptionPayment.status.in_(['pending', 'unpaid', 'overdue', 'partial'])).scalar() or 0)
     overdue_count = SubscriptionPayment.query.filter_by(status='overdue').count()
 
     plans = SubscriptionPlan.query.all()
@@ -214,6 +223,7 @@ def billing_invoice_mark_paid(invoice_id):
     old_status = inv.status
     inv.status = 'paid'
     inv.paid_at = datetime.utcnow()
+    inv.paid_amount = inv.amount
     log_action(
         'INVOICE_PAID', entity_type='Invoice', entity_id=invoice_id,
         old_value={'status': old_status}, new_value={'status': 'paid'},
@@ -246,6 +256,85 @@ def billing_invoice_refund(invoice_id):
     db.session.commit()
     flash(f'تم استرداد المبلغ: {refund_amount} ج.م', 'warning')
     return redirect(url_for('admin.billing_invoice_detail', invoice_id=invoice_id))
+
+
+@admin_bp.route('/billing/invoices/<int:invoice_id>/mark-partial', methods=['POST'])
+@super_admin_required
+def billing_invoice_mark_partial(invoice_id):
+    """Record a partial payment (amount paid so far, rest deferred)."""
+    inv = SubscriptionPayment.query.get_or_404(invoice_id)
+    paid_amount = request.form.get('paid_amount', type=float)
+    if paid_amount is None or paid_amount <= 0:
+        flash('قيمة الدفعة الجزئية مطلوبة', 'danger')
+        return redirect(url_for('admin.billing_invoice_detail', invoice_id=invoice_id))
+
+    total = float(inv.amount or 0)
+    if paid_amount >= total:
+        flash('المبلغ المدخل يساوي أو يتجاوز الإجمالي — استخدم "تأكيد الدفع" بدلاً من ذلك', 'warning')
+        return redirect(url_for('admin.billing_invoice_detail', invoice_id=invoice_id))
+
+    old_status = inv.status
+    inv.status = 'partial'
+    inv.paid_amount = paid_amount
+    log_action(
+        'INVOICE_PARTIAL', entity_type='Invoice', entity_id=invoice_id,
+        old_value={'status': old_status},
+        new_value={'status': 'partial', 'paid_amount': paid_amount},
+        description=f'Partial payment {paid_amount} of {total} on {inv.invoice_number}',
+    )
+    db.session.commit()
+    flash(f'تم تسجيل دفعة جزئية: {paid_amount} ج.م من {total}', 'success')
+    return redirect(url_for('admin.billing_invoice_detail', invoice_id=invoice_id))
+
+
+@admin_bp.route('/billing/invoices/<int:invoice_id>/attach', methods=['POST'])
+@super_admin_required
+def billing_invoice_attach(invoice_id):
+    """Attach the real invoice file (issued externally) to this record."""
+    inv = SubscriptionPayment.query.get_or_404(invoice_id)
+    upload = request.files.get('attachment')
+    if not upload or not upload.filename:
+        flash('يرجى اختيار ملف', 'danger')
+        return redirect(url_for('admin.billing_invoice_detail', invoice_id=invoice_id))
+
+    original = secure_filename(upload.filename)
+    ext = os.path.splitext(original)[1].lower()
+    allowed = {'.pdf', '.png', '.jpg', '.jpeg', '.docx', '.xlsx'}
+    if ext not in allowed:
+        flash('نوع الملف غير مسموح به (PDF/Word/Excel/صورة فقط)', 'danger')
+        return redirect(url_for('admin.billing_invoice_detail', invoice_id=invoice_id))
+
+    upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'invoices')
+    os.makedirs(upload_dir, exist_ok=True)
+    stored_name = f'invoice_{inv.id}_{int(datetime.utcnow().timestamp())}{ext}'
+    upload.save(os.path.join(upload_dir, stored_name))
+
+    inv.attached_invoice_path = f'uploads/invoices/{stored_name}'
+    inv.attached_invoice_filename = original
+
+    log_action(
+        'INVOICE_ATTACHMENT', entity_type='Invoice', entity_id=invoice_id,
+        new_value={'filename': original},
+        description=f'Attached file {original} to invoice {inv.invoice_number}',
+    )
+    db.session.commit()
+    flash('تم إرفاق الملف', 'success')
+    return redirect(url_for('admin.billing_invoice_detail', invoice_id=invoice_id))
+
+
+@admin_bp.route('/billing/invoices/<int:invoice_id>/attachment')
+@super_admin_required
+def billing_invoice_attachment(invoice_id):
+    """Download the attached invoice file."""
+    inv = SubscriptionPayment.query.get_or_404(invoice_id)
+    if not inv.attached_invoice_path:
+        abort(404)
+    static_dir = os.path.join(current_app.root_path, 'static')
+    return send_from_directory(
+        static_dir, inv.attached_invoice_path,
+        as_attachment=True,
+        download_name=inv.attached_invoice_filename or os.path.basename(inv.attached_invoice_path),
+    )
 
 
 @admin_bp.route('/billing/invoices/<int:invoice_id>/cancel', methods=['POST'])

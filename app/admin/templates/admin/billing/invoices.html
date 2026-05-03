@@ -34,6 +34,7 @@
                 <select name="status" class="form-select form-select-sm">
                     <option value="">كل الحالات</option>
                     <option value="paid" {{ 'selected' if filters.status == 'paid' }}>مدفوعة</option>
+                    <option value="partial" {{ 'selected' if filters.status == 'partial' }}>دفع جزئي</option>
                     <option value="pending" {{ 'selected' if filters.status == 'pending' }}>قيد الدفع</option>
                     <option value="unpaid" {{ 'selected' if filters.status == 'unpaid' }}>غير مدفوعة</option>
                     <option value="overdue" {{ 'selected' if filters.status == 'overdue' }}>متأخرة</option>
@@ -104,6 +105,7 @@
                     <td><span class="badge badge-soft-secondary">{{ inv.payment_type }}</span></td>
                     <td>
                         {% if inv.status == 'paid' %}<span class="badge badge-soft-success">مدفوعة</span>
+                        {% elif inv.status == 'partial' %}<span class="badge badge-soft-info">دفع جزئي ({{ inv.paid_amount or 0 }} / {{ inv.amount }})</span>
                         {% elif inv.status == 'pending' %}<span class="badge badge-soft-info">قيد الدفع</span>
                         {% elif inv.status == 'unpaid' %}<span class="badge badge-soft-warning">غير مدفوعة</span>
                         {% elif inv.status == 'overdue' %}<span class="badge badge-soft-danger">متأخرة</span>
@@ -114,6 +116,11 @@
                     <td class="small">{{ inv.issue_date or (inv.created_at.date() if inv.created_at else '—') }}</td>
                     <td class="small">{{ inv.due_date or '—' }}</td>
                     <td>
+                        {% if inv.attached_invoice_path %}
+                        <a href="{{ url_for('admin.billing_invoice_attachment', invoice_id=inv.id) }}" class="btn btn-xs btn-outline-info" title="تحميل المرفق">
+                            <i class="bi bi-paperclip"></i>
+                        </a>
+                        {% endif %}
                         <a href="{{ url_for('admin.billing_invoice_detail', invoice_id=inv.id) }}" class="btn btn-xs btn-outline-light" title="تفاصيل">
                             <i class="bi bi-eye"></i>
                         </a>
