@@ -142,6 +142,15 @@
             color: var(--dark-text);
             box-shadow: 0 0 0 3px rgba(7,143,210,0.15);
         }
+        .form-select option,
+        .form-select optgroup {
+            background-color: var(--dark-surface);
+            color: var(--dark-text);
+        }
+        .form-select option:disabled,
+        .form-select option[value=""] {
+            color: var(--dark-muted);
+        }
         .btn-primary {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             border: none;
