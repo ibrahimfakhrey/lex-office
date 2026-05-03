@@ -12,7 +12,7 @@ from flask_jwt_extended import (
 from app.models.user import User, Role, Invitation
 from app.models.tenant import Tenant
 from app.utils.helpers import generate_otp, generate_token
-from app.utils.validators import validate_email, validate_password, validate_phone
+from app.utils.validators import validate_email, validate_password, validate_phone, normalize_phone
 from app.services.email_service import send_otp_email
 
 
@@ -24,7 +24,8 @@ def api_register():
     data = get_json_or_form()
     full_name = (data.get('full_name') or '').strip()
     email = (data.get('email') or '').strip().lower()
-    phone = (data.get('phone') or '').strip()
+    phone_raw = (data.get('phone') or '').strip()
+    phone = normalize_phone(phone_raw)
     password = data.get('password', '')
     office_size = data.get('office_size', '1-5')
 
@@ -34,17 +35,20 @@ def api_register():
         errors['full_name'] = 'الاسم الكامل مطلوب'
     if not validate_email(email):
         errors['email'] = 'البريد الإلكتروني غير صالح'
-    if not validate_phone(phone):
+    if not validate_phone(phone_raw):
         errors['phone'] = 'رقم الهاتف غير صالح'
 
     valid_pw, pw_msg = validate_password(password)
     if not valid_pw:
         errors['password'] = pw_msg
 
-    # Check email uniqueness
-    existing = User.query.filter_by(email=email).first()
-    if existing:
+    # Check email uniqueness (global)
+    if User.query.filter_by(email=email).first():
         errors['email'] = 'البريد الإلكتروني مسجل بالفعل'
+
+    # Check phone uniqueness (global)
+    if phone and User.query.filter_by(phone=phone).first():
+        errors['phone'] = 'رقم الهاتف مسجل بالفعل'
 
     if errors:
         return validation_error(errors)
@@ -69,7 +73,7 @@ def api_register():
         tenant_id=tenant.id,
         email=email,
         full_name=full_name,
-        phone=phone,
+        phone=phone,  # already normalized above
         role_id=manager_role.id,
         is_active=False,
     )
@@ -401,6 +405,10 @@ def api_accept_invite():
     valid_pw, pw_msg = validate_password(password)
     if not valid_pw:
         return validation_error({'password': pw_msg})
+
+    # Defensive global-email check (DB unique would also catch this).
+    if User.query.filter_by(email=invitation.email).first():
+        return error_response('البريد الإلكتروني مسجل بالفعل', error_code='email_exists', status_code=409)
 
     # Create user
     user = User(

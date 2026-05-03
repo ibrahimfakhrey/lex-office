@@ -12,6 +12,7 @@ from werkzeug.utils import secure_filename
 from app.models.tenant import Tenant
 from app.models.user import User, Role, Invitation
 from app.utils.helpers import generate_token
+from app.utils.validators import validate_phone, normalize_phone
 from app.services.email_service import send_invitation_email
 
 
@@ -98,8 +99,8 @@ def api_settings_team_invite():
     if errors:
         return validation_error(errors)
 
-    # Check duplicates
-    if User.query.filter_by(email=email, tenant_id=g.tenant_id).first():
+    # Email must be globally unique across all tenants.
+    if User.query.filter_by(email=email).first():
         return error_response('هذا البريد مسجل بالفعل', error_code='duplicate', status_code=409)
 
     if Invitation.query.filter_by(email=email, tenant_id=g.tenant_id, accepted_at=None).first():
@@ -186,7 +187,18 @@ def api_settings_profile_update():
     if 'full_name_en' in data:
         user.full_name_en = (data['full_name_en'] or '').strip() or None
     if 'phone' in data:
-        user.phone = (data['phone'] or '').strip() or None
+        phone_raw = (data['phone'] or '').strip()
+        if not phone_raw:
+            user.phone = None
+        else:
+            if not validate_phone(phone_raw):
+                return validation_error({'phone': 'رقم الهاتف غير صالح'})
+            new_phone = normalize_phone(phone_raw)
+            if new_phone != user.phone:
+                clash = User.query.filter(User.phone == new_phone, User.id != user.id).first()
+                if clash:
+                    return error_response('رقم الهاتف مسجل بالفعل', error_code='duplicate_phone', status_code=409)
+            user.phone = new_phone
 
     # Password change
     current_password = (data.get('current_password') or '').strip()

@@ -9,13 +9,35 @@ def validate_email(email):
 
 
 def validate_phone(phone):
-    """Validate Egyptian phone number."""
+    """Validate Egyptian mobile number — accepts any format normalize_phone() handles."""
     if not phone:
         return True
-    cleaned = re.sub(r'[\s\-\(\)]', '', phone)
-    # Egyptian numbers: 01xxxxxxxxx or +201xxxxxxxxx
-    pattern = r'^(\+?2)?01[0125]\d{8}$'
-    return bool(re.match(pattern, cleaned))
+    normalized = normalize_phone(phone)
+    if not normalized:
+        return False
+    return bool(re.match(r'^01[0125]\d{8}$', normalized))
+
+
+def normalize_phone(phone):
+    """Normalize an Egyptian phone number to canonical 11-digit local form (01XXXXXXXXX).
+
+    Strips spaces/dashes/parens and the +20 / 0020 / 20 country prefix when present.
+    Returns None if the input is empty after stripping. Returns the raw digit-stripped
+    string if it doesn't match the Egyptian shape — uniqueness still works, but
+    callers should pair this with validate_phone() for shape enforcement.
+    """
+    if not phone:
+        return None
+    digits = re.sub(r'\D', '', phone)
+    if not digits:
+        return None
+    if digits.startswith('0020'):
+        digits = digits[4:]
+    elif digits.startswith('20') and len(digits) == 12:
+        digits = digits[2:]
+    if not digits.startswith('0') and len(digits) == 10:
+        digits = '0' + digits
+    return digits
 
 
 def validate_national_id(nid):

@@ -8,6 +8,7 @@ from app.utils.decorators import login_required, permission_required
 from app.models.tenant import Tenant
 from app.models.user import User, Role, Invitation
 from app.utils.helpers import generate_token
+from app.utils.validators import validate_phone, normalize_phone
 from app.services.email_service import send_invitation_email
 
 settings_bp = Blueprint('settings', __name__, template_folder='../../templates/settings')
@@ -70,8 +71,8 @@ def invite_member():
         flash('البريد الإلكتروني والدور مطلوبان', 'danger')
         return redirect(url_for('settings.team'))
 
-    # Check if already exists
-    if User.query.filter_by(email=email, tenant_id=g.tenant_id).first():
+    # Email must be globally unique across all tenants.
+    if User.query.filter_by(email=email).first():
         flash('هذا البريد مسجل بالفعل', 'warning')
         return redirect(url_for('settings.team'))
 
@@ -137,7 +138,21 @@ def profile():
     if request.method == 'POST':
         user.full_name = request.form.get('full_name', user.full_name).strip()
         user.full_name_en = request.form.get('full_name_en', '').strip() or None
-        user.phone = request.form.get('phone', '').strip() or None
+
+        phone_raw = request.form.get('phone', '').strip()
+        if phone_raw:
+            if not validate_phone(phone_raw):
+                flash('رقم الهاتف غير صالح', 'danger')
+                return render_template('settings/profile.html', user=user)
+            new_phone = normalize_phone(phone_raw)
+            if new_phone != user.phone:
+                clash = User.query.filter(User.phone == new_phone, User.id != user.id).first()
+                if clash:
+                    flash('رقم الهاتف مسجل بالفعل', 'danger')
+                    return render_template('settings/profile.html', user=user)
+            user.phone = new_phone
+        else:
+            user.phone = None
 
         # Change password
         current_password = request.form.get('current_password', '')

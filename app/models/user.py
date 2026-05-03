@@ -58,7 +58,7 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=False)
-    email = db.Column(db.String(200), nullable=False)
+    email = db.Column(db.String(200), nullable=False, unique=True)
     password_hash = db.Column(db.String(255), nullable=False)
     full_name = db.Column(db.String(200), nullable=False)
     full_name_en = db.Column(db.String(200), nullable=True)
@@ -87,7 +87,14 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    __table_args__ = (db.UniqueConstraint('tenant_id', 'email'),)
+    __table_args__ = (
+        db.Index(
+            'uq_users_phone_not_null',
+            'phone',
+            unique=True,
+            postgresql_where=db.text('phone IS NOT NULL'),
+        ),
+    )
 
     def set_password(self, password):
         self.password_hash = bcrypt.hashpw(

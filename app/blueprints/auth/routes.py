@@ -11,7 +11,7 @@ from app.models.user import User, Role, Invitation
 from app.models.tenant import Tenant
 from app.models.subscription import SubscriptionPlan
 from app.utils.helpers import generate_otp, generate_token
-from app.utils.validators import validate_email, validate_password, validate_phone
+from app.utils.validators import validate_email, validate_password, validate_phone, normalize_phone
 from app.services.email_service import send_otp_email, send_password_reset_email
 
 auth_bp = Blueprint('auth', __name__, template_folder='../../templates/auth')
@@ -24,7 +24,8 @@ def register():
     if request.method == 'POST':
         full_name = request.form.get('full_name', '').strip()
         email = request.form.get('email', '').strip().lower()
-        phone = request.form.get('phone', '').strip()
+        phone_raw = request.form.get('phone', '').strip()
+        phone = normalize_phone(phone_raw)
         password = request.form.get('password', '')
         office_size = request.form.get('office_size', '1-5')
 
@@ -34,17 +35,20 @@ def register():
             errors.append('الاسم الكامل مطلوب')
         if not validate_email(email):
             errors.append('البريد الإلكتروني غير صالح')
-        if not validate_phone(phone):
+        if not validate_phone(phone_raw):
             errors.append('رقم الهاتف غير صالح')
 
         valid_pw, pw_msg = validate_password(password)
         if not valid_pw:
             errors.append(pw_msg)
 
-        # Check if email already exists
-        existing = User.query.filter_by(email=email).first()
-        if existing:
+        # Check if email already exists (global)
+        if User.query.filter_by(email=email).first():
             errors.append('البريد الإلكتروني مسجل بالفعل')
+
+        # Check if phone already exists (global)
+        if phone and User.query.filter_by(phone=phone).first():
+            errors.append('رقم الهاتف مسجل بالفعل')
 
         if errors:
             for err in errors:
@@ -359,6 +363,12 @@ def accept_invite(token):
         if not valid_pw:
             flash(pw_msg, 'danger')
             return render_template('auth/accept_invite.html', invitation=invitation)
+
+        # Defensive: someone else may have claimed this email globally
+        # between the invite being sent and accepted.
+        if User.query.filter_by(email=invitation.email).first():
+            flash('البريد الإلكتروني مسجل بالفعل', 'danger')
+            return redirect(url_for('auth.login'))
 
         user = User(
             tenant_id=invitation.tenant_id,
