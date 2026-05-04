@@ -1,0 +1,103 @@
+{% extends 'admin/base.html' %}
+{% block title %}فئات المصاريف{% endblock %}
+{% block page_title %}<i class="bi bi-tags-fill"></i> فئات المصاريف — Expense Categories{% endblock %}
+
+{% block content %}
+<div class="finance-hint mb-3">
+    <i class="bi bi-info-circle"></i>
+    قائمة البنود المرجعية. مثلاً: من فئة "ذكاء اصطناعي" → بند "اشتراك Claude". <a href="{{ url_for('admin.finance_monthly_expenses') }}">سجل المصاريف الشهري</a> يجيب من هنا فقط.
+</div>
+
+<div class="section-band d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-clipboard-data"></i> الفئات والبنود</span>
+    <button class="btn btn-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+        <i class="bi bi-plus-circle"></i> إضافة بند
+    </button>
+</div>
+
+{% if grouped %}
+{% for cat_name, items in grouped.items() %}
+<div class="card mb-3">
+    <div class="card-header">
+        <i class="bi bi-folder-fill" style="color: var(--gold)"></i>
+        <strong>{{ cat_name }}</strong>
+        <span class="badge badge-soft-secondary ms-2">{{ items|length }} بند</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>اسم البند</th>
+                    <th>ملاحظات</th>
+                    <th class="text-center" style="width:80px">حذف</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td class="fw-bold" style="color: var(--accent)">{{ item.item_name }}</td>
+                    <td class="text-muted small">{{ item.notes or '—' }}</td>
+                    <td class="text-center">
+                        <form method="POST" action="{{ url_for('admin.finance_expense_categories_delete', cat_id=item.id) }}"
+                              class="d-inline" onsubmit="return confirm('حذف البند؟');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-tags" style="font-size:2.5rem; opacity:0.4"></i>
+        <div class="mt-2">لا توجد فئات بعد — أضف أول بند بزر "إضافة بند" أعلاه.</div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Add modal -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.finance_expense_categories_create') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-tag-fill"></i> إضافة بند جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">اسم الفئة <span class="text-danger">*</span></label>
+                        <input type="text" name="category_name" class="form-control" required
+                               placeholder="مثال: ذكاء اصطناعي - تشغيلي" list="catSuggestions">
+                        <datalist id="catSuggestions">
+                            {% for cat_name in grouped.keys() %}
+                            <option value="{{ cat_name }}">
+                            {% endfor %}
+                        </datalist>
+                        <small class="text-muted">يمكنك اختيار فئة موجودة أو كتابة فئة جديدة</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">اسم البند <span class="text-danger">*</span></label>
+                        <input type="text" name="item_name" class="form-control" required
+                               placeholder="مثال: هوست/سيرفر، ماركتينج، إيجار">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ملاحظات</label>
+                        <textarea name="notes" rows="2" class="form-control"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

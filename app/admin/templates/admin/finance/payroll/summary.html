@@ -1,0 +1,94 @@
+{% extends 'admin/base.html' %}
+{% block title %}ملخص الرواتب{% endblock %}
+{% block page_title %}<i class="bi bi-bar-chart-line-fill"></i> ملخص الرواتب — Payroll Summary{% endblock %}
+
+{% block content %}
+<div class="finance-hint mb-3">
+    <i class="bi bi-info-circle"></i>
+    شاشة عرض فقط — كل الأرقام محسوبة تلقائياً من <a href="{{ url_for('admin.finance_employees_list') }}" class="alert-link">الموظفين</a>
+    و<a href="{{ url_for('admin.finance_payroll_payments') }}" class="alert-link">دفعات الرواتب</a>.
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">إجمالي المستحق المتراكم</div>
+            <div class="value text-warning">{{ '{:,.0f}'.format(totals.due) }} <small style="font-size:1rem">ج.م</small></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">إجمالي المدفوع</div>
+            <div class="value text-success">{{ '{:,.0f}'.format(totals.paid) }} <small style="font-size:1rem">ج.م</small></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">الباقي الفعلي</div>
+            <div class="value text-danger">{{ '{:,.0f}'.format(totals.balance) }} <small style="font-size:1rem">ج.م</small></div>
+        </div>
+    </div>
+</div>
+
+<div class="section-band"><i class="bi bi-people"></i> ملخص لكل موظف</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>اسم الموظف</th>
+                    <th>النوع</th>
+                    <th class="text-end">الراتب الشهري</th>
+                    <th>تاريخ الانضمام</th>
+                    <th class="text-end">إجمالي المستحق</th>
+                    <th class="text-end">إجمالي المدفوع</th>
+                    <th class="text-end">الباقي الفعلي</th>
+                    <th class="text-center">عدد الدفعات</th>
+                    <th>آخر دفعة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                {% set emp = r.employee %}
+                <tr>
+                    <td class="fw-bold" style="color: var(--accent)">{{ emp.full_name }}</td>
+                    <td>
+                        {% if emp.employment_type == 'full_time' %}<span class="badge badge-soft-info">Full-time</span>
+                        {% elif emp.employment_type == 'freelance' %}<span class="badge badge-soft-warning">Freelance</span>
+                        {% else %}<span class="badge badge-soft-secondary">Part-time</span>{% endif %}
+                    </td>
+                    <td class="text-end">{{ '{:,.0f}'.format(emp.monthly_salary) }}</td>
+                    <td>{{ emp.joined_at.strftime('%d/%m/%Y') }}</td>
+                    <td class="text-end fw-bold text-warning">{{ '{:,.0f}'.format(r.due) }}</td>
+                    <td class="text-end fw-bold text-success">{{ '{:,.0f}'.format(r.paid) }}</td>
+                    <td class="text-end fw-bold {{ 'text-danger' if r.balance > 0 else 'text-success' }}">
+                        {{ '{:,.0f}'.format(r.balance) }}
+                    </td>
+                    <td class="text-center">
+                        <span class="badge badge-soft-info">{{ r.count }}</span>
+                    </td>
+                    <td class="text-muted small">{{ r.last_date.strftime('%d/%m/%Y') if r.last_date else '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="9" class="text-center py-4 text-muted">
+                    <i class="bi bi-inbox" style="font-size:2rem; opacity:0.4"></i>
+                    <div class="mt-2">لا يوجد بيانات — أضف موظفين ودفعات أولاً.</div>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+            {% if rows %}
+            <tfoot class="fw-bold" style="background: rgba(7,143,210,0.06)">
+                <tr>
+                    <td colspan="4" class="text-end">الإجمالي</td>
+                    <td class="text-end text-warning">{{ '{:,.0f}'.format(totals.due) }} ج.م</td>
+                    <td class="text-end text-success">{{ '{:,.0f}'.format(totals.paid) }} ج.م</td>
+                    <td class="text-end text-danger">{{ '{:,.0f}'.format(totals.balance) }} ج.م</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+{% endblock %}

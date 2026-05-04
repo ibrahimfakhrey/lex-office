@@ -1,0 +1,171 @@
+{% extends 'admin/base.html' %}
+{% block title %}لوحة المالية{% endblock %}
+{% block page_title %}<i class="bi bi-speedometer2"></i> لوحة المالية — Finance Dashboard{% endblock %}
+
+{% block content %}
+<div class="finance-hint mb-3">
+    <i class="bi bi-info-circle"></i>
+    ملخص مالي شامل يتحدث تلقائياً من كل الموديولات.
+    <strong>الرواتب والقروض</strong> دايماً إجمالي (لا تتأثر بالفلتر).
+    <strong>المصاريف والإيرادات</strong> تتفلتر بالسنة/الشهر.
+</div>
+
+<!-- Filter -->
+<div class="section-band d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-funnel-fill"></i> فلتر زمني (للمصاريف والإيرادات والصافي)</span>
+    <form method="GET" class="d-flex gap-2 align-items-center">
+        <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">كل السنوات</option>
+            {% for y in available_years %}
+            <option value="{{ y }}" {{ 'selected' if y == year_filter }}>{{ y }}</option>
+            {% endfor %}
+        </select>
+        <select name="month" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">كل الشهور</option>
+            {% for m in range(1, 13) %}
+            <option value="{{ m }}" {{ 'selected' if m == month_filter }}>{{ arabic_months[m] }}</option>
+            {% endfor %}
+        </select>
+        {% if year_filter or month_filter %}
+        <a href="{{ url_for('admin.finance_dashboard') }}" class="btn btn-sm btn-outline-light">
+            <i class="bi bi-x-lg"></i>
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Net (the headline number) -->
+<div class="card mb-4" style="background: linear-gradient(135deg, {% if net >= 0 %}#0a3d2a 0%, #064e3b{% else %}#3d0a14 0%, #4e0610{% endif %} 100%); border-color: transparent">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <div class="text-muted mb-1" style="font-size:0.85rem; letter-spacing:0.5px">
+                    <i class="bi bi-calculator"></i> الصافي
+                    {% if year_filter and month_filter %}— {{ arabic_months[month_filter] }} {{ year_filter }}
+                    {% elif year_filter %}— سنة {{ year_filter }}
+                    {% else %}— كل التاريخ{% endif %}
+                </div>
+                <div style="font-size:2.8rem; font-weight:800; color:{% if net >= 0 %}#34d399{% else %}#f87171{% endif %}">
+                    {{ '{:,.0f}'.format(net) }} <span style="font-size:1.4rem">ج.م</span>
+                </div>
+                <small class="text-muted">= الإيرادات − (رواتب باقية + قروض باقية + مصاريف الفترة)</small>
+            </div>
+            <div class="text-end">
+                <i class="bi bi-{{ 'arrow-up-circle-fill' if net >= 0 else 'arrow-down-circle-fill' }}" style="font-size:4rem; color:{% if net >= 0 %}#34d399{% else %}#f87171{% endif %}; opacity:0.4"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 4 stat cards -->
+<div class="row g-3 mb-4">
+    <!-- Payroll -->
+    <div class="col-md-6 col-lg-3">
+        <div class="stat-card h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <span class="label"><i class="bi bi-cash-stack"></i> الرواتب</span>
+                <a href="{{ url_for('admin.finance_payroll_summary') }}" class="text-muted small"><i class="bi bi-arrow-left-circle"></i></a>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <small class="text-muted">مستحق:</small>
+                <span class="fw-bold text-warning">{{ '{:,.0f}'.format(payroll.due) }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <small class="text-muted">مدفوع:</small>
+                <span class="fw-bold text-success">{{ '{:,.0f}'.format(payroll.paid) }}</span>
+            </div>
+            <hr style="opacity:0.15; margin:8px 0">
+            <div class="d-flex justify-content-between">
+                <small class="text-muted">الباقي:</small>
+                <span class="fw-bold {{ 'text-danger' if payroll.balance > 0 else 'text-success' }}">
+                    {{ '{:,.0f}'.format(payroll.balance) }} ج.م
+                </span>
+            </div>
+            <small class="text-muted d-block mt-2">{{ payroll.count }} موظف</small>
+        </div>
+    </div>
+
+    <!-- Loans -->
+    <div class="col-md-6 col-lg-3">
+        <div class="stat-card h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <span class="label"><i class="bi bi-bank"></i> القروض</span>
+                <a href="{{ url_for('admin.finance_loans_summary') }}" class="text-muted small"><i class="bi bi-arrow-left-circle"></i></a>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <small class="text-muted">أصلي:</small>
+                <span class="fw-bold text-warning">{{ '{:,.0f}'.format(loans.original) }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <small class="text-muted">مسدد:</small>
+                <span class="fw-bold text-success">{{ '{:,.0f}'.format(loans.paid) }}</span>
+            </div>
+            <hr style="opacity:0.15; margin:8px 0">
+            <div class="d-flex justify-content-between">
+                <small class="text-muted">الباقي:</small>
+                <span class="fw-bold {{ 'text-danger' if loans.balance > 0 else 'text-success' }}">
+                    {{ '{:,.0f}'.format(loans.balance) }} ج.م
+                </span>
+            </div>
+            <small class="text-muted d-block mt-2">{{ loans.count }} قرض</small>
+        </div>
+    </div>
+
+    <!-- Expenses -->
+    <div class="col-md-6 col-lg-3">
+        <div class="stat-card h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <span class="label"><i class="bi bi-pie-chart-fill"></i> المصاريف</span>
+                <a href="{{ url_for('admin.finance_expenses_summary') }}" class="text-muted small"><i class="bi bi-arrow-left-circle"></i></a>
+            </div>
+            <div class="value text-warning" style="font-size:1.6rem">
+                {{ '{:,.0f}'.format(expenses_total) }} <small style="font-size:0.85rem">ج.م</small>
+            </div>
+            <small class="text-muted d-block mt-2">
+                {% if year_filter and month_filter %}{{ arabic_months[month_filter] }} {{ year_filter }}
+                {% elif year_filter %}سنة {{ year_filter }}
+                {% else %}إجمالي كل التاريخ{% endif %}
+            </small>
+        </div>
+    </div>
+
+    <!-- Income -->
+    <div class="col-md-6 col-lg-3">
+        <div class="stat-card h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <span class="label"><i class="bi bi-cash-coin"></i> الإيرادات</span>
+                <a href="{{ url_for('admin.finance_income_list') }}" class="text-muted small"><i class="bi bi-arrow-left-circle"></i></a>
+            </div>
+            <div class="value text-success" style="font-size:1.6rem">
+                {{ '{:,.0f}'.format(income_total) }} <small style="font-size:0.85rem">ج.م</small>
+            </div>
+            <small class="text-muted d-block mt-2">
+                {% if year_filter and month_filter %}{{ arabic_months[month_filter] }} {{ year_filter }}
+                {% elif year_filter %}سنة {{ year_filter }}
+                {% else %}إجمالي كل التاريخ{% endif %}
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Quick links -->
+<div class="row g-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-link-45deg"></i> اختصارات سريعة</div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-3"><a href="{{ url_for('admin.finance_employees_list') }}" class="btn btn-outline-light w-100"><i class="bi bi-people-fill"></i> الموظفون</a></div>
+                    <div class="col-md-3"><a href="{{ url_for('admin.finance_payroll_payments') }}" class="btn btn-outline-light w-100"><i class="bi bi-cash-stack"></i> دفعات رواتب</a></div>
+                    <div class="col-md-3"><a href="{{ url_for('admin.finance_lenders_list') }}" class="btn btn-outline-light w-100"><i class="bi bi-bank"></i> القروض</a></div>
+                    <div class="col-md-3"><a href="{{ url_for('admin.finance_loan_payments') }}" class="btn btn-outline-light w-100"><i class="bi bi-coin"></i> دفعات قروض</a></div>
+                    <div class="col-md-3"><a href="{{ url_for('admin.finance_expense_categories') }}" class="btn btn-outline-light w-100"><i class="bi bi-tags-fill"></i> فئات المصاريف</a></div>
+                    <div class="col-md-3"><a href="{{ url_for('admin.finance_monthly_expenses') }}" class="btn btn-outline-light w-100"><i class="bi bi-journal-text"></i> سجل المصاريف</a></div>
+                    <div class="col-md-3"><a href="{{ url_for('admin.finance_income_list') }}" class="btn btn-outline-light w-100"><i class="bi bi-cash-coin"></i> الإيرادات</a></div>
+                    <div class="col-md-3"><a href="{{ url_for('admin.finance_fixed_expenses') }}" class="btn btn-outline-light w-100"><i class="bi bi-pin-angle-fill"></i> المصاريف الثابتة</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

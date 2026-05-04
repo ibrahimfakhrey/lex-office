@@ -1,0 +1,162 @@
+{% extends 'admin/base.html' %}
+{% block title %}الموظفون{% endblock %}
+{% block page_title %}<i class="bi bi-people-fill"></i> الموظفون — Employees{% endblock %}
+
+{% macro employee_form_fields(types, statuses, emp=None) %}
+<div class="row g-3">
+    <div class="col-md-6">
+        <label class="form-label">اسم الموظف <span class="text-danger">*</span></label>
+        <input type="text" name="full_name" class="form-control" required value="{{ emp.full_name if emp else '' }}">
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">النوع <span class="text-danger">*</span></label>
+        <select name="employment_type" class="form-select" required>
+            {% for v, label in types %}
+            <option value="{{ v }}" {{ 'selected' if emp and emp.employment_type == v }}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">الراتب الشهري (ج.م) <span class="text-danger">*</span></label>
+        <input type="number" step="0.01" min="0" name="monthly_salary" class="form-control" required
+               value="{{ emp.monthly_salary if emp else '' }}">
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">تاريخ الانضمام <span class="text-danger">*</span></label>
+        <input type="date" name="joined_at" class="form-control" required
+               value="{{ emp.joined_at.isoformat() if emp else '' }}">
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">رقم التواصل</label>
+        <input type="text" name="contact_phone" class="form-control" value="{{ emp.contact_phone or '' if emp else '' }}">
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">الحالة <span class="text-danger">*</span></label>
+        <select name="status" class="form-select" required>
+            {% for v, label in statuses %}
+            <option value="{{ v }}" {{ 'selected' if emp and emp.status == v else ('selected' if not emp and v == 'active') }}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-12">
+        <label class="form-label">ملاحظات</label>
+        <textarea name="notes" rows="2" class="form-control">{{ emp.notes or '' if emp else '' }}</textarea>
+    </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="finance-hint mb-3">
+    <i class="bi bi-info-circle"></i>
+    سجّل كل موظف مرة واحدة هنا فقط — باقي الشاشات (دفعات الرواتب، الملخص) تجيب الاسم منه عبر القائمة المنسدلة.
+</div>
+
+<div class="section-band d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-clipboard-data"></i> بيانات الموظفين</span>
+    <button class="btn btn-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+        <i class="bi bi-plus-circle"></i> إضافة موظف
+    </button>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>اسم الموظف</th>
+                    <th>النوع</th>
+                    <th class="text-end">الراتب الشهري</th>
+                    <th>تاريخ الانضمام</th>
+                    <th>رقم التواصل</th>
+                    <th>الحالة</th>
+                    <th>ملاحظات</th>
+                    <th class="text-center" style="width:120px">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                <tr>
+                    <td class="fw-bold" style="color: var(--accent)">{{ emp.full_name }}</td>
+                    <td>
+                        {% if emp.employment_type == 'full_time' %}<span class="badge badge-soft-info">Full-time</span>
+                        {% elif emp.employment_type == 'freelance' %}<span class="badge badge-soft-warning">Freelance</span>
+                        {% else %}<span class="badge badge-soft-secondary">Part-time</span>{% endif %}
+                    </td>
+                    <td class="text-end fw-bold">{{ '{:,.0f}'.format(emp.monthly_salary) }} <small class="text-muted">ج.م</small></td>
+                    <td>{{ emp.joined_at.strftime('%d/%m/%Y') }}</td>
+                    <td class="text-muted">{{ emp.contact_phone or '—' }}</td>
+                    <td>
+                        {% if emp.status == 'active' %}<span class="badge badge-soft-success">نشط</span>
+                        {% elif emp.status == 'paused' %}<span class="badge badge-soft-warning">متوقف</span>
+                        {% else %}<span class="badge badge-soft-danger">منتهي</span>{% endif %}
+                    </td>
+                    <td class="text-muted small" style="max-width:200px">{{ emp.notes or '—' }}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                                data-bs-target="#editEmployeeModal{{ emp.id }}" title="تعديل">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form method="POST" action="{{ url_for('admin.finance_employees_delete', emp_id=emp.id) }}"
+                              class="d-inline" onsubmit="return confirm('حذف الموظف وكل دفعاته؟');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-center py-4 text-muted">
+                    <i class="bi bi-inbox" style="font-size:2rem; opacity:0.4"></i>
+                    <div class="mt-2">لا يوجد موظفين بعد — أضف أول موظف بزر "إضافة موظف" أعلاه.</div>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add modal -->
+<div class="modal fade" id="addEmployeeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.finance_employees_create') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-person-plus"></i> إضافة موظف جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {{ employee_form_fields(employment_types, status_options) }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit modals (one per employee) -->
+{% for emp in employees %}
+<div class="modal fade" id="editEmployeeModal{{ emp.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.finance_employees_edit', emp_id=emp.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil-square"></i> تعديل: {{ emp.full_name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {{ employee_form_fields(employment_types, status_options, emp) }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> حفظ التعديلات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

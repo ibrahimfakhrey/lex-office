@@ -1,0 +1,86 @@
+{% extends 'admin/base.html' %}
+{% block title %}ملخص القروض{% endblock %}
+{% block page_title %}<i class="bi bi-bar-chart-line-fill"></i> ملخص القروض — Loans Summary{% endblock %}
+
+{% block content %}
+<div class="finance-hint mb-3">
+    <i class="bi bi-info-circle"></i>
+    شاشة عرض فقط — كل الأرقام محسوبة تلقائياً من
+    <a href="{{ url_for('admin.finance_lenders_list') }}">القروض</a>
+    و<a href="{{ url_for('admin.finance_loan_payments') }}">الدفعات</a>.
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">إجمالي المبالغ الأصلية</div>
+            <div class="value text-warning">{{ '{:,.0f}'.format(totals.original) }} <small style="font-size:1rem">ج.م</small></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">إجمالي المسدد</div>
+            <div class="value text-success">{{ '{:,.0f}'.format(totals.paid) }} <small style="font-size:1rem">ج.م</small></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">الباقي</div>
+            <div class="value text-danger">{{ '{:,.0f}'.format(totals.balance) }} <small style="font-size:1rem">ج.م</small></div>
+        </div>
+    </div>
+</div>
+
+<div class="section-band"><i class="bi bi-bank"></i> ملخص لكل قرض</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>الجهة / الشخص</th>
+                    <th class="text-end">المبلغ الأصلي</th>
+                    <th>تاريخ القرض</th>
+                    <th class="text-end">إجمالي المسدد</th>
+                    <th class="text-end">الباقي</th>
+                    <th class="text-center">عدد الدفعات</th>
+                    <th>آخر دفعة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                {% set lender = r.lender %}
+                <tr>
+                    <td class="fw-bold" style="color: var(--accent)">{{ lender.lender_name }}</td>
+                    <td class="text-end">{{ '{:,.0f}'.format(r.original) }}</td>
+                    <td>{{ lender.loan_date.strftime('%d/%m/%Y') }}</td>
+                    <td class="text-end fw-bold text-success">{{ '{:,.0f}'.format(r.paid) }}</td>
+                    <td class="text-end fw-bold {{ 'text-danger' if r.balance > 0 else 'text-success' }}">
+                        {{ '{:,.0f}'.format(r.balance) }}
+                    </td>
+                    <td class="text-center"><span class="badge badge-soft-info">{{ r.count }}</span></td>
+                    <td class="text-muted small">{{ r.last_date.strftime('%d/%m/%Y') if r.last_date else '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center py-4 text-muted">
+                    <i class="bi bi-inbox" style="font-size:2rem; opacity:0.4"></i>
+                    <div class="mt-2">لا توجد بيانات — أضف قروضاً ودفعات أولاً.</div>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+            {% if rows %}
+            <tfoot class="fw-bold" style="background: rgba(7,143,210,0.06)">
+                <tr>
+                    <td>الإجمالي</td>
+                    <td class="text-end text-warning">{{ '{:,.0f}'.format(totals.original) }} ج.م</td>
+                    <td></td>
+                    <td class="text-end text-success">{{ '{:,.0f}'.format(totals.paid) }} ج.م</td>
+                    <td class="text-end text-danger">{{ '{:,.0f}'.format(totals.balance) }} ج.م</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+{% endblock %}

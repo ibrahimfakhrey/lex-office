@@ -12,3 +12,8 @@ from app.models.task import Task, Appointment
 from app.models.document import Document, LegalTemplate
 from app.models.notification import Notification, NotificationSetting
 from app.models.audit import AuditLog, DeviceSession
+from app.models.op_finance import (
+    OpEmployee, OpPayrollPayment, OpLender, OpLoanPayment,
+    OpExpenseCategory, OpMonthlyExpense, OpFixedExpense,
+    OpIncome, OpFinanceAuditLog,
+)

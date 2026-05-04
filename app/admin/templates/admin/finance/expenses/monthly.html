@@ -1,0 +1,126 @@
+{% extends 'admin/base.html' %}
+{% block title %}سجل المصاريف الشهري{% endblock %}
+{% block page_title %}<i class="bi bi-journal-text"></i> سجل المصاريف الشهري — Monthly Log{% endblock %}
+
+{% block content %}
+<div class="finance-hint mb-3">
+    <i class="bi bi-info-circle"></i>
+    كل مصروف فعلي تم دفعه يُسجَّل هنا. <strong>كل شهر مستقل تماماً</strong> — المصاريف السنوية أو لمرة واحدة تُسجَّل في الشهر الفعلي اللي دفعت فيه (لا توزيع).
+    {% if not categories %}
+        <strong class="text-warning"> — أضف بنداً أولاً من <a href="{{ url_for('admin.finance_expense_categories') }}" class="alert-link">فئات المصاريف</a>.</strong>
+    {% endif %}
+</div>
+
+<div class="section-band"><i class="bi bi-plus-square"></i> تسجيل مصروف جديد</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.finance_monthly_expenses_create') }}" class="row g-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-2">
+                <label class="form-label">السنة <span class="text-danger">*</span></label>
+                <input type="number" name="year" class="form-control" min="2020" max="2100" required value="{{ current_year }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">الشهر <span class="text-danger">*</span></label>
+                <select name="month" class="form-select" required>
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {{ 'selected' if m == current_month }}>{{ arabic_months[m] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">الفئة / البند <span class="text-danger">*</span></label>
+                <select name="category_id" class="form-select" required {{ 'disabled' if not categories }}>
+                    <option value="" disabled selected>— اختر بند —</option>
+                    {% for c in categories %}
+                    <option value="{{ c.id }}">{{ c.category_name }} — {{ c.item_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">المبلغ (ج.م) <span class="text-danger">*</span></label>
+                <input type="number" step="0.01" min="0" name="amount" class="form-control" required>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100" {{ 'disabled' if not categories }}>
+                    <i class="bi bi-check-lg"></i> تسجيل
+                </button>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">تاريخ الدفعة <small class="text-muted">(اختياري)</small></label>
+                <input type="date" name="payment_date" class="form-control">
+            </div>
+            <div class="col-md-9">
+                <label class="form-label">ملاحظات</label>
+                <input type="text" name="notes" class="form-control" placeholder="اختياري">
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="section-band d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-funnel-fill"></i> سجل المصاريف</span>
+    <form method="GET" class="d-flex gap-2 align-items-center">
+        <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">كل السنوات</option>
+            {% for y in available_years %}
+            <option value="{{ y }}" {{ 'selected' if y == year_filter }}>{{ y }}</option>
+            {% endfor %}
+        </select>
+        <select name="month" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">كل الشهور</option>
+            {% for m in range(1, 13) %}
+            <option value="{{ m }}" {{ 'selected' if m == month_filter }}>{{ arabic_months[m] }}</option>
+            {% endfor %}
+        </select>
+        {% if year_filter or month_filter %}
+        <a href="{{ url_for('admin.finance_monthly_expenses') }}" class="btn btn-sm btn-outline-light">
+            <i class="bi bi-x-lg"></i>
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>السنة / الشهر</th>
+                    <th>الفئة</th>
+                    <th>البند</th>
+                    <th class="text-end">المبلغ</th>
+                    <th>تاريخ الدفعة</th>
+                    <th>ملاحظات</th>
+                    <th class="text-center" style="width:80px">حذف</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in expenses %}
+                <tr>
+                    <td>{{ arabic_months[e.month] }} {{ e.year }}</td>
+                    <td class="text-muted">{{ e.category.category_name if e.category else '—' }}</td>
+                    <td class="fw-bold" style="color: var(--accent)">{{ e.category.item_name if e.category else '— محذوف —' }}</td>
+                    <td class="text-end fw-bold text-warning">{{ '{:,.0f}'.format(e.amount) }} <small class="text-muted">ج.م</small></td>
+                    <td>{{ e.payment_date.strftime('%d/%m/%Y') if e.payment_date else '—' }}</td>
+                    <td class="text-muted small" style="max-width:200px">{{ e.notes or '—' }}</td>
+                    <td class="text-center">
+                        <form method="POST" action="{{ url_for('admin.finance_monthly_expenses_delete', exp_id=e.id) }}"
+                              class="d-inline" onsubmit="return confirm('حذف المصروف؟');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center py-4 text-muted">
+                    <i class="bi bi-inbox" style="font-size:2rem; opacity:0.4"></i>
+                    <div class="mt-2">لا توجد مصاريف{% if year_filter or month_filter %} للفترة المختارة{% endif %}.</div>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

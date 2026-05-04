@@ -1,0 +1,125 @@
+{% extends 'admin/base.html' %}
+{% block title %}المصاريف الثابتة{% endblock %}
+{% block page_title %}<i class="bi bi-pin-angle-fill"></i> المصاريف الثابتة — Fixed Expenses{% endblock %}
+
+{% block content %}
+<div class="finance-hint mb-3">
+    <i class="bi bi-info-circle"></i>
+    <strong>شاشة مرجعية فقط</strong> — لا تُستخدم في الحسابات. الغرض: تعرف إيه المصاريف الموجودة عندك (شهرياً، سنوياً، أو لمرة واحدة).
+</div>
+
+<div class="section-band d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-clipboard-data"></i> قائمة المصاريف الثابتة</span>
+    <button class="btn btn-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#addFixedModal">
+        <i class="bi bi-plus-circle"></i> إضافة مصروف ثابت
+    </button>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>اسم المصروف</th>
+                    <th class="text-end">المبلغ التقديري</th>
+                    <th>التكرار</th>
+                    <th>الشهر (لو سنوي)</th>
+                    <th>ملاحظات</th>
+                    <th class="text-center" style="width:80px">حذف</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td class="fw-bold" style="color: var(--accent)">{{ item.expense_name }}</td>
+                    <td class="text-end">
+                        {% if item.estimated_amount %}{{ '{:,.0f}'.format(item.estimated_amount) }} <small class="text-muted">ج.م</small>{% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if item.recurrence == 'monthly' %}<span class="badge badge-soft-info">شهري</span>
+                        {% elif item.recurrence == 'yearly' %}<span class="badge badge-soft-warning">سنوي</span>
+                        {% else %}<span class="badge badge-soft-secondary">مدى الحياة</span>{% endif %}
+                    </td>
+                    <td>{{ arabic_months[item.month_if_yearly] if item.month_if_yearly else '—' }}</td>
+                    <td class="text-muted small" style="max-width:200px">{{ item.notes or '—' }}</td>
+                    <td class="text-center">
+                        <form method="POST" action="{{ url_for('admin.finance_fixed_expenses_delete', item_id=item.id) }}"
+                              class="d-inline" onsubmit="return confirm('حذف؟');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center py-4 text-muted">
+                    <i class="bi bi-pin" style="font-size:2rem; opacity:0.4"></i>
+                    <div class="mt-2">لا توجد مصاريف ثابتة مُسجَّلة.</div>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add modal -->
+<div class="modal fade" id="addFixedModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.finance_fixed_expenses_create') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pin-fill"></i> إضافة مصروف ثابت</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">اسم المصروف <span class="text-danger">*</span></label>
+                            <input type="text" name="expense_name" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">المبلغ التقديري (ج.م)</label>
+                            <input type="number" step="0.01" min="0" name="estimated_amount" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">التكرار <span class="text-danger">*</span></label>
+                            <select name="recurrence" id="recurrenceSelect" class="form-select" required>
+                                {% for v, label in recurrence_options %}
+                                <option value="{{ v }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6" id="monthYearlyWrapper" style="display:none">
+                            <label class="form-label">الشهر (لو سنوي)</label>
+                            <select name="month_if_yearly" class="form-select">
+                                <option value="">— اختر —</option>
+                                {% for m in range(1, 13) %}
+                                <option value="{{ m }}">{{ arabic_months[m] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">ملاحظات</label>
+                            <textarea name="notes" rows="2" class="form-control"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const recurrenceSelect = document.getElementById('recurrenceSelect');
+const monthWrapper = document.getElementById('monthYearlyWrapper');
+recurrenceSelect?.addEventListener('change', () => {
+    monthWrapper.style.display = recurrenceSelect.value === 'yearly' ? 'block' : 'none';
+});
+</script>
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends 'admin/base.html' %}
+{% block title %}دفعات الرواتب{% endblock %}
+{% block page_title %}<i class="bi bi-cash-stack"></i> دفعات الرواتب — Payroll Payments{% endblock %}
+
+{% block content %}
+<div class="finance-hint mb-3">
+    <i class="bi bi-info-circle"></i>
+    كل صف = دفعة واحدة. اسم الموظف يُختار من القائمة المنسدلة فقط — لا يُكتب يدوياً.
+    {% if not employees %}
+        <strong class="text-warning"> — أضف موظفاً أولاً من <a href="{{ url_for('admin.finance_employees_list') }}" class="alert-link">شاشة الموظفين</a>.</strong>
+    {% endif %}
+</div>
+
+<div class="section-band d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-plus-square"></i> تسجيل دفعة جديدة</span>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.finance_payroll_create') }}" class="row g-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-4">
+                <label class="form-label">اسم الموظف <span class="text-danger">*</span></label>
+                <select name="employee_id" class="form-select" required {{ 'disabled' if not employees }}>
+                    <option value="" disabled selected>— اختر موظف —</option>
+                    {% for emp in employees %}
+                    <option value="{{ emp.id }}" data-salary="{{ emp.monthly_salary }}">
+                        {{ emp.full_name }} ({{ '{:,.0f}'.format(emp.monthly_salary) }} ج.م/شهر)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">تاريخ الدفعة <span class="text-danger">*</span></label>
+                <input type="date" name="payment_date" class="form-control" required value="{{ today.isoformat() }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">المبلغ المدفوع (ج.م) <span class="text-danger">*</span></label>
+                <input type="number" step="0.01" min="0" name="amount" class="form-control" required>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100" {{ 'disabled' if not employees }}>
+                    <i class="bi bi-check-lg"></i> تسجيل
+                </button>
+            </div>
+            <div class="col-12">
+                <label class="form-label">ملاحظات</label>
+                <input type="text" name="notes" class="form-control" placeholder="اختياري">
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="section-band"><i class="bi bi-list-ul"></i> سجل الدفعات</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>اسم الموظف</th>
+                    <th>تاريخ الدفعة</th>
+                    <th class="text-end">المبلغ المدفوع</th>
+                    <th>ملاحظات</th>
+                    <th class="text-center" style="width:80px">حذف</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payments %}
+                <tr>
+                    <td class="fw-bold" style="color: var(--accent)">{{ p.employee.full_name if p.employee else '— محذوف —' }}</td>
+                    <td>{{ p.payment_date.strftime('%d/%m/%Y') }}</td>
+                    <td class="text-end fw-bold text-success">{{ '{:,.0f}'.format(p.amount) }} <small class="text-muted">ج.م</small></td>
+                    <td class="text-muted small">{{ p.notes or '—' }}</td>
+                    <td class="text-center">
+                        <form method="POST" action="{{ url_for('admin.finance_payroll_delete', payment_id=p.id) }}"
+                              class="d-inline" onsubmit="return confirm('حذف هذه الدفعة؟');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center py-4 text-muted">
+                    <i class="bi bi-cash-coin" style="font-size:2rem; opacity:0.4"></i>
+                    <div class="mt-2">لم تُسجَّل أي دفعات بعد.</div>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-fill amount with the employee's monthly salary when chosen
+document.querySelector('select[name="employee_id"]')?.addEventListener('change', function () {
+    const salary = this.options[this.selectedIndex].getAttribute('data-salary');
+    const amountInput = document.querySelector('input[name="amount"]');
+    if (salary && amountInput && !amountInput.value) {
+        amountInput.value = parseFloat(salary).toFixed(2);
+    }
+});
+</script>
+{% endblock %}

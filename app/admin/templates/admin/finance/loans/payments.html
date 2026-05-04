@@ -1,0 +1,91 @@
+{% extends 'admin/base.html' %}
+{% block title %}دفعات القروض{% endblock %}
+{% block page_title %}<i class="bi bi-coin"></i> دفعات القروض — Loan Payments{% endblock %}
+
+{% block content %}
+<div class="finance-hint mb-3">
+    <i class="bi bi-info-circle"></i>
+    كل صف = دفعة لقرض معيّن. الجهة تُختار من القائمة المنسدلة فقط.
+    {% if not lenders %}
+        <strong class="text-warning"> — أضف قرضاً أولاً من <a href="{{ url_for('admin.finance_lenders_list') }}" class="alert-link">شاشة القروض</a>.</strong>
+    {% endif %}
+</div>
+
+<div class="section-band"><i class="bi bi-plus-square"></i> تسجيل دفعة قرض جديدة</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.finance_loan_payments_create') }}" class="row g-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-4">
+                <label class="form-label">الجهة / الشخص <span class="text-danger">*</span></label>
+                <select name="lender_id" class="form-select" required {{ 'disabled' if not lenders }}>
+                    <option value="" disabled selected>— اختر قرض —</option>
+                    {% for lender in lenders %}
+                    <option value="{{ lender.id }}" data-balance="{{ lender.balance }}">
+                        {{ lender.lender_name }} (متبقي {{ '{:,.0f}'.format(lender.balance) }} ج.م)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">تاريخ الدفعة <span class="text-danger">*</span></label>
+                <input type="date" name="payment_date" class="form-control" required value="{{ today.isoformat() }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">المبلغ المدفوع (ج.م) <span class="text-danger">*</span></label>
+                <input type="number" step="0.01" min="0" name="amount" class="form-control" required>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100" {{ 'disabled' if not lenders }}>
+                    <i class="bi bi-check-lg"></i> تسجيل
+                </button>
+            </div>
+            <div class="col-12">
+                <label class="form-label">ملاحظات</label>
+                <input type="text" name="notes" class="form-control" placeholder="اختياري">
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="section-band"><i class="bi bi-list-ul"></i> سجل دفعات القروض</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>الجهة / الشخص</th>
+                    <th>تاريخ الدفعة</th>
+                    <th class="text-end">المبلغ المدفوع</th>
+                    <th>ملاحظات</th>
+                    <th class="text-center" style="width:80px">حذف</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payments %}
+                <tr>
+                    <td class="fw-bold" style="color: var(--accent)">{{ p.lender.lender_name if p.lender else '— محذوف —' }}</td>
+                    <td>{{ p.payment_date.strftime('%d/%m/%Y') }}</td>
+                    <td class="text-end fw-bold text-success">{{ '{:,.0f}'.format(p.amount) }} <small class="text-muted">ج.م</small></td>
+                    <td class="text-muted small">{{ p.notes or '—' }}</td>
+                    <td class="text-center">
+                        <form method="POST" action="{{ url_for('admin.finance_loan_payments_delete', payment_id=p.id) }}"
+                              class="d-inline" onsubmit="return confirm('حذف هذه الدفعة؟');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center py-4 text-muted">
+                    <i class="bi bi-cash-coin" style="font-size:2rem; opacity:0.4"></i>
+                    <div class="mt-2">لم تُسجَّل دفعات قروض بعد.</div>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

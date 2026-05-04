@@ -1,0 +1,135 @@
+{% extends 'admin/base.html' %}
+{% block title %}القروض{% endblock %}
+{% block page_title %}<i class="bi bi-bank"></i> القروض — Lenders{% endblock %}
+
+{% macro lender_form_fields(lender=None) %}
+<div class="row g-3">
+    <div class="col-md-6">
+        <label class="form-label">الجهة / الشخص <span class="text-danger">*</span></label>
+        <input type="text" name="lender_name" class="form-control" required value="{{ lender.lender_name if lender else '' }}">
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">المبلغ الأصلي (ج.م) <span class="text-danger">*</span></label>
+        <input type="number" step="0.01" min="0" name="original_amount" class="form-control" required
+               value="{{ lender.original_amount if lender else '' }}">
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">تاريخ القرض <span class="text-danger">*</span></label>
+        <input type="date" name="loan_date" class="form-control" required
+               value="{{ lender.loan_date.isoformat() if lender else '' }}">
+    </div>
+    <div class="col-12">
+        <label class="form-label">ملاحظات</label>
+        <textarea name="notes" rows="2" class="form-control">{{ lender.notes or '' if lender else '' }}</textarea>
+    </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="finance-hint mb-3">
+    <i class="bi bi-info-circle"></i>
+    كل قرض يُسجّل هنا مرة واحدة. الدفعات تُسجَّل في
+    <a href="{{ url_for('admin.finance_loan_payments') }}">دفعات القروض</a> والأرقام تتحدث تلقائياً.
+</div>
+
+<div class="section-band d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-clipboard-data"></i> بيانات القروض</span>
+    <button class="btn btn-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#addLenderModal">
+        <i class="bi bi-plus-circle"></i> إضافة قرض
+    </button>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>الجهة / الشخص</th>
+                    <th class="text-end">المبلغ الأصلي</th>
+                    <th>تاريخ القرض</th>
+                    <th class="text-end">إجمالي المسدد</th>
+                    <th class="text-end">الباقي</th>
+                    <th class="text-center">عدد الدفعات</th>
+                    <th>آخر دفعة</th>
+                    <th>ملاحظات</th>
+                    <th class="text-center" style="width:120px">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lender in lenders %}
+                <tr>
+                    <td class="fw-bold" style="color: var(--accent)">{{ lender.lender_name }}</td>
+                    <td class="text-end fw-bold">{{ '{:,.0f}'.format(lender.original_amount) }} <small class="text-muted">ج.م</small></td>
+                    <td>{{ lender.loan_date.strftime('%d/%m/%Y') }}</td>
+                    <td class="text-end fw-bold text-success">{{ '{:,.0f}'.format(lender.total_paid) }}</td>
+                    <td class="text-end fw-bold {{ 'text-warning' if lender.balance > 0 else 'text-success' }}">
+                        {{ '{:,.0f}'.format(lender.balance) }}
+                    </td>
+                    <td class="text-center"><span class="badge badge-soft-info">{{ lender.payment_count }}</span></td>
+                    <td class="text-muted small">{{ lender.last_payment_date.strftime('%d/%m/%Y') if lender.last_payment_date else '—' }}</td>
+                    <td class="text-muted small" style="max-width:180px">{{ lender.notes or '—' }}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                                data-bs-target="#editLenderModal{{ lender.id }}" title="تعديل">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form method="POST" action="{{ url_for('admin.finance_lenders_delete', lender_id=lender.id) }}"
+                              class="d-inline" onsubmit="return confirm('حذف القرض وكل دفعاته؟');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="9" class="text-center py-4 text-muted">
+                    <i class="bi bi-inbox" style="font-size:2rem; opacity:0.4"></i>
+                    <div class="mt-2">لا توجد قروض مُسجَّلة بعد.</div>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add modal -->
+<div class="modal fade" id="addLenderModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.finance_lenders_create') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> إضافة قرض جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">{{ lender_form_fields() }}</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit modals -->
+{% for lender in lenders %}
+<div class="modal fade" id="editLenderModal{{ lender.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.finance_lenders_edit', lender_id=lender.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil-square"></i> تعديل: {{ lender.lender_name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">{{ lender_form_fields(lender) }}</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> حفظ التعديلات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

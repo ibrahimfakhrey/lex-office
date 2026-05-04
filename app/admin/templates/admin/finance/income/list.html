@@ -1,0 +1,90 @@
+{% extends 'admin/base.html' %}
+{% block title %}الإيرادات{% endblock %}
+{% block page_title %}<i class="bi bi-cash-coin"></i> الإيرادات — Income{% endblock %}
+
+{% block content %}
+<div class="finance-hint mb-3">
+    <i class="bi bi-info-circle"></i>
+    إدخال يدوي للإيرادات. <strong>إيرادات الاشتراكات تُتابع منفصلة</strong> في
+    <a href="{{ url_for('admin.billing_invoices') }}">شاشة الفواتير</a>.
+    هذه الشاشة تستخدم في حساب <strong>الصافي</strong> في لوحة المالية.
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-12">
+        <div class="stat-card">
+            <div class="label">إجمالي الإيرادات المُسجَّلة</div>
+            <div class="value text-success">{{ '{:,.0f}'.format(total) }} <small style="font-size:1rem">ج.م</small></div>
+        </div>
+    </div>
+</div>
+
+<div class="section-band"><i class="bi bi-plus-square"></i> تسجيل إيراد جديد</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.finance_income_create') }}" class="row g-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-3">
+                <label class="form-label">تاريخ الإيراد <span class="text-danger">*</span></label>
+                <input type="date" name="income_date" class="form-control" required value="{{ today.isoformat() }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">المصدر <span class="text-danger">*</span></label>
+                <input type="text" name="source_label" class="form-control" required placeholder="مثال: عميل خاص — مشروع XYZ">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">المبلغ (ج.م) <span class="text-danger">*</span></label>
+                <input type="number" step="0.01" min="0" name="amount" class="form-control" required>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check-lg"></i> تسجيل</button>
+            </div>
+            <div class="col-12">
+                <label class="form-label">ملاحظات</label>
+                <input type="text" name="notes" class="form-control" placeholder="اختياري">
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="section-band"><i class="bi bi-list-ul"></i> سجل الإيرادات</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>التاريخ</th>
+                    <th>المصدر</th>
+                    <th class="text-end">المبلغ</th>
+                    <th>ملاحظات</th>
+                    <th class="text-center" style="width:80px">حذف</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in incomes %}
+                <tr>
+                    <td>{{ i.income_date.strftime('%d/%m/%Y') }}</td>
+                    <td class="fw-bold" style="color: var(--accent)">{{ i.source_label }}</td>
+                    <td class="text-end fw-bold text-success">{{ '{:,.0f}'.format(i.amount) }} <small class="text-muted">ج.م</small></td>
+                    <td class="text-muted small">{{ i.notes or '—' }}</td>
+                    <td class="text-center">
+                        <form method="POST" action="{{ url_for('admin.finance_income_delete', income_id=i.id) }}"
+                              class="d-inline" onsubmit="return confirm('حذف الإيراد؟');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center py-4 text-muted">
+                    <i class="bi bi-cash-coin" style="font-size:2rem; opacity:0.4"></i>
+                    <div class="mt-2">لم تُسجَّل إيرادات بعد.</div>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
