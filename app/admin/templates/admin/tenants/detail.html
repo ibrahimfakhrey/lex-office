@@ -203,11 +203,28 @@
     <div class="card-header"><i class="bi bi-toggles2"></i> الميزات الفعالة</div>
     <div class="table-responsive">
         <table class="table table-sm mb-0">
-            <thead><tr><th>المفتاح</th><th>قيمة الخطة</th><th>المصدر</th><th>الحالة</th><th>صالح حتى</th><th>السبب</th><th></th></tr></thead>
+            <thead><tr>
+                <th>الميزة</th>
+                <th>قيمة الخطة</th>
+                <th>المصدر</th>
+                <th>الحالة</th>
+                <th>
+                    تاريخ انتهاء التفعيل
+                    <i class="bi bi-info-circle text-muted ms-1"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="top"
+                       title="ينطبق فقط عند وجود Override يدوي. بعد هذا التاريخ يعود الإعداد لقيمة الخطة الافتراضية. الفراغ يعني بلا انتهاء."></i>
+                </th>
+                <th>السبب</th>
+                <th></th>
+            </tr></thead>
             <tbody>
                 {% for f in feature_view %}
                 <tr>
-                    <td class="font-monospace small">{{ f.key }}</td>
+                    <td>
+                        <div class="fw-semibold small">{{ f.label }}</div>
+                        <div class="font-monospace text-muted" style="font-size:0.72rem">{{ f.key }}</div>
+                    </td>
                     <td class="small">{{ f.plan_value }}</td>
                     <td>
                         {% if f.source == 'override' %}

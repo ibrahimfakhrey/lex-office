@@ -62,3 +62,11 @@ def features_by_group():
     for f in ALL_FEATURES:
         grouped[f['group']].append(f)
     return grouped
+
+
+_FEATURE_LABELS = {f['key']: f['label'] for f in ALL_FEATURES}
+
+
+def label_for(key):
+    """Return the Arabic display name for a feature key, falling back to the key itself."""
+    return _FEATURE_LABELS.get(key, key)

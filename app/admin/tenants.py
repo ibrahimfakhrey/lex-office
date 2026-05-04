@@ -269,6 +269,8 @@ def tenant_features(tenant_id):
         feature_keys.add(o.feature_key)
     overrides_map = {o.feature_key: o for o in overrides}
 
+    from app.admin.feature_keys import label_for
+
     feature_view = []
     for key in sorted(feature_keys):
         plan_val = plan_features.get(key)
@@ -281,6 +283,7 @@ def tenant_features(tenant_id):
             source = 'plan'
         feature_view.append({
             'key': key,
+            'label': label_for(key),
             'plan_value': plan_val,
             'override': ov,
             'effective': effective,
