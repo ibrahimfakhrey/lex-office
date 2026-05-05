@@ -1,17 +1,20 @@
 {% extends 'admin/base.html' %}
 {% block title %}إدارة الأدمن{% endblock %}
-{% block page_title %}قائمة الأدمن{% endblock %}
+{% block page_title %}<i class="bi bi-shield-lock"></i> حسابات الأدمن{% endblock %}
 
 {% block content %}
-<div class="mb-3">
+<div class="d-flex justify-content-between align-items-center mb-3">
     <a href="{{ url_for('admin.settings_general') }}" class="text-decoration-none small text-muted">
         <i class="bi bi-arrow-right"></i> العودة للإعدادات
     </a>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addAdminModal">
+        <i class="bi bi-person-plus"></i> + أدمن جديد
+    </button>
 </div>
 
 <div class="card">
     <div class="card-header">
-        <i class="bi bi-shield-lock"></i> حسابات الأدمن ({{ admins|length }})
+        <i class="bi bi-people-fill"></i> قائمة الأدمن ({{ admins|length }})
     </div>
     <div class="table-responsive">
         <table class="table table-hover mb-0">
@@ -23,8 +26,8 @@
                     <th>الدور</th>
                     <th>MFA</th>
                     <th>آخر دخول</th>
-                    <th>تاريخ الإنشاء</th>
                     <th>الحالة</th>
+                    <th class="text-center" style="width:120px">إجراءات</th>
                 </tr>
             </thead>
             <tbody>
@@ -33,25 +36,136 @@
                     <td>{{ a.id }}</td>
                     <td><strong>{{ a.full_name }}</strong></td>
                     <td class="small">{{ a.email }}</td>
-                    <td><span class="badge badge-soft-info">{{ a.role }}</span></td>
+                    <td>
+                        {% if a.admin_role %}
+                            <span class="badge {{ 'badge-soft-info' if a.admin_role.is_system else 'badge-soft-warning' }}">
+                                {{ a.admin_role.name_ar }}
+                            </span>
+                        {% else %}
+                            <span class="badge badge-soft-secondary">بدون دور</span>
+                        {% endif %}
+                    </td>
                     <td>
                         {% if a.mfa_enabled %}<span class="badge badge-soft-success">مفعل</span>
                         {% else %}<span class="badge badge-soft-warning">معطل</span>{% endif %}
                     </td>
                     <td class="small">{{ a.last_login_at.strftime('%Y-%m-%d %H:%M') if a.last_login_at else '—' }}</td>
-                    <td class="small">{{ a.created_at.strftime('%Y-%m-%d') if a.created_at }}</td>
                     <td>
                         {% if a.is_active %}<span class="badge badge-soft-success">نشط</span>
                         {% else %}<span class="badge badge-soft-danger">معطل</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                                data-bs-target="#editAdminModal{{ a.id }}" title="تعديل">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        {% if a.id != g.current_admin.id %}
+                        <form method="POST" action="{{ url_for('admin.settings_admins_delete', admin_id=a.id) }}"
+                              class="d-inline" onsubmit="return confirm('حذف هذا الأدمن نهائياً؟');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button>
+                        </form>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-    <div class="card-footer small text-muted">
-        <i class="bi bi-info-circle"></i> لإضافة أدمن جديد، استخدم الأمر:
-        <code style="background: var(--dark-bg); padding: 4px 8px; border-radius: 4px">flask --app flask_app create-admin</code>
+</div>
+
+<!-- Add admin modal -->
+<div class="modal fade" id="addAdminModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.settings_admins_create') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-person-plus"></i> أدمن جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">الاسم الكامل <span class="text-danger">*</span></label>
+                        <input type="text" name="full_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">البريد الإلكتروني <span class="text-danger">*</span></label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">كلمة المرور <span class="text-danger">*</span></label>
+                        <input type="password" name="password" class="form-control" required minlength="8">
+                        <small class="text-muted">8+ أحرف، حرف كبير، رقم، رمز خاص</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الدور <span class="text-danger">*</span></label>
+                        <select name="role_id" class="form-select" required>
+                            <option value="" disabled selected>— اختر دور —</option>
+                            {% for r in roles %}
+                            <option value="{{ r.id }}">
+                                {{ r.name_ar }} {% if r.is_system %}(نظام){% else %}(مخصص){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> إنشاء</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<!-- Edit modals -->
+{% for a in admins %}
+<div class="modal fade" id="editAdminModal{{ a.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.settings_admins_edit', admin_id=a.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil-square"></i> تعديل: {{ a.full_name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">الاسم الكامل</label>
+                        <input type="text" name="full_name" class="form-control" required value="{{ a.full_name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">البريد <small class="text-muted">(لا يمكن تغييره)</small></label>
+                        <input type="email" class="form-control" disabled value="{{ a.email }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الدور</label>
+                        <select name="role_id" class="form-select" required>
+                            {% for r in roles %}
+                            <option value="{{ r.id }}" {{ 'selected' if a.role_id == r.id }}>
+                                {{ r.name_ar }} {% if r.is_system %}(نظام){% else %}(مخصص){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">كلمة مرور جديدة <small class="text-muted">(فارغ = إبقاء الحالية)</small></label>
+                        <input type="password" name="password" class="form-control" minlength="8">
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="active{{ a.id }}"
+                               {{ 'checked' if a.is_active }}>
+                        <label class="form-check-label" for="active{{ a.id }}">حساب نشط</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}

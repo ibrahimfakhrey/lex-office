@@ -10,7 +10,7 @@ from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, g
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required
+from app.admin.decorators import super_admin_required, admin_permission_required
 from app.admin.finance.audit import log_finance_action
 from app.models.op_finance import OpEmployee, OpPayrollPayment
 
@@ -22,7 +22,7 @@ def _parse_date(value):
 
 
 @admin_bp.route('/finance/payroll')
-@super_admin_required
+@admin_permission_required('finance_payroll', 'view')
 def finance_payroll_payments():
     """List all payroll payments + add-payment form."""
     payments = (
@@ -45,7 +45,7 @@ def finance_payroll_payments():
 
 
 @admin_bp.route('/finance/payroll/new', methods=['POST'])
-@super_admin_required
+@admin_permission_required('finance_payroll', 'add')
 def finance_payroll_create():
     try:
         emp_id = int(request.form['employee_id'])
@@ -76,7 +76,7 @@ def finance_payroll_create():
 
 
 @admin_bp.route('/finance/payroll/<int:payment_id>/delete', methods=['POST'])
-@super_admin_required
+@admin_permission_required('finance_payroll', 'delete')
 def finance_payroll_delete(payment_id):
     payment = OpPayrollPayment.query.get_or_404(payment_id)
     emp_name = payment.employee.full_name if payment.employee else '—'
@@ -99,7 +99,7 @@ def finance_payroll_delete(payment_id):
 
 
 @admin_bp.route('/finance/payroll/summary')
-@super_admin_required
+@admin_permission_required('finance_payroll', 'view')
 def finance_payroll_summary():
     """Read-only computed table — one row per employee."""
     employees = OpEmployee.query.order_by(OpEmployee.full_name).all()

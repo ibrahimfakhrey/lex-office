@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import or_, func
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required, log_action
+from app.admin.decorators import super_admin_required, log_action, admin_permission_required
 from app.models.subscription import SubscriptionPayment, SubscriptionPlan
 from app.models.tenant import Tenant
 from app.services.email_service import send_email
@@ -49,7 +49,7 @@ def _parse_date(s):
 # ──────────────────────────── list ────────────────────────────
 
 @admin_bp.route('/billing/invoices')
-@super_admin_required
+@admin_permission_required('billing', 'view')
 def billing_invoices():
     """All invoices across all tenants."""
     page = request.args.get('page', 1, type=int)
@@ -121,7 +121,7 @@ def billing_invoices():
 # ──────────────────────────── detail ────────────────────────────
 
 @admin_bp.route('/billing/invoices/<int:invoice_id>')
-@super_admin_required
+@admin_permission_required('billing', 'view')
 def billing_invoice_detail(invoice_id):
     """View a single invoice."""
     inv = SubscriptionPayment.query.get_or_404(invoice_id)
@@ -131,7 +131,7 @@ def billing_invoice_detail(invoice_id):
 # ──────────────────────────── PDF ────────────────────────────
 
 @admin_bp.route('/billing/invoices/<int:invoice_id>/pdf')
-@super_admin_required
+@admin_permission_required('billing', 'view')
 def billing_invoice_pdf(invoice_id):
     """Render an invoice as a printable PDF (uses WeasyPrint if installed,
     otherwise renders an HTML page that the browser can print)."""
@@ -154,7 +154,7 @@ def billing_invoice_pdf(invoice_id):
 # ──────────────────────────── create ────────────────────────────
 
 @admin_bp.route('/billing/invoices/create', methods=['GET', 'POST'])
-@super_admin_required
+@admin_permission_required('billing', 'add')
 def billing_invoice_create():
     """Create a manual custom invoice for any tenant."""
     if request.method == 'POST':
@@ -217,7 +217,7 @@ def billing_invoice_create():
 # ──────────────────────────── status / refund / remind ────────────────────────────
 
 @admin_bp.route('/billing/invoices/<int:invoice_id>/mark-paid', methods=['POST'])
-@super_admin_required
+@admin_permission_required('billing', 'edit')
 def billing_invoice_mark_paid(invoice_id):
     inv = SubscriptionPayment.query.get_or_404(invoice_id)
     old_status = inv.status
@@ -235,7 +235,7 @@ def billing_invoice_mark_paid(invoice_id):
 
 
 @admin_bp.route('/billing/invoices/<int:invoice_id>/refund', methods=['POST'])
-@super_admin_required
+@admin_permission_required('billing', 'edit')
 def billing_invoice_refund(invoice_id):
     inv = SubscriptionPayment.query.get_or_404(invoice_id)
     refund_amount = request.form.get('refund_amount', type=float) or float(inv.amount)
@@ -259,7 +259,7 @@ def billing_invoice_refund(invoice_id):
 
 
 @admin_bp.route('/billing/invoices/<int:invoice_id>/mark-partial', methods=['POST'])
-@super_admin_required
+@admin_permission_required('billing', 'edit')
 def billing_invoice_mark_partial(invoice_id):
     """Record a partial payment (amount paid so far, rest deferred)."""
     inv = SubscriptionPayment.query.get_or_404(invoice_id)
@@ -288,7 +288,7 @@ def billing_invoice_mark_partial(invoice_id):
 
 
 @admin_bp.route('/billing/invoices/<int:invoice_id>/attach', methods=['POST'])
-@super_admin_required
+@admin_permission_required('billing', 'edit')
 def billing_invoice_attach(invoice_id):
     """Attach the real invoice file (issued externally) to this record."""
     inv = SubscriptionPayment.query.get_or_404(invoice_id)
@@ -323,7 +323,7 @@ def billing_invoice_attach(invoice_id):
 
 
 @admin_bp.route('/billing/invoices/<int:invoice_id>/attachment')
-@super_admin_required
+@admin_permission_required('billing', 'view')
 def billing_invoice_attachment(invoice_id):
     """Download the attached invoice file."""
     inv = SubscriptionPayment.query.get_or_404(invoice_id)
@@ -338,7 +338,7 @@ def billing_invoice_attachment(invoice_id):
 
 
 @admin_bp.route('/billing/invoices/<int:invoice_id>/cancel', methods=['POST'])
-@super_admin_required
+@admin_permission_required('billing', 'delete')
 def billing_invoice_cancel(invoice_id):
     inv = SubscriptionPayment.query.get_or_404(invoice_id)
     old_status = inv.status
@@ -354,7 +354,7 @@ def billing_invoice_cancel(invoice_id):
 
 
 @admin_bp.route('/billing/invoices/<int:invoice_id>/remind', methods=['POST'])
-@super_admin_required
+@admin_permission_required('billing', 'edit')
 def billing_invoice_remind(invoice_id):
     """Send a payment reminder email to the tenant."""
     inv = SubscriptionPayment.query.get_or_404(invoice_id)
@@ -392,7 +392,7 @@ def billing_invoice_remind(invoice_id):
 # ──────────────────────────── grace period ────────────────────────────
 
 @admin_bp.route('/billing/tenants/<int:tenant_id>/grace-period', methods=['POST'])
-@super_admin_required
+@admin_permission_required('billing', 'edit')
 def billing_grace_period(tenant_id):
     """Add N days grace to a tenant's subscription."""
     tenant = Tenant.query.get_or_404(tenant_id)
@@ -416,7 +416,7 @@ def billing_grace_period(tenant_id):
 # ──────────────────────────── export ────────────────────────────
 
 @admin_bp.route('/billing/export')
-@super_admin_required
+@admin_permission_required('billing', 'view')
 def billing_export():
     """Export filtered invoices to CSV."""
     search = (request.args.get('q') or '').strip()

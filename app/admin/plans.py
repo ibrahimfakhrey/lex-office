@@ -4,7 +4,7 @@ from flask import (
 )
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required, log_action
+from app.admin.decorators import super_admin_required, log_action, admin_permission_required
 from app.admin.feature_keys import ALL_FEATURES, BOOLEAN_FEATURES, LIMIT_FEATURES, features_by_group, GROUPS
 from app.models.subscription import SubscriptionPlan
 from app.models.tenant import Tenant
@@ -24,7 +24,7 @@ def _tenant_count(plan_id):
 # ───────────────────────────── list ─────────────────────────────
 
 @admin_bp.route('/plans')
-@super_admin_required
+@admin_permission_required('plans', 'view')
 def plans_list():
     """List all plans with tenant counts."""
     plans = SubscriptionPlan.query.order_by(SubscriptionPlan.price_monthly.asc()).all()
@@ -35,7 +35,7 @@ def plans_list():
 # ───────────────────────────── create ─────────────────────────────
 
 @admin_bp.route('/plans/create', methods=['GET', 'POST'])
-@super_admin_required
+@admin_permission_required('plans', 'add')
 def plans_create():
     """Create a new plan."""
     if request.method == 'POST':
@@ -85,7 +85,7 @@ def plans_create():
 # ───────────────────────────── edit ─────────────────────────────
 
 @admin_bp.route('/plans/<int:plan_id>/edit', methods=['GET', 'POST'])
-@super_admin_required
+@admin_permission_required('plans', 'edit')
 def plans_edit(plan_id):
     """Edit an existing plan."""
     plan = _plan_or_404(plan_id)
@@ -129,7 +129,7 @@ def plans_edit(plan_id):
 # ───────────────────────────── archive / delete ─────────────────────────────
 
 @admin_bp.route('/plans/<int:plan_id>/archive', methods=['POST'])
-@super_admin_required
+@admin_permission_required('plans', 'delete')
 def plans_archive(plan_id):
     """Archive a plan (existing tenants keep it, no new signups)."""
     plan = _plan_or_404(plan_id)
@@ -149,7 +149,7 @@ def plans_archive(plan_id):
 
 
 @admin_bp.route('/plans/<int:plan_id>/delete', methods=['POST'])
-@super_admin_required
+@admin_permission_required('plans', 'delete')
 def plans_delete(plan_id):
     """Delete plan — only allowed if Draft AND zero tenants."""
     plan = _plan_or_404(plan_id)

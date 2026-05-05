@@ -33,6 +33,28 @@ def super_admin_required(f):
     return decorated
 
 
+def admin_permission_required(module, action='view', write_action=None):
+    """Gate a route on (module, action) RBAC. Super Admin role short-circuits.
+
+    For routes that handle both GET and POST, pass `write_action` separately
+    (e.g. action='view', write_action='edit') so the POST path is checked
+    against the correct permission. If `write_action` is omitted, the same
+    `action` applies to both methods.
+    """
+    def decorator(f):
+        @wraps(f)
+        @super_admin_required
+        def decorated(*args, **kwargs):
+            admin = g.current_admin
+            needed = write_action if (write_action and request.method == 'POST') else action
+            if admin.has_admin_permission(module, needed):
+                return f(*args, **kwargs)
+            flash('ليس لديك صلاحية للوصول لهذه الصفحة', 'danger')
+            return redirect(url_for('admin.index'))
+        return decorated
+    return decorator
+
+
 def role_required(*allowed_roles):
     """Restrict route to specific admin roles."""
     def decorator(f):

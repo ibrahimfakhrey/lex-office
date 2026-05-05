@@ -7,7 +7,7 @@ from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, g
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required
+from app.admin.decorators import super_admin_required, admin_permission_required
 from app.admin.finance.audit import log_finance_action
 from app.models.op_finance import OpLender, OpLoanPayment
 
@@ -20,14 +20,14 @@ def _parse_date(value):
 
 # ─── Lenders CRUD ───
 @admin_bp.route('/finance/lenders')
-@super_admin_required
+@admin_permission_required('finance_lenders', 'view')
 def finance_lenders_list():
     lenders = OpLender.query.order_by(OpLender.created_at.desc()).all()
     return render_template('admin/finance/loans/lenders.html', lenders=lenders)
 
 
 @admin_bp.route('/finance/lenders/new', methods=['POST'])
-@super_admin_required
+@admin_permission_required('finance_lenders', 'add')
 def finance_lenders_create():
     try:
         lender = OpLender(
@@ -54,7 +54,7 @@ def finance_lenders_create():
 
 
 @admin_bp.route('/finance/lenders/<int:lender_id>/edit', methods=['POST'])
-@super_admin_required
+@admin_permission_required('finance_lenders', 'edit')
 def finance_lenders_edit(lender_id):
     lender = OpLender.query.get_or_404(lender_id)
     try:
@@ -78,7 +78,7 @@ def finance_lenders_edit(lender_id):
 
 
 @admin_bp.route('/finance/lenders/<int:lender_id>/delete', methods=['POST'])
-@super_admin_required
+@admin_permission_required('finance_lenders', 'delete')
 def finance_lenders_delete(lender_id):
     lender = OpLender.query.get_or_404(lender_id)
     name = lender.lender_name
@@ -99,7 +99,7 @@ def finance_lenders_delete(lender_id):
 
 # ─── Loan Payments ───
 @admin_bp.route('/finance/loans/payments')
-@super_admin_required
+@admin_permission_required('finance_lenders', 'view')
 def finance_loan_payments():
     payments = (
         OpLoanPayment.query
@@ -114,7 +114,7 @@ def finance_loan_payments():
 
 
 @admin_bp.route('/finance/loans/payments/new', methods=['POST'])
-@super_admin_required
+@admin_permission_required('finance_lenders', 'add')
 def finance_loan_payments_create():
     try:
         lender_id = int(request.form['lender_id'])
@@ -142,7 +142,7 @@ def finance_loan_payments_create():
 
 
 @admin_bp.route('/finance/loans/payments/<int:payment_id>/delete', methods=['POST'])
-@super_admin_required
+@admin_permission_required('finance_lenders', 'delete')
 def finance_loan_payments_delete(payment_id):
     payment = OpLoanPayment.query.get_or_404(payment_id)
     lender_name = payment.lender.lender_name if payment.lender else '—'
@@ -164,7 +164,7 @@ def finance_loan_payments_delete(payment_id):
 
 # ─── Loan Summary (read-only computed) ───
 @admin_bp.route('/finance/loans/summary')
-@super_admin_required
+@admin_permission_required('finance_lenders', 'view')
 def finance_loans_summary():
     lenders = OpLender.query.order_by(OpLender.lender_name).all()
     rows = []

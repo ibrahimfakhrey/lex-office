@@ -56,7 +56,8 @@ def create_app(config_name=None):
         from app.models import (
             tenant, user, subscription, client, case, session,
             judgment, enforcement, power_of_attorney, financial,
-            task, document, notification, audit, admin, op_finance
+            task, document, notification, audit, admin, op_finance,
+            admin_rbac,
         )
 
     return app

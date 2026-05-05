@@ -5,7 +5,7 @@ from flask import (
 )
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required, log_action
+from app.admin.decorators import super_admin_required, log_action, admin_permission_required
 from app.models.admin import BroadcastNotification
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -17,7 +17,7 @@ from app.services.email_service import send_email
 # ───────────────────────────── send to one tenant ─────────────────────────────
 
 @admin_bp.route('/notifications/send', methods=['GET', 'POST'])
-@super_admin_required
+@admin_permission_required('notifications', 'view', write_action='send')
 def notifications_send():
     """Send a notification to a single tenant."""
     if request.method == 'POST':
@@ -58,7 +58,7 @@ def notifications_send():
 # ───────────────────────────── broadcast ─────────────────────────────
 
 @admin_bp.route('/notifications/broadcast', methods=['GET', 'POST'])
-@super_admin_required
+@admin_permission_required('notifications', 'view', write_action='send')
 def notifications_broadcast():
     """Broadcast to all tenants matching audience filter."""
     if request.method == 'POST':
@@ -135,7 +135,7 @@ def notifications_broadcast():
 # ───────────────────────────── history ─────────────────────────────
 
 @admin_bp.route('/notifications/history')
-@super_admin_required
+@admin_permission_required('notifications', 'view')
 def notifications_history():
     """List of past broadcasts with sent counts."""
     page = request.args.get('page', 1, type=int)

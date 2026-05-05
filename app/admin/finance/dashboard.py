@@ -11,7 +11,7 @@ from flask import render_template, request
 from sqlalchemy import func, extract
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required
+from app.admin.decorators import super_admin_required, admin_permission_required
 from app.models.op_finance import (
     OpEmployee, OpLender, OpMonthlyExpense, OpIncome,
 )
@@ -24,7 +24,7 @@ ARABIC_MONTHS = [
 
 
 @admin_bp.route('/finance/dashboard')
-@super_admin_required
+@admin_permission_required('finance_dashboard', 'view')
 def finance_dashboard():
     year_filter = request.args.get('year', type=int)
     month_filter = request.args.get('month', type=int)

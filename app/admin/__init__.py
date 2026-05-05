@@ -42,6 +42,7 @@ from app.admin import billing       # noqa: E402, F401
 from app.admin import notifications # noqa: E402, F401
 from app.admin import settings      # noqa: E402, F401
 from app.admin import audit         # noqa: E402, F401
+from app.admin import roles         # noqa: E402, F401
 
 # Internal finance sub-package (Manasety company books)
 from app.admin.finance import employees as _finance_employees   # noqa: E402, F401

@@ -11,7 +11,7 @@ from flask import render_template, request, redirect, url_for, flash, g
 from sqlalchemy import func
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required
+from app.admin.decorators import super_admin_required, admin_permission_required
 from app.admin.finance.audit import log_finance_action
 from app.models.op_finance import OpExpenseCategory, OpMonthlyExpense, OpFixedExpense
 
@@ -35,7 +35,7 @@ def _parse_date(value):
 
 # ─── Categories ───
 @admin_bp.route('/finance/expenses/categories')
-@super_admin_required
+@admin_permission_required('finance_expenses', 'view')
 def finance_expense_categories():
     cats = OpExpenseCategory.query.order_by(
         OpExpenseCategory.category_name, OpExpenseCategory.item_name
@@ -47,7 +47,7 @@ def finance_expense_categories():
 
 
 @admin_bp.route('/finance/expenses/categories/new', methods=['POST'])
-@super_admin_required
+@admin_permission_required('finance_expenses', 'add')
 def finance_expense_categories_create():
     try:
         cat = OpExpenseCategory(
@@ -71,7 +71,7 @@ def finance_expense_categories_create():
 
 
 @admin_bp.route('/finance/expenses/categories/<int:cat_id>/delete', methods=['POST'])
-@super_admin_required
+@admin_permission_required('finance_expenses', 'delete')
 def finance_expense_categories_delete(cat_id):
     cat = OpExpenseCategory.query.get_or_404(cat_id)
     label = cat.display_label
@@ -96,7 +96,7 @@ def finance_expense_categories_delete(cat_id):
 
 # ─── Monthly Log ───
 @admin_bp.route('/finance/expenses/monthly')
-@super_admin_required
+@admin_permission_required('finance_expenses', 'view')
 def finance_monthly_expenses():
     year_filter = request.args.get('year', type=int)
     month_filter = request.args.get('month', type=int)
@@ -136,7 +136,7 @@ def finance_monthly_expenses():
 
 
 @admin_bp.route('/finance/expenses/monthly/new', methods=['POST'])
-@super_admin_required
+@admin_permission_required('finance_expenses', 'add')
 def finance_monthly_expenses_create():
     try:
         cat = OpExpenseCategory.query.get_or_404(int(request.form['category_id']))
@@ -167,7 +167,7 @@ def finance_monthly_expenses_create():
 
 
 @admin_bp.route('/finance/expenses/monthly/<int:exp_id>/delete', methods=['POST'])
-@super_admin_required
+@admin_permission_required('finance_expenses', 'delete')
 def finance_monthly_expenses_delete(exp_id):
     exp = OpMonthlyExpense.query.get_or_404(exp_id)
     label = exp.category.display_label if exp.category else '—'
@@ -188,7 +188,7 @@ def finance_monthly_expenses_delete(exp_id):
 
 # ─── Expenses Summary ───
 @admin_bp.route('/finance/expenses/summary')
-@super_admin_required
+@admin_permission_required('finance_expenses', 'view')
 def finance_expenses_summary():
     year_filter = request.args.get('year', type=int)
     month_filter = request.args.get('month', type=int)
@@ -240,7 +240,7 @@ def finance_expenses_summary():
 
 # ─── Fixed Expenses (reference only) ───
 @admin_bp.route('/finance/expenses/fixed')
-@super_admin_required
+@admin_permission_required('finance_expenses', 'view')
 def finance_fixed_expenses():
     items = OpFixedExpense.query.order_by(OpFixedExpense.recurrence, OpFixedExpense.expense_name).all()
     return render_template(
@@ -252,7 +252,7 @@ def finance_fixed_expenses():
 
 
 @admin_bp.route('/finance/expenses/fixed/new', methods=['POST'])
-@super_admin_required
+@admin_permission_required('finance_expenses', 'add')
 def finance_fixed_expenses_create():
     try:
         item = OpFixedExpense(
@@ -278,7 +278,7 @@ def finance_fixed_expenses_create():
 
 
 @admin_bp.route('/finance/expenses/fixed/<int:item_id>/delete', methods=['POST'])
-@super_admin_required
+@admin_permission_required('finance_expenses', 'delete')
 def finance_fixed_expenses_delete(item_id):
     item = OpFixedExpense.query.get_or_404(item_id)
     name = item.expense_name

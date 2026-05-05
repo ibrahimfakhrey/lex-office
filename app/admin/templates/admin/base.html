@@ -273,49 +273,74 @@
                         <i class="bi bi-grid-1x2-fill"></i> لوحة التحكم
                     </a>
                 </li>
+                {% if g.current_admin.has_admin_permission('tenants', 'view') %}
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint and 'tenant' in (request.endpoint or '') }}" href="{{ url_for('admin.tenants_list') }}">
                         <i class="bi bi-building-fill"></i> المكاتب
                     </a>
                 </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('plans', 'view') %}
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint and 'plan' in (request.endpoint or '') }}" href="{{ url_for('admin.plans_list') }}">
                         <i class="bi bi-stack"></i> الخطط
                     </a>
                 </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('features', 'view') %}
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint and 'feature' in (request.endpoint or '') }}" href="{{ url_for('admin.features_matrix') }}">
                         <i class="bi bi-toggles2"></i> الميزات
                     </a>
                 </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('billing', 'view') %}
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint and 'billing' in (request.endpoint or '') }}" href="{{ url_for('admin.billing_invoices') }}">
                         <i class="bi bi-receipt"></i> الفواتير
                     </a>
                 </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('notifications', 'view') %}
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.notification') }}" href="{{ url_for('admin.notifications_send') }}">
                         <i class="bi bi-bell-fill"></i> الإشعارات
                     </a>
                 </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('audit_log', 'view') %}
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint and 'audit' in (request.endpoint or '') }}" href="{{ url_for('admin.audit_log') }}">
                         <i class="bi bi-shield-check"></i> سجل العمليات
                     </a>
                 </li>
+                {% endif %}
+                {% set _show_finance = g.current_admin.has_admin_permission('finance_dashboard','view')
+                                       or g.current_admin.has_admin_permission('finance_employees','view')
+                                       or g.current_admin.has_admin_permission('finance_payroll','view')
+                                       or g.current_admin.has_admin_permission('finance_lenders','view')
+                                       or g.current_admin.has_admin_permission('finance_expenses','view')
+                                       or g.current_admin.has_admin_permission('finance_income','view') %}
+                {% if _show_finance %}
                 <li class="nav-item mt-3">
                     <small class="text-muted px-3" style="font-size:0.65rem; letter-spacing:1.5px; text-transform:uppercase">الإدارة المالية الداخلية</small>
                 </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('finance_dashboard','view') %}
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint == 'admin.finance_dashboard' }}" href="{{ url_for('admin.finance_dashboard') }}">
                         <i class="bi bi-speedometer2"></i> لوحة المالية
                     </a>
                 </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('finance_employees','view') %}
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.finance_employees') }}" href="{{ url_for('admin.finance_employees_list') }}">
                         <i class="bi bi-people-fill"></i> الموظفون
                     </a>
                 </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('finance_payroll','view') %}
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint == 'admin.finance_payroll_payments' or request.endpoint == 'admin.finance_payroll_create' or request.endpoint == 'admin.finance_payroll_delete' }}" href="{{ url_for('admin.finance_payroll_payments') }}">
                         <i class="bi bi-cash-stack"></i> دفعات الرواتب
@@ -326,6 +351,8 @@
                         <i class="bi bi-bar-chart-line-fill"></i> ملخص الرواتب
                     </a>
                 </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('finance_lenders','view') %}
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.finance_lenders') }}" href="{{ url_for('admin.finance_lenders_list') }}">
                         <i class="bi bi-bank"></i> القروض
@@ -341,6 +368,8 @@
                         <i class="bi bi-graph-up"></i> ملخص القروض
                     </a>
                 </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('finance_expenses','view') %}
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.finance_expense_categories') }}" href="{{ url_for('admin.finance_expense_categories') }}">
                         <i class="bi bi-tags-fill"></i> فئات المصاريف
@@ -361,20 +390,44 @@
                         <i class="bi bi-pin-angle-fill"></i> المصاريف الثابتة
                     </a>
                 </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('finance_income','view') %}
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.finance_income') }}" href="{{ url_for('admin.finance_income_list') }}">
                         <i class="bi bi-cash-coin"></i> الإيرادات
                     </a>
                 </li>
+                {% endif %}
 
+                {% set _show_admin = g.current_admin.has_admin_permission('settings','view')
+                                     or g.current_admin.has_admin_permission('admin_users','view')
+                                     or g.current_admin.has_admin_permission('admin_roles','view') %}
+                {% if _show_admin %}
                 <li class="nav-item mt-3">
                     <small class="text-muted px-3" style="font-size:0.65rem; letter-spacing:1.5px; text-transform:uppercase">إدارة</small>
                 </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('settings','view') %}
                 <li class="nav-item">
-                    <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.settings') }}" href="{{ url_for('admin.settings_general') }}">
+                    <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.settings') and not request.endpoint.startswith('admin.settings_admins') }}" href="{{ url_for('admin.settings_general') }}">
                         <i class="bi bi-gear-fill"></i> الإعدادات
                     </a>
                 </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('admin_users','view') %}
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.settings_admins') }}" href="{{ url_for('admin.settings_admins') }}">
+                        <i class="bi bi-shield-lock"></i> حسابات الأدمن
+                    </a>
+                </li>
+                {% endif %}
+                {% if g.current_admin.has_admin_permission('admin_roles','view') %}
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.admin_roles') }}" href="{{ url_for('admin.admin_roles_list') }}">
+                        <i class="bi bi-shield-fill-check"></i> الأدوار والصلاحيات
+                    </a>
+                </li>
+                {% endif %}
             </ul>
             <div class="p-3 mt-auto">
                 <a href="{{ url_for('admin.logout') }}" class="btn btn-outline-light btn-sm w-100">

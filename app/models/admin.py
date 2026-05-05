@@ -32,6 +32,15 @@ class AdminUser(db.Model):
     failed_login_attempts = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
 
+    # New RBAC link (one admin → one AdminRole)
+    role_id = db.Column(
+        db.Integer,
+        db.ForeignKey('admin_roles.id', ondelete='SET NULL'),
+        nullable=True,
+        index=True,
+    )
+    admin_role = db.relationship('AdminRole', backref='admins', lazy='joined')
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -49,6 +58,16 @@ class AdminUser(db.Model):
     @property
     def is_locked(self) -> bool:
         return self.locked_until is not None and datetime.utcnow() < self.locked_until
+
+    def has_admin_permission(self, module: str, action: str = 'view') -> bool:
+        """Check whether this admin's role grants the given (module, action).
+
+        System role (Super Admin) always returns True; admins with no role
+        return False.
+        """
+        if not self.admin_role:
+            return False
+        return self.admin_role.has_permission(module, action)
 
     def to_dict(self):
         return {

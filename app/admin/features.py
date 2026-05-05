@@ -2,13 +2,13 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required, log_action
+from app.admin.decorators import super_admin_required, log_action, admin_permission_required
 from app.admin.feature_keys import ALL_FEATURES, BOOLEAN_FEATURES, LIMIT_FEATURES, features_by_group, GROUPS
 from app.models.subscription import SubscriptionPlan
 
 
 @admin_bp.route('/features')
-@super_admin_required
+@admin_permission_required('features', 'view')
 def features_matrix():
     """Show all features × all plans in one matrix."""
     plans = SubscriptionPlan.query.order_by(SubscriptionPlan.price_monthly.asc()).all()
@@ -30,7 +30,7 @@ def features_matrix():
 
 
 @admin_bp.route('/features/plan/<int:plan_id>/toggle', methods=['POST'])
-@super_admin_required
+@admin_permission_required('features', 'edit')
 def feature_toggle(plan_id):
     """Toggle a single boolean feature on a plan, AJAX-friendly."""
     plan = SubscriptionPlan.query.get_or_404(plan_id)
@@ -54,7 +54,7 @@ def feature_toggle(plan_id):
 
 
 @admin_bp.route('/features/plan/<int:plan_id>/limit', methods=['POST'])
-@super_admin_required
+@admin_permission_required('features', 'edit')
 def feature_limit(plan_id):
     """Set numeric quantity limit (e.g. max_cases=50) on a plan."""
     plan = SubscriptionPlan.query.get_or_404(plan_id)

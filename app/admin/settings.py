@@ -3,7 +3,7 @@ from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, g
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required, log_action
+from app.admin.decorators import super_admin_required, log_action, admin_permission_required
 from app.models.admin import SystemSetting
 from app.services.email_service import send_email
 
@@ -36,7 +36,7 @@ def _get(key, default=''):
 # ──────────────────────────── general ────────────────────────────
 
 @admin_bp.route('/settings/general', methods=['GET', 'POST'])
-@super_admin_required
+@admin_permission_required('settings', 'view', write_action='edit')
 def settings_general():
     """General system settings — product name, support email, links, etc."""
     if request.method == 'POST':
@@ -67,7 +67,7 @@ def settings_general():
 # ──────────────────────────── SMTP ────────────────────────────
 
 @admin_bp.route('/settings/smtp', methods=['GET', 'POST'])
-@super_admin_required
+@admin_permission_required('settings', 'view', write_action='edit')
 def settings_smtp():
     """SMTP email configuration."""
     if request.method == 'POST':
@@ -96,7 +96,7 @@ def settings_smtp():
 
 
 @admin_bp.route('/settings/smtp/test', methods=['POST'])
-@super_admin_required
+@admin_permission_required('settings', 'edit')
 def settings_smtp_test():
     """Send a test email to verify SMTP works."""
     test_email = (request.form.get('test_email') or g.current_admin.email).strip()
@@ -122,9 +122,154 @@ def settings_smtp_test():
 # ──────────────────────────── admins management ────────────────────────────
 
 @admin_bp.route('/settings/admins')
-@super_admin_required
+@admin_permission_required('admin_users', 'view')
 def settings_admins():
-    """List of admin users (P3 — read-only for now)."""
+    """List + manage admin users (CRUD + role assignment)."""
     from app.models.admin import AdminUser
+    from app.models.admin_rbac import AdminRole
     admins = AdminUser.query.order_by(AdminUser.created_at).all()
-    return render_template('admin/settings/admins.html', admins=admins)
+    roles = AdminRole.query.order_by(AdminRole.is_system.desc(), AdminRole.created_at).all()
+    return render_template('admin/settings/admins.html', admins=admins, roles=roles)
+
+
+@admin_bp.route('/settings/admins/new', methods=['POST'])
+@admin_permission_required('admin_users', 'add')
+def settings_admins_create():
+    from app.models.admin import AdminUser
+    from app.models.admin_rbac import AdminRole
+    from app.utils.validators import validate_email, validate_password
+
+    email = (request.form.get('email') or '').strip().lower()
+    full_name = (request.form.get('full_name') or '').strip()
+    password = request.form.get('password') or ''
+    role_id = request.form.get('role_id', type=int)
+
+    if not validate_email(email):
+        flash('بريد غير صالح', 'danger')
+        return redirect(url_for('admin.settings_admins'))
+    if not full_name:
+        flash('الاسم الكامل مطلوب', 'danger')
+        return redirect(url_for('admin.settings_admins'))
+    valid, msg = validate_password(password)
+    if not valid:
+        flash(msg, 'danger')
+        return redirect(url_for('admin.settings_admins'))
+    if AdminUser.query.filter_by(email=email).first():
+        flash(f'يوجد أدمن بالبريد {email} بالفعل', 'danger')
+        return redirect(url_for('admin.settings_admins'))
+
+    role = AdminRole.query.get_or_404(role_id) if role_id else None
+    if not role:
+        flash('يجب اختيار دور للأدمن الجديد', 'danger')
+        return redirect(url_for('admin.settings_admins'))
+
+    admin = AdminUser(
+        email=email,
+        full_name=full_name,
+        role=role.name,            # legacy string column kept in sync
+        role_id=role.id,
+        is_active=True,
+        mfa_enabled=False,
+    )
+    admin.set_password(password)
+    db.session.add(admin)
+    db.session.flush()
+    log_action(
+        'ADMIN_USER_CREATED', entity_type='AdminUser', entity_id=admin.id,
+        new_value={'email': email, 'role': role.name_ar},
+        description=f'إنشاء أدمن: {email}',
+    )
+    db.session.commit()
+    flash(f'تم إنشاء الأدمن "{full_name}" بدور "{role.name_ar}"', 'success')
+    return redirect(url_for('admin.settings_admins'))
+
+
+@admin_bp.route('/settings/admins/<int:admin_id>/edit', methods=['POST'])
+@admin_permission_required('admin_users', 'edit')
+def settings_admins_edit(admin_id):
+    from app.models.admin import AdminUser
+    from app.models.admin_rbac import AdminRole
+
+    admin = AdminUser.query.get_or_404(admin_id)
+    full_name = (request.form.get('full_name') or '').strip()
+    role_id = request.form.get('role_id', type=int)
+    is_active = request.form.get('is_active') == 'on'
+    new_password = request.form.get('password') or ''
+
+    if not full_name:
+        flash('الاسم مطلوب', 'danger')
+        return redirect(url_for('admin.settings_admins'))
+
+    role = AdminRole.query.get_or_404(role_id) if role_id else None
+    if not role:
+        flash('يجب اختيار دور', 'danger')
+        return redirect(url_for('admin.settings_admins'))
+
+    # Safety: don't deactivate or demote the last active super admin
+    if admin.role_id and admin.admin_role and admin.admin_role.is_system:
+        if (not is_active or role.id != admin.role_id):
+            other_active_supers = AdminUser.query.filter(
+                AdminUser.id != admin.id,
+                AdminUser.role_id == admin.role_id,
+                AdminUser.is_active.is_(True),
+            ).count()
+            if other_active_supers == 0:
+                flash('لا يمكن تعطيل أو نقل آخر Super Admin نشط', 'danger')
+                return redirect(url_for('admin.settings_admins'))
+
+    old = {'full_name': admin.full_name, 'role': admin.admin_role.name_ar if admin.admin_role else None,
+           'is_active': admin.is_active}
+    admin.full_name = full_name
+    admin.role = role.name
+    admin.role_id = role.id
+    admin.is_active = is_active
+    if new_password:
+        from app.utils.validators import validate_password
+        valid, msg = validate_password(new_password)
+        if not valid:
+            flash(msg, 'danger')
+            return redirect(url_for('admin.settings_admins'))
+        admin.set_password(new_password)
+
+    log_action(
+        'ADMIN_USER_UPDATED', entity_type='AdminUser', entity_id=admin.id,
+        old_value=old,
+        new_value={'full_name': full_name, 'role': role.name_ar, 'is_active': is_active},
+        description=f'تعديل أدمن: {admin.email}',
+    )
+    db.session.commit()
+    flash(f'تم حفظ تعديلات "{admin.full_name}"', 'success')
+    return redirect(url_for('admin.settings_admins'))
+
+
+@admin_bp.route('/settings/admins/<int:admin_id>/delete', methods=['POST'])
+@admin_permission_required('admin_users', 'delete')
+def settings_admins_delete(admin_id):
+    from app.models.admin import AdminUser
+
+    admin = AdminUser.query.get_or_404(admin_id)
+    if admin.id == g.current_admin.id:
+        flash('لا يمكن حذف حسابك أنت', 'danger')
+        return redirect(url_for('admin.settings_admins'))
+
+    # Safety: can't delete last active super admin
+    if admin.admin_role and admin.admin_role.is_system:
+        other_active_supers = AdminUser.query.filter(
+            AdminUser.id != admin.id,
+            AdminUser.role_id == admin.role_id,
+            AdminUser.is_active.is_(True),
+        ).count()
+        if other_active_supers == 0:
+            flash('لا يمكن حذف آخر Super Admin نشط', 'danger')
+            return redirect(url_for('admin.settings_admins'))
+
+    email = admin.email
+    log_action(
+        'ADMIN_USER_DELETED', entity_type='AdminUser', entity_id=admin.id,
+        old_value={'email': email, 'full_name': admin.full_name},
+        description=f'حذف أدمن: {email}',
+    )
+    db.session.delete(admin)
+    db.session.commit()
+    flash(f'تم حذف الأدمن "{email}"', 'warning')
+    return redirect(url_for('admin.settings_admins'))

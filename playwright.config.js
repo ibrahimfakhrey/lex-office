@@ -9,7 +9,7 @@ module.exports = defineConfig({
     workers: 1, // Run serially since tests share DB state
     reporter: [['html', { outputFolder: 'tests/playwright-report', open: 'never' }], ['line']],
     use: {
-        baseURL: 'http://127.0.0.1:5000',
+        baseURL: 'http://127.0.0.1:5050',
         headless: false,
         channel: 'chrome',
         screenshot: 'on',

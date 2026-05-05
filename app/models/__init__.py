@@ -17,3 +17,4 @@ from app.models.op_finance import (
     OpExpenseCategory, OpMonthlyExpense, OpFixedExpense,
     OpIncome, OpFinanceAuditLog,
 )
+from app.models.admin_rbac import AdminRole, AdminRolePermission

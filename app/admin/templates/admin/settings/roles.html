@@ -1,0 +1,370 @@
+{% extends 'admin/base.html' %}
+{% block title %}الأدوار والصلاحيات{% endblock %}
+{% block page_title %}<i class="bi bi-shield-lock-fill"></i> إدارة الـ Roles والصلاحيات{% endblock %}
+
+{% block extra_css %}
+<style>
+.role-list-card {
+    max-height: 75vh;
+    overflow-y: auto;
+}
+.role-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; border-radius: 10px; cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.15s;
+    text-decoration: none;
+    color: var(--dark-text);
+    margin-bottom: 6px;
+}
+.role-item:hover { background: rgba(7,143,210,0.08); color: var(--dark-text); }
+.role-item.active {
+    background: linear-gradient(135deg, rgba(7,143,210,0.18) 0%, rgba(24,73,169,0.10) 100%);
+    border-color: var(--accent);
+    color: #fff;
+}
+.role-item .name { font-weight: 700; font-size: 0.95rem; }
+.role-item .meta { font-size: 0.72rem; color: var(--dark-muted); }
+.role-item .badge { font-size: 0.62rem; padding: 4px 8px; }
+.add-role-btn {
+    display: block;
+    text-align: center;
+    padding: 10px;
+    border: 2px dashed rgba(255,255,255,0.15);
+    border-radius: 10px;
+    color: var(--dark-muted);
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.15s;
+}
+.add-role-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Toggle switch (Bootstrap form-switch but our colors) */
+.form-check-input:checked {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+.perm-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.perm-row:last-child { border-bottom: none; }
+.perm-row .label { font-weight: 600; }
+.perm-actions { display: flex; gap: 18px; }
+.perm-actions label {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-size: 0.72rem; color: var(--dark-muted);
+}
+.group-divider {
+    color: var(--dark-muted);
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    margin: 22px 0 6px;
+    font-weight: 700;
+}
+.group-divider:first-of-type { margin-top: 6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col">
+        <p class="text-muted mb-0" style="font-size: 0.9rem">
+            <i class="bi bi-info-circle"></i>
+            اضبط كل دور وصلاحياته، ثم اربطه بأدمن. دور <strong>Super Admin</strong> هو دور نظام — صلاحياته كاملة ولا يمكن تعديله.
+        </p>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+            <i class="bi bi-plus-circle"></i> + جديد role
+        </button>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- LEFT — list of roles -->
+    <div class="col-md-4">
+        <div class="card role-list-card">
+            <div class="card-body p-2">
+                {% for role in roles %}
+                <a href="{{ url_for('admin.admin_roles_list', id=role.id) }}"
+                   class="role-item {{ 'active' if active and role.id == active.id }}">
+                    <div>
+                        <div class="name">{{ role.name_ar }}</div>
+                        <div class="meta">{{ role.admins | length }} أدمن</div>
+                    </div>
+                    <span class="badge {{ 'badge-soft-info' if role.is_system else 'badge-soft-warning' }}">
+                        {{ 'نظام' if role.is_system else 'مخصص' }}
+                    </span>
+                </a>
+                {% endfor %}
+                <a class="add-role-btn" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+                    <i class="bi bi-plus-circle"></i> + جديد role
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT — selected role detail -->
+    <div class="col-md-8">
+        {% if active %}
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>{{ active.name_ar }}</strong>
+                    <span class="badge {{ 'badge-soft-info' if active.is_system else 'badge-soft-warning' }} ms-2">
+                        {{ 'نظام' if active.is_system else 'مخصص' }}
+                    </span>
+                    <small class="text-muted ms-2">{{ active.name }}</small>
+                </div>
+                {% if not active.is_system %}
+                <div>
+                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#renameRoleModal">
+                        <i class="bi bi-pencil"></i> تعديل الاسم
+                    </button>
+                    <form method="POST" action="{{ url_for('admin.admin_roles_delete', role_id=active.id) }}"
+                          class="d-inline" onsubmit="return confirm('حذف الدور نهائياً؟');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> حذف</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if active.description %}
+                <p class="text-muted small mb-3">{{ active.description }}</p>
+                {% endif %}
+
+                <ul class="nav nav-tabs mb-3" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#permsTab">
+                            <i class="bi bi-toggles2"></i> الصلاحيات
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#adminsTab">
+                            <i class="bi bi-people-fill"></i> الأدمن ({{ active.admins | length }})
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- Permissions matrix -->
+                    <div class="tab-pane fade show active" id="permsTab">
+                        {% if active.is_system %}
+                        <div class="alert alert-info py-2 small">
+                            <i class="bi bi-shield-fill-check"></i>
+                            هذا دور نظام — كل الصلاحيات مفعّلة دائماً ولا يمكن تعديلها.
+                        </div>
+                        {% endif %}
+
+                        <form method="POST" action="{{ url_for('admin.admin_roles_save_permissions', role_id=active.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                            {% for group in catalogue %}
+                            <div class="group-divider">{{ group.group_ar }}</div>
+                            {% for module in group.modules %}
+                            <div class="perm-row">
+                                <div class="label">{{ module.label_ar }}</div>
+                                <div class="perm-actions">
+                                    {% for action in module.actions %}
+                                    <label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox"
+                                                   name="perm__{{ module.key }}__{{ action }}"
+                                                   {{ 'checked' if active.is_system or (module.key, action) in permission_set }}
+                                                   {{ 'disabled' if active.is_system }}>
+                                        </div>
+                                        {{ action_labels[action] }}
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% endfor %}
+
+                            {% if not active.is_system %}
+                            <div class="text-end mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-lg"></i> حفظ الصلاحيات
+                                </button>
+                            </div>
+                            {% endif %}
+                        </form>
+                    </div>
+
+                    <!-- Admins assigned to this role -->
+                    <div class="tab-pane fade" id="adminsTab">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="text-muted small">الأدمن المربوطين بهذا الدور:</span>
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignAdminModal"
+                                    {{ 'disabled' if not unassigned_admins }}>
+                                <i class="bi bi-plus-circle"></i> + إضافة أدمن
+                            </button>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>الاسم</th>
+                                        <th>البريد</th>
+                                        <th>الحالة</th>
+                                        <th class="text-center" style="width:100px">إزالة</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for admin in active.admins %}
+                                    <tr>
+                                        <td class="fw-bold" style="color: var(--accent)">{{ admin.full_name }}</td>
+                                        <td class="text-muted small">{{ admin.email }}</td>
+                                        <td>
+                                            {% if admin.is_active %}<span class="badge badge-soft-success">نشط</span>
+                                            {% else %}<span class="badge badge-soft-secondary">غير نشط</span>{% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <form method="POST"
+                                                  action="{{ url_for('admin.admin_roles_remove_admin', role_id=active.id, admin_id=admin.id) }}"
+                                                  class="d-inline" onsubmit="return confirm('إزالة من الدور؟');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button class="btn btn-sm btn-outline-danger" title="إزالة">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="4" class="text-center py-4 text-muted">
+                                        <i class="bi bi-person-x" style="font-size:2rem; opacity:0.4"></i>
+                                        <div class="mt-2">لا يوجد أدمن مربوط بهذا الدور.</div>
+                                    </td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5 text-muted">
+                <i class="bi bi-shield" style="font-size:3rem; opacity:0.3"></i>
+                <div class="mt-3">اختر دوراً من القائمة لعرض تفاصيله.</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add role modal -->
+<div class="modal fade" id="addRoleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.admin_roles_create') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> دور جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">الاسم العربي <span class="text-danger">*</span></label>
+                        <input type="text" name="name_ar" class="form-control" required placeholder="مثال: محاسب">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الاسم البرمجي (إنجليزي) <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required pattern="[a-z0-9_]+" placeholder="مثال: accountant">
+                        <small class="text-muted">حروف صغيرة + شرطة سفلية فقط — لا يُعرض للمستخدم</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">وصف</label>
+                        <textarea name="description" rows="2" class="form-control"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> إنشاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if active and not active.is_system %}
+<!-- Rename role modal -->
+<div class="modal fade" id="renameRoleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.admin_roles_rename', role_id=active.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil-square"></i> تعديل الدور</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">الاسم العربي</label>
+                        <input type="text" name="name_ar" class="form-control" required value="{{ active.name_ar }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">وصف</label>
+                        <textarea name="description" rows="2" class="form-control">{{ active.description or '' }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if active %}
+<!-- Assign admin modal -->
+<div class="modal fade" id="assignAdminModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.admin_roles_assign_admin', role_id=active.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-person-plus"></i> إضافة أدمن لدور: {{ active.name_ar }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {% if unassigned_admins %}
+                    <label class="form-label">اختر الأدمن</label>
+                    <select name="admin_id" class="form-select" required>
+                        <option value="" disabled selected>— اختر —</option>
+                        {% for admin in unassigned_admins %}
+                        <option value="{{ admin.id }}">
+                            {{ admin.full_name }} — {{ admin.email }}
+                            {% if admin.admin_role %}(حالياً: {{ admin.admin_role.name_ar }}){% else %}(بدون دور){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">سيتم نقل الأدمن من دوره الحالي لهذا الدور.</small>
+                    {% else %}
+                    <div class="alert alert-info small mb-0">
+                        كل الأدمن النشطين مربوطين بهذا الدور بالفعل.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">إلغاء</button>
+                    {% if unassigned_admins %}
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> ربط</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

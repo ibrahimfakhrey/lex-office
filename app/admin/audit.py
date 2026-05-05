@@ -6,7 +6,7 @@ import io
 from flask import render_template, request, Response
 from sqlalchemy import or_
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required
+from app.admin.decorators import super_admin_required, admin_permission_required
 from app.models.admin import AdminAuditLog, AdminUser
 
 
@@ -20,7 +20,7 @@ def _parse_date(s):
 
 
 @admin_bp.route('/audit')
-@super_admin_required
+@admin_permission_required('audit_log', 'view')
 def audit_log():
     """Full audit log with filters."""
     page = request.args.get('page', 1, type=int)
@@ -79,7 +79,7 @@ def audit_log():
 
 
 @admin_bp.route('/audit/export')
-@super_admin_required
+@admin_permission_required('audit_log', 'view')
 def audit_export():
     """Export filtered audit log to CSV."""
     search = (request.args.get('q') or '').strip()

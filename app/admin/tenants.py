@@ -10,7 +10,7 @@ from flask import (
 from sqlalchemy import or_, func
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required, log_action
+from app.admin.decorators import super_admin_required, log_action, admin_permission_required
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.subscription import SubscriptionPlan, SubscriptionPayment
@@ -43,7 +43,7 @@ def _tenant_or_404(tenant_id):
 # ───────────────────────────── list ─────────────────────────────
 
 @admin_bp.route('/tenants')
-@super_admin_required
+@admin_permission_required('tenants', 'view')
 def tenants_list():
     """Tenants list with filters, search, sort, pagination."""
     page = request.args.get('page', 1, type=int)
@@ -129,7 +129,7 @@ def tenants_list():
 # ───────────────────────────── export ─────────────────────────────
 
 @admin_bp.route('/tenants/export')
-@super_admin_required
+@admin_permission_required('tenants', 'view')
 def tenants_export():
     """Export current filtered tenants list to CSV."""
     # Reuse the same filter logic as the list (simplified — no pagination)
@@ -178,7 +178,7 @@ def tenants_export():
 # ───────────────────────────── detail ─────────────────────────────
 
 @admin_bp.route('/tenants/<int:tenant_id>')
-@super_admin_required
+@admin_permission_required('tenants', 'view')
 def tenant_detail(tenant_id):
     """Tenant detail — overview tab (default). Other tabs are GET endpoints."""
     tenant = _tenant_or_404(tenant_id)
@@ -199,7 +199,7 @@ def tenant_detail(tenant_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/usage')
-@super_admin_required
+@admin_permission_required('tenants', 'view')
 def tenant_usage(tenant_id):
     """Usage stats tab — case/client/session counts, storage, last logins."""
     tenant = _tenant_or_404(tenant_id)
@@ -236,7 +236,7 @@ def tenant_usage(tenant_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/billing')
-@super_admin_required
+@admin_permission_required('tenants', 'view')
 def tenant_billing(tenant_id):
     """Billing tab — invoices and notes/files."""
     tenant = _tenant_or_404(tenant_id)
@@ -256,7 +256,7 @@ def tenant_billing(tenant_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/features')
-@super_admin_required
+@admin_permission_required('tenants', 'view')
 def tenant_features(tenant_id):
     """Features tab — show plan flags + per-tenant overrides."""
     tenant = _tenant_or_404(tenant_id)
@@ -302,7 +302,7 @@ def tenant_features(tenant_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/audit')
-@super_admin_required
+@admin_permission_required('tenants', 'view')
 def tenant_audit(tenant_id):
     """Audit log tab — admin actions on this tenant."""
     tenant = _tenant_or_404(tenant_id)
@@ -323,7 +323,7 @@ def tenant_audit(tenant_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/notes')
-@super_admin_required
+@admin_permission_required('tenants', 'view')
 def tenant_notes(tenant_id):
     """Internal admin notes tab."""
     tenant = _tenant_or_404(tenant_id)
@@ -345,7 +345,7 @@ def tenant_notes(tenant_id):
 # ───────────────────────────── actions ─────────────────────────────
 
 @admin_bp.route('/tenants/<int:tenant_id>/edit', methods=['POST'])
-@super_admin_required
+@admin_permission_required('tenants', 'edit')
 def tenant_edit(tenant_id):
     """Edit basic tenant info."""
     tenant = _tenant_or_404(tenant_id)
@@ -370,7 +370,7 @@ def tenant_edit(tenant_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/suspend', methods=['POST'])
-@super_admin_required
+@admin_permission_required('tenants', 'edit')
 def tenant_suspend(tenant_id):
     """Suspend a tenant — locks all their users out."""
     tenant = _tenant_or_404(tenant_id)
@@ -394,7 +394,7 @@ def tenant_suspend(tenant_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/unsuspend', methods=['POST'])
-@super_admin_required
+@admin_permission_required('tenants', 'edit')
 def tenant_unsuspend(tenant_id):
     """Reactivate a suspended tenant."""
     tenant = _tenant_or_404(tenant_id)
@@ -423,7 +423,7 @@ def tenant_unsuspend(tenant_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/cancel', methods=['POST'])
-@super_admin_required
+@admin_permission_required('tenants', 'edit')
 def tenant_cancel(tenant_id):
     """Cancel a tenant subscription."""
     tenant = _tenant_or_404(tenant_id)
@@ -446,7 +446,7 @@ def tenant_cancel(tenant_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/extend', methods=['POST'])
-@super_admin_required
+@admin_permission_required('tenants', 'edit')
 def tenant_extend(tenant_id):
     """Extend trial or subscription by N days."""
     tenant = _tenant_or_404(tenant_id)
@@ -479,7 +479,7 @@ def tenant_extend(tenant_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/change-plan', methods=['POST'])
-@super_admin_required
+@admin_permission_required('tenants', 'edit')
 def tenant_change_plan(tenant_id):
     """Move tenant to a different plan."""
     tenant = _tenant_or_404(tenant_id)
@@ -524,7 +524,7 @@ def tenant_change_plan(tenant_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/notes', methods=['POST'])
-@super_admin_required
+@admin_permission_required('tenants', 'edit')
 def tenant_add_note(tenant_id):
     """Add an internal admin support note about this tenant."""
     tenant = _tenant_or_404(tenant_id)
@@ -548,7 +548,7 @@ def tenant_add_note(tenant_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/notes/<int:note_id>/delete', methods=['POST'])
-@super_admin_required
+@admin_permission_required('tenants', 'edit')
 def tenant_delete_note(tenant_id, note_id):
     """Delete a support note."""
     note = TenantSupportNote.query.filter_by(id=note_id, tenant_id=tenant_id).first_or_404()
@@ -564,7 +564,7 @@ def tenant_delete_note(tenant_id, note_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/features/toggle', methods=['POST'])
-@super_admin_required
+@admin_permission_required('tenants', 'edit')
 def tenant_feature_toggle(tenant_id):
     """Set or update a per-tenant feature override."""
     tenant = _tenant_or_404(tenant_id)
@@ -607,7 +607,7 @@ def tenant_feature_toggle(tenant_id):
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/features/<int:override_id>/remove', methods=['POST'])
-@super_admin_required
+@admin_permission_required('tenants', 'edit')
 def tenant_feature_remove(tenant_id, override_id):
     """Remove an override (revert to plan-level flag)."""
     override = TenantFeatureOverride.query.filter_by(
