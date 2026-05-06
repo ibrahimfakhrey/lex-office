@@ -40,6 +40,10 @@ def admin_permission_required(module, action='view', write_action=None):
     (e.g. action='view', write_action='edit') so the POST path is checked
     against the correct permission. If `write_action` is omitted, the same
     `action` applies to both methods.
+
+    Side effect: stores the admin's data scope ('own' or 'all') for the
+    module on `g.current_scope`, so views can apply ownership filters via
+    the helpers below.
     """
     def decorator(f):
         @wraps(f)
@@ -47,12 +51,52 @@ def admin_permission_required(module, action='view', write_action=None):
         def decorated(*args, **kwargs):
             admin = g.current_admin
             needed = write_action if (write_action and request.method == 'POST') else action
-            if admin.has_admin_permission(module, needed):
-                return f(*args, **kwargs)
-            flash('ليس لديك صلاحية للوصول لهذه الصفحة', 'danger')
-            return redirect(url_for('admin.index'))
+            if not admin.has_admin_permission(module, needed):
+                flash('ليس لديك صلاحية للوصول لهذه الصفحة', 'danger')
+                return redirect(url_for('admin.index'))
+            g.current_scope = admin.admin_role.scope_for(module) if admin.admin_role else 'own'
+            g.current_module = module
+            return f(*args, **kwargs)
         return decorated
     return decorator
+
+
+def apply_admin_scope(query, model, attr='created_by_admin_id', module=None):
+    """Filter `query` to rows owned by the current admin when scope is 'own'.
+
+    By default reads the gated-route scope from `g.current_scope` (set by
+    `admin_permission_required`). Pass `module=` to look up the scope for a
+    *different* module — useful on the dashboard where one route aggregates
+    across several modules with their own independent scopes.
+    """
+    if module:
+        admin = g.get('current_admin') if g else None
+        scope = (admin.admin_role.scope_for(module) if admin and admin.admin_role else 'all')
+    else:
+        scope = g.get('current_scope', 'all') if g else 'all'
+
+    if scope == 'own':
+        admin = g.get('current_admin')
+        admin_id = admin.id if admin else None
+        return query.filter(getattr(model, attr) == admin_id)
+    return query
+
+
+def get_or_404_with_scope(model, obj_id, attr='created_by_admin_id'):
+    """Like `Model.query.get_or_404` but enforces ownership when scope='own'.
+
+    Returns 404 if the row exists but belongs to a different admin — the
+    same response as 'not found' so URL-guessing reveals nothing.
+    """
+    from flask import abort
+    obj = model.query.get_or_404(obj_id)
+    scope = g.get('current_scope', 'all') if g else 'all'
+    if scope == 'own':
+        admin = g.get('current_admin')
+        admin_id = admin.id if admin else None
+        if getattr(obj, attr, None) != admin_id:
+            abort(404)
+    return obj
 
 
 def role_required(*allowed_roles):

@@ -119,15 +119,17 @@ def forgot_password():
             admin.otp_code = otp
             admin.otp_expires_at = datetime.utcnow() + timedelta(minutes=15)
             db.session.commit()
+            from app.models.admin import SystemSetting
+            product_name = SystemSetting.get('product_name', 'LexOffice') or 'LexOffice'
             html = f"""
             <div dir='rtl' style='font-family: Tajawal, Arial; padding: 20px;'>
-                <h2>إعادة تعيين كلمة المرور — LexOffice Admin</h2>
+                <h2>إعادة تعيين كلمة المرور — {product_name} Admin</h2>
                 <p>رمز التحقق الخاص بك:</p>
                 <div style='font-size:28px; font-weight:bold; letter-spacing:6px; padding:16px; background:#f0f4f8; border-radius:8px; text-align:center'>{otp}</div>
                 <p>صالح لمدة 15 دقيقة.</p>
             </div>
             """
-            send_email(email, 'إعادة تعيين كلمة المرور — LexOffice Admin', html)
+            send_email(email, f'إعادة تعيين كلمة المرور — {product_name} Admin', html)
 
         # Always show same message (don't reveal if email exists)
         flash('إذا كان البريد مسجلاً، فستصلك رسالة برمز التحقق', 'info')

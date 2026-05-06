@@ -8,7 +8,10 @@ from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, g
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required, admin_permission_required
+from app.admin.decorators import (
+    super_admin_required, admin_permission_required,
+    apply_admin_scope, get_or_404_with_scope,
+)
 from app.admin.finance.audit import log_finance_action
 from app.models.op_finance import OpIncome
 
@@ -22,7 +25,7 @@ def _parse_date(value):
 @admin_bp.route('/finance/income')
 @admin_permission_required('finance_income', 'view')
 def finance_income_list():
-    incomes = OpIncome.query.order_by(OpIncome.income_date.desc(), OpIncome.id.desc()).all()
+    incomes = apply_admin_scope(OpIncome.query, OpIncome).order_by(OpIncome.income_date.desc(), OpIncome.id.desc()).all()
     total = sum(float(i.amount or 0) for i in incomes)
     return render_template('admin/finance/income/list.html', incomes=incomes, total=total)
 
@@ -56,7 +59,7 @@ def finance_income_create():
 @admin_bp.route('/finance/income/<int:income_id>/delete', methods=['POST'])
 @admin_permission_required('finance_income', 'delete')
 def finance_income_delete(income_id):
-    income = OpIncome.query.get_or_404(income_id)
+    income = get_or_404_with_scope(OpIncome, income_id)
     label = income.source_label
     amount = income.amount
     try:

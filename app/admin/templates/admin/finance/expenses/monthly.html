@@ -11,11 +11,13 @@
     {% endif %}
 </div>
 
+{% if g.current_admin.has_admin_permission('finance_expenses', 'add') %}
 <div class="section-band"><i class="bi bi-plus-square"></i> تسجيل مصروف جديد</div>
 
 <div class="card mb-4">
     <div class="card-body">
-        <form method="POST" action="{{ url_for('admin.finance_monthly_expenses_create') }}" class="row g-3">
+        <form method="POST" action="{{ url_for('admin.finance_monthly_expenses_create') }}"
+              class="row g-3" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="col-md-2">
                 <label class="form-label">السنة <span class="text-danger">*</span></label>
@@ -51,13 +53,19 @@
                 <label class="form-label">تاريخ الدفعة <small class="text-muted">(اختياري)</small></label>
                 <input type="date" name="payment_date" class="form-control">
             </div>
-            <div class="col-md-9">
+            <div class="col-md-5">
                 <label class="form-label">ملاحظات</label>
                 <input type="text" name="notes" class="form-control" placeholder="اختياري">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">إيصال / مرفق <small class="text-muted">(اختياري — PDF/صورة)</small></label>
+                <input type="file" name="attachment" class="form-control"
+                       accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx">
             </div>
         </form>
     </div>
 </div>
+{% endif %}
 
 <div class="section-band d-flex justify-content-between align-items-center">
     <span><i class="bi bi-funnel-fill"></i> سجل المصاريف</span>
@@ -93,6 +101,7 @@
                     <th class="text-end">المبلغ</th>
                     <th>تاريخ الدفعة</th>
                     <th>ملاحظات</th>
+                    <th class="text-center" style="width:90px">المرفق</th>
                     <th class="text-center" style="width:80px">حذف</th>
                 </tr>
             </thead>
@@ -106,15 +115,31 @@
                     <td>{{ e.payment_date.strftime('%d/%m/%Y') if e.payment_date else '—' }}</td>
                     <td class="text-muted small" style="max-width:200px">{{ e.notes or '—' }}</td>
                     <td class="text-center">
+                        {% if e.attachment_path %}
+                        <a href="{{ url_for('admin.finance_monthly_expense_attachment', exp_id=e.id) }}"
+                           target="_blank"
+                           class="btn btn-sm btn-outline-info"
+                           title="{{ e.attachment_filename or 'استعراض المرفق' }}">
+                            <i class="bi bi-paperclip"></i>
+                        </a>
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if g.current_admin.has_admin_permission('finance_expenses', 'delete') %}
                         <form method="POST" action="{{ url_for('admin.finance_monthly_expenses_delete', exp_id=e.id) }}"
                               class="d-inline" onsubmit="return confirm('حذف المصروف؟');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                         </form>
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="7" class="text-center py-4 text-muted">
+                <tr><td colspan="8" class="text-center py-4 text-muted">
                     <i class="bi bi-inbox" style="font-size:2rem; opacity:0.4"></i>
                     <div class="mt-2">لا توجد مصاريف{% if year_filter or month_filter %} للفترة المختارة{% endif %}.</div>
                 </td></tr>

@@ -4,9 +4,27 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from app.extensions import db
 from app.utils.decorators import login_required, permission_required
+from app.admin.feature_utils import tenant_feature_limit
+from app.models.tenant import Tenant
 from app.models.document import LegalTemplate, Document
 from app.models.case import Case
 from app.models.client import Client
+
+
+def _templates_quota(tenant_id):
+    """Return (used, limit) for `tenant_id`. limit==None means unlimited.
+
+    Only counts templates owned by the tenant; global templates (tenant_id
+    IS NULL) are shared and don't consume the tenant's quota.
+    """
+    if not tenant_id:
+        return 0, None
+    used = LegalTemplate.query.filter_by(tenant_id=tenant_id, is_active=True).count()
+    tenant = Tenant.query.get(tenant_id)
+    raw = tenant_feature_limit(tenant, 'max_legal_templates', default=None)
+    # Treat 0, negative, or None as "unlimited"
+    limit = int(raw) if (raw is not None and int(raw) > 0) else None
+    return used, limit
 
 templates_legal_bp = Blueprint('templates_legal', __name__, template_folder='../../templates/templates_legal')
 
@@ -81,14 +99,27 @@ def index():
         query = query.filter_by(template_type=template_type)
 
     templates = query.order_by(LegalTemplate.name).paginate(page=page, per_page=20)
+    used, limit = _templates_quota(g.tenant_id)
     return render_template('templates_legal/index.html', templates=templates,
-                           template_type=template_type, template_types=TEMPLATE_TYPES)
+                           template_type=template_type, template_types=TEMPLATE_TYPES,
+                           templates_used=used, templates_limit=limit)
 
 
 @templates_legal_bp.route('/create', methods=['GET', 'POST'])
 @permission_required('templates', 'create')
 def create():
     """Create a new legal template."""
+    # Plan-based quota — block both GET (form) and POST (submission) once
+    # the tenant has hit their cap, with a friendly Arabic message.
+    used, limit = _templates_quota(g.tenant_id)
+    if limit is not None and used >= limit:
+        flash(
+            f'لقد وصلت للحد الأقصى ({limit}) من القوالب المتاحة لخطتك. '
+            'احذف قالباً غير مستخدم أو رقّ خطتك لإضافة المزيد.',
+            'warning',
+        )
+        return redirect(url_for('templates_legal.index'))
+
     if request.method == 'POST':
         errors = []
         name = request.form.get('name', '').strip()

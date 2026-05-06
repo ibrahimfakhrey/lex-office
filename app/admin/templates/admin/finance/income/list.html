@@ -19,6 +19,7 @@
     </div>
 </div>
 
+{% if g.current_admin.has_admin_permission('finance_income', 'add') %}
 <div class="section-band"><i class="bi bi-plus-square"></i> تسجيل إيراد جديد</div>
 
 <div class="card mb-4">
@@ -47,6 +48,7 @@
         </form>
     </div>
 </div>
+{% endif %}
 
 <div class="section-band"><i class="bi bi-list-ul"></i> سجل الإيرادات</div>
 
@@ -70,11 +72,15 @@
                     <td class="text-end fw-bold text-success">{{ '{:,.0f}'.format(i.amount) }} <small class="text-muted">ج.م</small></td>
                     <td class="text-muted small">{{ i.notes or '—' }}</td>
                     <td class="text-center">
+                        {% if g.current_admin.has_admin_permission('finance_income', 'delete') %}
                         <form method="POST" action="{{ url_for('admin.finance_income_delete', income_id=i.id) }}"
                               class="d-inline" onsubmit="return confirm('حذف الإيراد؟');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                         </form>
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}

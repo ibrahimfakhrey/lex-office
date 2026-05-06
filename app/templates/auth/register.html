@@ -42,6 +42,25 @@
         </select>
     </div>
 
+    {# Required terms / privacy agreement — links pulled from system settings #}
+    <div class="mb-3 form-check">
+        <input class="form-check-input" type="checkbox" id="agree_terms" name="agree_terms" required>
+        <label class="form-check-label small" for="agree_terms">
+            أوافق على
+            {% if terms_url %}
+                <a href="{{ terms_url }}" target="_blank" class="text-decoration-none">شروط الخدمة</a>
+            {% else %}
+                <span class="text-muted">شروط الخدمة</span>
+            {% endif %}
+            و
+            {% if privacy_url %}
+                <a href="{{ privacy_url }}" target="_blank" class="text-decoration-none">سياسة الخصوصية</a>
+            {% else %}
+                <span class="text-muted">سياسة الخصوصية</span>
+            {% endif %}
+        </label>
+    </div>
+
     <button type="submit" class="btn btn-primary w-100 mb-3">
         <i class="bi bi-person-plus me-1"></i> إنشاء حساب
     </button>

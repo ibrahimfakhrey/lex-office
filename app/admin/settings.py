@@ -1,14 +1,17 @@
 """System settings — general, SMTP, etc."""
+import os
 from datetime import datetime
-from flask import render_template, request, redirect, url_for, flash, g
+from flask import render_template, request, redirect, url_for, flash, g, current_app
 from app.extensions import db
 from app.admin import admin_bp
 from app.admin.decorators import super_admin_required, log_action, admin_permission_required
 from app.models.admin import SystemSetting
 from app.services.email_service import send_email
+from app.utils.helpers import save_uploaded_file
 
 
-# Default keys we expose in the UI
+# Default keys we expose in the UI. `help_center_url` removed per
+# requirements doc — replaced by the existing contact page.
 GENERAL_KEYS = [
     ('product_name',     'اسم المنتج',                'LexOffice'),
     ('product_logo_url', 'رابط شعار المنتج',          ''),
@@ -16,7 +19,6 @@ GENERAL_KEYS = [
     ('default_currency', 'العملة الافتراضية',         'EGP'),
     ('terms_url',        'رابط شروط الخدمة',          ''),
     ('privacy_url',      'رابط سياسة الخصوصية',       ''),
-    ('help_center_url',  'رابط مركز المساعدة',        ''),
 ]
 
 SMTP_KEYS = [
@@ -47,6 +49,15 @@ def settings_general():
             val = (request.form.get(key) or '').strip()
             SystemSetting.set(key, val, admin_id=g.current_admin.id)
             new_values[key] = val
+
+        # Optional logo upload: if a file is provided, save it and overwrite
+        # `product_logo_url` with the served path (wins over the URL field).
+        logo_file = request.files.get('product_logo_file')
+        if logo_file and logo_file.filename:
+            saved_path = save_uploaded_file(logo_file, subfolder='branding')
+            served_url = url_for('static', filename=f'uploads/{saved_path}')
+            SystemSetting.set('product_logo_url', served_url, admin_id=g.current_admin.id)
+            new_values['product_logo_url'] = served_url
 
         log_action(
             'SETTINGS_GENERAL_UPDATED', entity_type='Setting',

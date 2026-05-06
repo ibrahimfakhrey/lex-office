@@ -27,6 +27,11 @@ class Tenant(db.Model):
     city = db.Column(db.String(120), nullable=True)
     # organic / referral / paid_ad / direct
     acquisition_source = db.Column(db.String(40), nullable=True)
+    # Which admin onboarded this tenant (NULL for public-signup tenants).
+    # Used by RBAC scope filtering to restrict which admins can see/edit.
+    created_by_admin_id = db.Column(
+        db.Integer, db.ForeignKey('admin_users.id'), nullable=True, index=True,
+    )
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

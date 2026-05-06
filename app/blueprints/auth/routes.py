@@ -28,9 +28,12 @@ def register():
         phone = normalize_phone(phone_raw)
         password = request.form.get('password', '')
         office_size = request.form.get('office_size', '1-5')
+        agree_terms = request.form.get('agree_terms') == 'on'
 
         # Validations
         errors = []
+        if not agree_terms:
+            errors.append('يجب الموافقة على شروط الخدمة وسياسة الخصوصية')
         if not full_name:
             errors.append('الاسم الكامل مطلوب')
         if not validate_email(email):

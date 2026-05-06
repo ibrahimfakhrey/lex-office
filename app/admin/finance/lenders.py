@@ -7,7 +7,10 @@ from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, g
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required, admin_permission_required
+from app.admin.decorators import (
+    super_admin_required, admin_permission_required,
+    apply_admin_scope, get_or_404_with_scope,
+)
 from app.admin.finance.audit import log_finance_action
 from app.models.op_finance import OpLender, OpLoanPayment
 
@@ -22,7 +25,7 @@ def _parse_date(value):
 @admin_bp.route('/finance/lenders')
 @admin_permission_required('finance_lenders', 'view')
 def finance_lenders_list():
-    lenders = OpLender.query.order_by(OpLender.created_at.desc()).all()
+    lenders = apply_admin_scope(OpLender.query, OpLender).order_by(OpLender.created_at.desc()).all()
     return render_template('admin/finance/loans/lenders.html', lenders=lenders)
 
 
@@ -35,6 +38,7 @@ def finance_lenders_create():
             original_amount=request.form['original_amount'],
             loan_date=_parse_date(request.form['loan_date']),
             notes=(request.form.get('notes') or '').strip() or None,
+            created_by_admin_id=g.current_admin.id,
         )
         db.session.add(lender)
         db.session.flush()
@@ -56,7 +60,7 @@ def finance_lenders_create():
 @admin_bp.route('/finance/lenders/<int:lender_id>/edit', methods=['POST'])
 @admin_permission_required('finance_lenders', 'edit')
 def finance_lenders_edit(lender_id):
-    lender = OpLender.query.get_or_404(lender_id)
+    lender = get_or_404_with_scope(OpLender, lender_id)
     try:
         old = {'lender_name': lender.lender_name, 'amount': float(lender.original_amount)}
         lender.lender_name = request.form['lender_name'].strip()
@@ -80,7 +84,7 @@ def finance_lenders_edit(lender_id):
 @admin_bp.route('/finance/lenders/<int:lender_id>/delete', methods=['POST'])
 @admin_permission_required('finance_lenders', 'delete')
 def finance_lenders_delete(lender_id):
-    lender = OpLender.query.get_or_404(lender_id)
+    lender = get_or_404_with_scope(OpLender, lender_id)
     name = lender.lender_name
     try:
         log_finance_action(
@@ -101,12 +105,15 @@ def finance_lenders_delete(lender_id):
 @admin_bp.route('/finance/loans/payments')
 @admin_permission_required('finance_lenders', 'view')
 def finance_loan_payments():
+    # Scope payments by their parent lender's ownership
+    visible_lender_ids = [l.id for l in apply_admin_scope(OpLender.query, OpLender).all()]
     payments = (
         OpLoanPayment.query
+        .filter(OpLoanPayment.lender_id.in_(visible_lender_ids))
         .order_by(OpLoanPayment.payment_date.desc(), OpLoanPayment.id.desc())
         .all()
     )
-    lenders = OpLender.query.order_by(OpLender.lender_name).all()
+    lenders = apply_admin_scope(OpLender.query, OpLender).order_by(OpLender.lender_name).all()
     return render_template(
         'admin/finance/loans/payments.html',
         payments=payments, lenders=lenders,
@@ -118,7 +125,7 @@ def finance_loan_payments():
 def finance_loan_payments_create():
     try:
         lender_id = int(request.form['lender_id'])
-        lender = OpLender.query.get_or_404(lender_id)
+        lender = get_or_404_with_scope(OpLender, lender_id)
         payment = OpLoanPayment(
             lender_id=lender.id,
             payment_date=_parse_date(request.form['payment_date']),
@@ -145,6 +152,10 @@ def finance_loan_payments_create():
 @admin_permission_required('finance_lenders', 'delete')
 def finance_loan_payments_delete(payment_id):
     payment = OpLoanPayment.query.get_or_404(payment_id)
+    # Enforce scope via the parent lender — if you can't see the lender, you can't delete its payments
+    if g.get('current_scope') == 'own' and payment.lender and payment.lender.created_by_admin_id != g.current_admin.id:
+        from flask import abort
+        abort(404)
     lender_name = payment.lender.lender_name if payment.lender else '—'
     amount = payment.amount
     try:
@@ -166,7 +177,7 @@ def finance_loan_payments_delete(payment_id):
 @admin_bp.route('/finance/loans/summary')
 @admin_permission_required('finance_lenders', 'view')
 def finance_loans_summary():
-    lenders = OpLender.query.order_by(OpLender.lender_name).all()
+    lenders = apply_admin_scope(OpLender.query, OpLender).order_by(OpLender.lender_name).all()
     rows = []
     totals = {'original': 0.0, 'paid': 0.0, 'balance': 0.0}
     for lender in lenders:

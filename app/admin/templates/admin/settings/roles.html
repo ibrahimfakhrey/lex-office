@@ -169,7 +169,23 @@
                             <div class="group-divider">{{ group.group_ar }}</div>
                             {% for module in group.modules %}
                             <div class="perm-row">
-                                <div class="label">{{ module.label_ar }}</div>
+                                <div class="label">
+                                    {{ module.label_ar }}
+                                    {% if module.scoped %}
+                                    <div class="mt-1">
+                                        <select name="scope__{{ module.key }}" class="form-select form-select-sm"
+                                                {{ 'disabled' if active.is_system }}
+                                                style="font-size:0.75rem; padding:2px 8px; max-width:240px">
+                                            {% for v, label in scope_options %}
+                                            <option value="{{ v }}"
+                                                {{ 'selected' if scope_by_module.get(module.key, 'own') == v }}>
+                                                {{ label }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    {% endif %}
+                                </div>
                                 <div class="perm-actions">
                                     {% for action in module.actions %}
                                     <label>

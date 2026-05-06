@@ -34,9 +34,11 @@
 
 <div class="section-band d-flex justify-content-between align-items-center">
     <span><i class="bi bi-clipboard-data"></i> بيانات القروض</span>
+    {% if g.current_admin.has_admin_permission('finance_lenders', 'add') %}
     <button class="btn btn-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#addLenderModal">
         <i class="bi bi-plus-circle"></i> إضافة قرض
     </button>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -69,15 +71,23 @@
                     <td class="text-muted small">{{ lender.last_payment_date.strftime('%d/%m/%Y') if lender.last_payment_date else '—' }}</td>
                     <td class="text-muted small" style="max-width:180px">{{ lender.notes or '—' }}</td>
                     <td class="text-center">
+                        {% if g.current_admin.has_admin_permission('finance_lenders', 'edit') %}
                         <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
                                 data-bs-target="#editLenderModal{{ lender.id }}" title="تعديل">
                             <i class="bi bi-pencil"></i>
                         </button>
+                        {% endif %}
+                        {% if g.current_admin.has_admin_permission('finance_lenders', 'delete') %}
                         <form method="POST" action="{{ url_for('admin.finance_lenders_delete', lender_id=lender.id) }}"
                               class="d-inline" onsubmit="return confirm('حذف القرض وكل دفعاته؟');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button>
                         </form>
+                        {% endif %}
+                        {% if not g.current_admin.has_admin_permission('finance_lenders', 'edit')
+                              and not g.current_admin.has_admin_permission('finance_lenders', 'delete') %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}

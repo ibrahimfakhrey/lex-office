@@ -141,10 +141,32 @@ def _register_context_processors(app):
                     chatwoot_hash = generate_chatwoot_token(current_user.id)
         except Exception:
             pass
+        # Brand identity from SystemSetting — used by sidebars, login pages,
+        # email subjects, etc. Falls back to safe defaults so templates never
+        # break before settings exist.
+        try:
+            from app.models.admin import SystemSetting
+            product_name = SystemSetting.get('product_name', 'LexOffice') or 'LexOffice'
+            product_logo = SystemSetting.get('product_logo_url', '') or ''
+            privacy_url = SystemSetting.get('privacy_url', '') or ''
+            terms_url = SystemSetting.get('terms_url', '') or ''
+            support_email = SystemSetting.get('support_email', '') or ''
+        except Exception:
+            product_name = 'LexOffice'
+            product_logo = ''
+            privacy_url = ''
+            terms_url = ''
+            support_email = ''
+
         return dict(
             current_user=current_user,
             now=datetime.utcnow,
             today=egypt_today(),
             unread_count=unread_count,
             chatwoot_hash=chatwoot_hash,
+            product_name=product_name,
+            product_logo=product_logo,
+            privacy_url=privacy_url,
+            terms_url=terms_url,
+            support_email=support_email,
         )

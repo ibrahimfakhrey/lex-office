@@ -33,7 +33,7 @@ td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
 
 <div class="header">
     <div class="brand">
-        ⚖️ LexOffice
+        {% if product_logo %}<img src="{{ product_logo }}" alt="logo" style="height:28px; vertical-align:middle; margin-left:6px">{% else %}⚖️{% endif %} {{ product_name }}
         <small>Manasety — منصة إدارة المكاتب القانونية</small>
     </div>
     <div class="invoice-no">
@@ -104,7 +104,7 @@ td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
 {% endif %}
 
 <div class="footer">
-    شكراً لاختيارك LexOffice — Manasety © {{ invoice.created_at.year if invoice.created_at else '2026' }}
+    شكراً لاختيارك {{ product_name }} — Manasety © {{ invoice.created_at.year if invoice.created_at else '2026' }}
 </div>
 
 </body>

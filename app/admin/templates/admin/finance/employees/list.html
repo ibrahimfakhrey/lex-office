@@ -53,9 +53,11 @@
 
 <div class="section-band d-flex justify-content-between align-items-center">
     <span><i class="bi bi-clipboard-data"></i> بيانات الموظفين</span>
+    {% if g.current_admin.has_admin_permission('finance_employees', 'add') %}
     <button class="btn btn-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
         <i class="bi bi-plus-circle"></i> إضافة موظف
     </button>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -92,15 +94,23 @@
                     </td>
                     <td class="text-muted small" style="max-width:200px">{{ emp.notes or '—' }}</td>
                     <td class="text-center">
+                        {% if g.current_admin.has_admin_permission('finance_employees', 'edit') %}
                         <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
                                 data-bs-target="#editEmployeeModal{{ emp.id }}" title="تعديل">
                             <i class="bi bi-pencil"></i>
                         </button>
+                        {% endif %}
+                        {% if g.current_admin.has_admin_permission('finance_employees', 'delete') %}
                         <form method="POST" action="{{ url_for('admin.finance_employees_delete', emp_id=emp.id) }}"
                               class="d-inline" onsubmit="return confirm('حذف الموظف وكل دفعاته؟');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button>
                         </form>
+                        {% endif %}
+                        {% if not g.current_admin.has_admin_permission('finance_employees', 'edit')
+                              and not g.current_admin.has_admin_permission('finance_employees', 'delete') %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}

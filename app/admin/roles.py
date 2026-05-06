@@ -9,7 +9,7 @@ from app.extensions import db
 from app.admin import admin_bp
 from app.admin.decorators import super_admin_required, log_action, admin_permission_required
 from app.admin.permissions import (
-    PERMISSION_CATALOGUE, ACTION_LABELS, is_known_permission,
+    PERMISSION_CATALOGUE, ACTION_LABELS, SCOPE_OPTIONS, is_known_permission,
 )
 from app.models.admin_rbac import AdminRole, AdminRolePermission
 from app.models.admin import AdminUser
@@ -36,6 +36,11 @@ def admin_roles_list():
     role_id = request.args.get('id', type=int)
     roles, active = _list_roles_with_active(role_id)
     permission_set = active.permission_set() if active else set()
+    # Per-module scope map for the active role: {module_key: 'own' | 'all'}
+    scope_by_module = {}
+    if active:
+        for p in active.permissions:
+            scope_by_module[p.module] = p.scope
     # Admins not yet assigned to the active role (for the "add admin" modal)
     if active:
         unassigned_admins = AdminUser.query.filter(
@@ -49,9 +54,11 @@ def admin_roles_list():
         roles=roles,
         active=active,
         permission_set=permission_set,
+        scope_by_module=scope_by_module,
         unassigned_admins=unassigned_admins,
         catalogue=PERMISSION_CATALOGUE,
         action_labels=ACTION_LABELS,
+        scope_options=SCOPE_OPTIONS,
     )
 
 
@@ -145,7 +152,9 @@ def admin_roles_save_permissions(role_id):
         flash('صلاحيات دور النظام لا يمكن تعديلها', 'danger')
         return redirect(url_for('admin.admin_roles_list', id=role.id))
 
-    # Form sends one checkbox per (module, action), name="perm__<module>__<action>"
+    # Form sends:
+    #   - one checkbox per (module, action), name="perm__<module>__<action>"
+    #   - one scope select per module,       name="scope__<module>", value: 'own' | 'all'
     granted = set()
     for key in request.form.keys():
         if not key.startswith('perm__'):
@@ -155,15 +164,23 @@ def admin_roles_save_permissions(role_id):
         except ValueError:
             continue
         if not is_known_permission(module, action):
-            continue   # silently drop unknown pairs
+            continue
         granted.add((module, action))
 
+    # Per-module scope (defaults to 'own' for new permissions if missing)
+    module_scopes = {}
+    for key, val in request.form.items():
+        if key.startswith('scope__'):
+            module_scopes[key[len('scope__'):]] = 'own' if val == 'own' else 'all'
+
     old_set = role.permission_set()
-    # Wipe + re-insert (simpler than diff; small table)
     AdminRolePermission.query.filter_by(role_id=role.id).delete()
     db.session.flush()
     for module, action in granted:
-        db.session.add(AdminRolePermission(role_id=role.id, module=module, action=action))
+        scope = module_scopes.get(module, 'own')
+        db.session.add(AdminRolePermission(
+            role_id=role.id, module=module, action=action, scope=scope,
+        ))
 
     log_action(
         'ADMIN_ROLE_PERMISSIONS_UPDATED', entity_type='AdminRole', entity_id=role.id,

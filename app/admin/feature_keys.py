@@ -5,11 +5,12 @@ application code should use `tenant_has_feature(tenant, key)` from
 `app.admin.feature_utils` to check entitlement.
 """
 
-# Quantity limits (numeric)
+# Quantity limits (numeric). 0 or absence = unlimited.
 LIMIT_FEATURES = [
-    {'key': 'max_cases',         'label': 'الحد الأقصى للقضايا',         'group': 'limits'},
-    {'key': 'max_clients',       'label': 'الحد الأقصى للموكلين',        'group': 'limits'},
-    {'key': 'max_storage_gb',    'label': 'حد التخزين (GB)',             'group': 'limits'},
+    {'key': 'max_cases',           'label': 'الحد الأقصى للقضايا',          'group': 'limits'},
+    {'key': 'max_clients',         'label': 'الحد الأقصى للموكلين',         'group': 'limits'},
+    {'key': 'max_storage_gb',      'label': 'حد التخزين (GB)',              'group': 'limits'},
+    {'key': 'max_legal_templates', 'label': 'الحد الأقصى للقوالب القانونية', 'group': 'limits'},
 ]
 
 # Boolean feature flags

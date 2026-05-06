@@ -10,9 +10,11 @@
 
 <div class="section-band d-flex justify-content-between align-items-center">
     <span><i class="bi bi-clipboard-data"></i> الفئات والبنود</span>
+    {% if g.current_admin.has_admin_permission('finance_expenses', 'add') %}
     <button class="btn btn-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
         <i class="bi bi-plus-circle"></i> إضافة بند
     </button>
+    {% endif %}
 </div>
 
 {% if grouped %}
@@ -38,11 +40,15 @@
                     <td class="fw-bold" style="color: var(--accent)">{{ item.item_name }}</td>
                     <td class="text-muted small">{{ item.notes or '—' }}</td>
                     <td class="text-center">
+                        {% if g.current_admin.has_admin_permission('finance_expenses', 'delete') %}
                         <form method="POST" action="{{ url_for('admin.finance_expense_categories_delete', cat_id=item.id) }}"
                               class="d-inline" onsubmit="return confirm('حذف البند؟');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                         </form>
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

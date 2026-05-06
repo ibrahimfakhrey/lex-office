@@ -5,13 +5,18 @@ PDF §3.7: each actual payment recorded as one row in Monthly Log; year+month re
 PDF §3.8: summary rolls up Monthly Log per item with year/month filter.
 PDF §3.9: fixed expenses are reference-only (no math).
 """
+import os
 from datetime import datetime, date
 from collections import defaultdict
-from flask import render_template, request, redirect, url_for, flash, g
+from flask import render_template, request, redirect, url_for, flash, g, send_from_directory, current_app, abort
 from sqlalchemy import func
 from app.extensions import db
+from app.utils.helpers import save_uploaded_file, allowed_file
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required, admin_permission_required
+from app.admin.decorators import (
+    super_admin_required, admin_permission_required,
+    apply_admin_scope, get_or_404_with_scope,
+)
 from app.admin.finance.audit import log_finance_action
 from app.models.op_finance import OpExpenseCategory, OpMonthlyExpense, OpFixedExpense
 
@@ -37,7 +42,7 @@ def _parse_date(value):
 @admin_bp.route('/finance/expenses/categories')
 @admin_permission_required('finance_expenses', 'view')
 def finance_expense_categories():
-    cats = OpExpenseCategory.query.order_by(
+    cats = apply_admin_scope(OpExpenseCategory.query, OpExpenseCategory).order_by(
         OpExpenseCategory.category_name, OpExpenseCategory.item_name
     ).all()
     grouped = defaultdict(list)
@@ -54,6 +59,7 @@ def finance_expense_categories_create():
             category_name=request.form['category_name'].strip(),
             item_name=request.form['item_name'].strip(),
             notes=(request.form.get('notes') or '').strip() or None,
+            created_by_admin_id=g.current_admin.id,
         )
         db.session.add(cat)
         db.session.flush()
@@ -73,7 +79,7 @@ def finance_expense_categories_create():
 @admin_bp.route('/finance/expenses/categories/<int:cat_id>/delete', methods=['POST'])
 @admin_permission_required('finance_expenses', 'delete')
 def finance_expense_categories_delete(cat_id):
-    cat = OpExpenseCategory.query.get_or_404(cat_id)
+    cat = get_or_404_with_scope(OpExpenseCategory, cat_id)
     label = cat.display_label
     in_use = OpMonthlyExpense.query.filter_by(category_id=cat.id).count()
     if in_use:
@@ -101,7 +107,10 @@ def finance_monthly_expenses():
     year_filter = request.args.get('year', type=int)
     month_filter = request.args.get('month', type=int)
 
-    q = OpMonthlyExpense.query
+    # Scope: monthly expenses inherit visibility from their parent category
+    visible_cat_ids = [c.id for c in apply_admin_scope(OpExpenseCategory.query, OpExpenseCategory).all()]
+
+    q = OpMonthlyExpense.query.filter(OpMonthlyExpense.category_id.in_(visible_cat_ids))
     if year_filter:
         q = q.filter(OpMonthlyExpense.year == year_filter)
     if month_filter:
@@ -112,7 +121,7 @@ def finance_monthly_expenses():
         OpMonthlyExpense.id.desc(),
     ).all()
 
-    categories = OpExpenseCategory.query.order_by(
+    categories = apply_admin_scope(OpExpenseCategory.query, OpExpenseCategory).order_by(
         OpExpenseCategory.category_name, OpExpenseCategory.item_name
     ).all()
 
@@ -139,7 +148,8 @@ def finance_monthly_expenses():
 @admin_permission_required('finance_expenses', 'add')
 def finance_monthly_expenses_create():
     try:
-        cat = OpExpenseCategory.query.get_or_404(int(request.form['category_id']))
+        # Scope-check: only allow adding under a category the admin can see
+        cat = get_or_404_with_scope(OpExpenseCategory, int(request.form['category_id']))
         exp = OpMonthlyExpense(
             year=int(request.form['year']),
             month=int(request.form['month']),
@@ -151,6 +161,16 @@ def finance_monthly_expenses_create():
         )
         if not (1 <= exp.month <= 12):
             raise ValueError('الشهر يجب أن يكون بين 1 و 12')
+
+        # Optional attachment (receipt/invoice)
+        attached = request.files.get('attachment')
+        if attached and attached.filename:
+            if not allowed_file(attached.filename):
+                raise ValueError('نوع الملف غير مسموح به')
+            saved_path = save_uploaded_file(attached, subfolder='op_finance')
+            exp.attachment_path = saved_path
+            exp.attachment_filename = attached.filename
+
         db.session.add(exp)
         db.session.flush()
         log_finance_action(
@@ -166,10 +186,41 @@ def finance_monthly_expenses_create():
     return redirect(url_for('admin.finance_monthly_expenses'))
 
 
+@admin_bp.route('/finance/expenses/monthly/<int:exp_id>/attachment')
+@admin_permission_required('finance_expenses', 'view')
+def finance_monthly_expense_attachment(exp_id):
+    """Stream the attached receipt/invoice for a monthly expense."""
+    exp = OpMonthlyExpense.query.get_or_404(exp_id)
+    # Enforce scope via the parent category
+    if g.get('current_scope') == 'own' and exp.category and exp.category.created_by_admin_id != g.current_admin.id:
+        abort(404)
+    if not exp.attachment_path:
+        abort(404)
+    upload_folder = os.path.abspath(current_app.config['UPLOAD_FOLDER'])
+    folder, fname = os.path.split(exp.attachment_path)
+    full_dir = os.path.abspath(os.path.join(upload_folder, folder))
+    return send_from_directory(
+        full_dir, fname,
+        as_attachment=False,
+        download_name=exp.attachment_filename or fname,
+    )
+
+
 @admin_bp.route('/finance/expenses/monthly/<int:exp_id>/delete', methods=['POST'])
 @admin_permission_required('finance_expenses', 'delete')
 def finance_monthly_expenses_delete(exp_id):
     exp = OpMonthlyExpense.query.get_or_404(exp_id)
+    # Enforce scope via the parent category
+    if g.get('current_scope') == 'own' and exp.category and exp.category.created_by_admin_id != g.current_admin.id:
+        abort(404)
+    # Best-effort: remove the attached file from disk too
+    if exp.attachment_path:
+        try:
+            full = os.path.join(current_app.config['UPLOAD_FOLDER'], exp.attachment_path)
+            if os.path.exists(full):
+                os.remove(full)
+        except Exception:
+            pass   # don't block the DB delete on a missing/locked file
     label = exp.category.display_label if exp.category else '—'
     try:
         log_finance_action(
@@ -202,14 +253,17 @@ def finance_expenses_summary():
     if month_filter:
         join_conds.append(OpMonthlyExpense.month == month_filter)
 
-    q = db.session.query(
-        OpExpenseCategory.id,
-        OpExpenseCategory.category_name,
-        OpExpenseCategory.item_name,
-        func.count(OpMonthlyExpense.id).label('count'),
-        func.coalesce(func.sum(OpMonthlyExpense.amount), 0).label('total'),
-        func.max(OpMonthlyExpense.payment_date).label('last_date'),
-    ).outerjoin(OpMonthlyExpense, db.and_(*join_conds))
+    q = apply_admin_scope(
+        db.session.query(
+            OpExpenseCategory.id,
+            OpExpenseCategory.category_name,
+            OpExpenseCategory.item_name,
+            func.count(OpMonthlyExpense.id).label('count'),
+            func.coalesce(func.sum(OpMonthlyExpense.amount), 0).label('total'),
+            func.max(OpMonthlyExpense.payment_date).label('last_date'),
+        ).outerjoin(OpMonthlyExpense, db.and_(*join_conds)),
+        OpExpenseCategory,
+    )
 
     rows = q.group_by(
         OpExpenseCategory.id,
@@ -242,7 +296,7 @@ def finance_expenses_summary():
 @admin_bp.route('/finance/expenses/fixed')
 @admin_permission_required('finance_expenses', 'view')
 def finance_fixed_expenses():
-    items = OpFixedExpense.query.order_by(OpFixedExpense.recurrence, OpFixedExpense.expense_name).all()
+    items = apply_admin_scope(OpFixedExpense.query, OpFixedExpense).order_by(OpFixedExpense.recurrence, OpFixedExpense.expense_name).all()
     return render_template(
         'admin/finance/expenses/fixed.html',
         items=items,
@@ -261,6 +315,7 @@ def finance_fixed_expenses_create():
             recurrence=request.form['recurrence'],
             month_if_yearly=int(request.form['month_if_yearly']) if request.form.get('month_if_yearly') else None,
             notes=(request.form.get('notes') or '').strip() or None,
+            created_by_admin_id=g.current_admin.id,
         )
         db.session.add(item)
         db.session.flush()
@@ -280,7 +335,7 @@ def finance_fixed_expenses_create():
 @admin_bp.route('/finance/expenses/fixed/<int:item_id>/delete', methods=['POST'])
 @admin_permission_required('finance_expenses', 'delete')
 def finance_fixed_expenses_delete(item_id):
-    item = OpFixedExpense.query.get_or_404(item_id)
+    item = get_or_404_with_scope(OpFixedExpense, item_id)
     name = item.expense_name
     try:
         log_finance_action(

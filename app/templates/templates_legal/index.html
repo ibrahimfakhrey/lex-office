@@ -10,6 +10,27 @@
 {% endblock %}
 
 {% block content %}
+{# Plan-based quota indicator — only meaningful when there is a limit #}
+{% if templates_limit is not none %}
+{% set quota_pct = ((templates_used / templates_limit) * 100) | round(0, 'floor') if templates_limit else 0 %}
+{% set quota_color = 'danger' if templates_used >= templates_limit else ('warning' if quota_pct >= 80 else 'primary') %}
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <strong class="small">استعمال القوالب القانونية</strong>
+            <span class="text-{{ quota_color }} small">
+                {{ templates_used }} / {{ templates_limit }}
+                {% if templates_used >= templates_limit %} — وصلت للحد الأقصى{% endif %}
+            </span>
+        </div>
+        <div class="progress" style="height:6px">
+            <div class="progress-bar bg-{{ quota_color }}"
+                 style="width: {{ [quota_pct, 100] | min }}%"></div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" class="row g-3 align-items-end">

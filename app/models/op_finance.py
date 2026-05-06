@@ -21,6 +21,7 @@ class OpEmployee(db.Model):
     status = db.Column(db.String(20), default='active', nullable=False)  # active / paused / terminated
     notes = db.Column(db.Text, nullable=True)
 
+    created_by_admin_id = db.Column(db.Integer, db.ForeignKey('admin_users.id'), nullable=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -89,6 +90,7 @@ class OpLender(db.Model):
     loan_date = db.Column(db.Date, nullable=False)
     notes = db.Column(db.Text, nullable=True)
 
+    created_by_admin_id = db.Column(db.Integer, db.ForeignKey('admin_users.id'), nullable=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -142,6 +144,7 @@ class OpExpenseCategory(db.Model):
     item_name = db.Column(db.String(120), nullable=False)
     notes = db.Column(db.Text, nullable=True)
 
+    created_by_admin_id = db.Column(db.Integer, db.ForeignKey('admin_users.id'), nullable=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
@@ -161,6 +164,10 @@ class OpMonthlyExpense(db.Model):
     payment_date = db.Column(db.Date, nullable=True)
     notes = db.Column(db.Text, nullable=True)
 
+    # Optional receipt/invoice file (stored under app/static/uploads/op_finance/)
+    attachment_path = db.Column(db.String(500), nullable=True)
+    attachment_filename = db.Column(db.String(255), nullable=True)
+
     created_by_admin_id = db.Column(db.Integer, db.ForeignKey('admin_users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -178,6 +185,7 @@ class OpFixedExpense(db.Model):
     month_if_yearly = db.Column(db.Integer, nullable=True)  # 1-12, when recurrence == yearly
     notes = db.Column(db.Text, nullable=True)
 
+    created_by_admin_id = db.Column(db.Integer, db.ForeignKey('admin_users.id'), nullable=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 

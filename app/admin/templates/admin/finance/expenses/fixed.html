@@ -10,9 +10,11 @@
 
 <div class="section-band d-flex justify-content-between align-items-center">
     <span><i class="bi bi-clipboard-data"></i> قائمة المصاريف الثابتة</span>
+    {% if g.current_admin.has_admin_permission('finance_expenses', 'add') %}
     <button class="btn btn-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#addFixedModal">
         <i class="bi bi-plus-circle"></i> إضافة مصروف ثابت
     </button>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -43,11 +45,15 @@
                     <td>{{ arabic_months[item.month_if_yearly] if item.month_if_yearly else '—' }}</td>
                     <td class="text-muted small" style="max-width:200px">{{ item.notes or '—' }}</td>
                     <td class="text-center">
+                        {% if g.current_admin.has_admin_permission('finance_expenses', 'delete') %}
                         <form method="POST" action="{{ url_for('admin.finance_fixed_expenses_delete', item_id=item.id) }}"
                               class="d-inline" onsubmit="return confirm('حذف؟');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                         </form>
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}

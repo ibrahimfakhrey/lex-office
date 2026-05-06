@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}LexOffice Admin{% endblock %} | Manasety</title>
+    <title>{% block title %}{{ product_name }} Admin{% endblock %} | {{ product_name }} — Manasety</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="96x96" href="{{ url_for('static', filename='img/favicon-96x96.png') }}">
@@ -264,7 +264,12 @@
     <div class="d-flex">
         <nav class="admin-sidebar">
             <div class="brand">
-                <h5>⚖️ LexOffice Admin</h5>
+                <h5>
+                    {% if product_logo %}
+                    <img src="{{ product_logo }}" alt="logo" style="width:22px; height:22px; object-fit:contain; vertical-align:middle; margin-left:6px">
+                    {% else %}⚖️{% endif %}
+                    {{ product_name }} Admin
+                </h5>
                 <small>Manasety Super Admin Panel</small>
             </div>
             <ul class="nav flex-column p-2">

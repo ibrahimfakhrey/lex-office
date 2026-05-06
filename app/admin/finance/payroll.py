@@ -10,7 +10,10 @@ from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, g
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required, admin_permission_required
+from app.admin.decorators import (
+    super_admin_required, admin_permission_required,
+    apply_admin_scope, get_or_404_with_scope,
+)
 from app.admin.finance.audit import log_finance_action
 from app.models.op_finance import OpEmployee, OpPayrollPayment
 
@@ -25,18 +28,19 @@ def _parse_date(value):
 @admin_permission_required('finance_payroll', 'view')
 def finance_payroll_payments():
     """List all payroll payments + add-payment form."""
+    # Scope payroll payments by their parent employee's ownership
+    visible_emp_ids = [e.id for e in apply_admin_scope(OpEmployee.query, OpEmployee).all()]
     payments = (
         OpPayrollPayment.query
+        .filter(OpPayrollPayment.employee_id.in_(visible_emp_ids))
         .order_by(OpPayrollPayment.payment_date.desc(), OpPayrollPayment.id.desc())
         .all()
     )
     # Only show active/paused employees in dropdown — terminated stay hidden by default
-    employees = (
-        OpEmployee.query
-        .filter(OpEmployee.status != 'terminated')
-        .order_by(OpEmployee.full_name)
-        .all()
-    )
+    employees = apply_admin_scope(
+        OpEmployee.query.filter(OpEmployee.status != 'terminated'),
+        OpEmployee,
+    ).order_by(OpEmployee.full_name).all()
     return render_template(
         'admin/finance/payroll/payments.html',
         payments=payments,
@@ -49,8 +53,8 @@ def finance_payroll_payments():
 def finance_payroll_create():
     try:
         emp_id = int(request.form['employee_id'])
-        # Ensure the employee exists (defensive — stops form-tampering attempts)
-        emp = OpEmployee.query.get_or_404(emp_id)
+        # Scope-check: only allow payments for employees the admin can see
+        emp = get_or_404_with_scope(OpEmployee, emp_id)
         payment = OpPayrollPayment(
             employee_id=emp.id,
             payment_date=_parse_date(request.form['payment_date']),
@@ -79,6 +83,10 @@ def finance_payroll_create():
 @admin_permission_required('finance_payroll', 'delete')
 def finance_payroll_delete(payment_id):
     payment = OpPayrollPayment.query.get_or_404(payment_id)
+    # Scope via parent employee
+    if g.get('current_scope') == 'own' and payment.employee and payment.employee.created_by_admin_id != g.current_admin.id:
+        from flask import abort
+        abort(404)
     emp_name = payment.employee.full_name if payment.employee else '—'
     amount = payment.amount
     try:
@@ -102,7 +110,7 @@ def finance_payroll_delete(payment_id):
 @admin_permission_required('finance_payroll', 'view')
 def finance_payroll_summary():
     """Read-only computed table — one row per employee."""
-    employees = OpEmployee.query.order_by(OpEmployee.full_name).all()
+    employees = apply_admin_scope(OpEmployee.query, OpEmployee).order_by(OpEmployee.full_name).all()
     rows = []
     totals = {'due': 0.0, 'paid': 0.0, 'balance': 0.0}
     for emp in employees:

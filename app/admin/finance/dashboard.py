@@ -11,9 +11,11 @@ from flask import render_template, request
 from sqlalchemy import func, extract
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required, admin_permission_required
+from app.admin.decorators import (
+    super_admin_required, admin_permission_required, apply_admin_scope,
+)
 from app.models.op_finance import (
-    OpEmployee, OpLender, OpMonthlyExpense, OpIncome,
+    OpEmployee, OpLender, OpMonthlyExpense, OpIncome, OpExpenseCategory,
 )
 
 
@@ -29,20 +31,26 @@ def finance_dashboard():
     year_filter = request.args.get('year', type=int)
     month_filter = request.args.get('month', type=int)
 
+    # Each section uses its own module's scope (dashboard's own scope is N/A
+    # since finance_dashboard has no records of its own).
     # ─── Payroll (lifetime — not affected by filter, per PDF) ───
-    employees = OpEmployee.query.all()
+    employees = apply_admin_scope(OpEmployee.query, OpEmployee, module='finance_employees').all()
     payroll_due = sum(e.total_due for e in employees)
     payroll_paid = sum(e.total_paid for e in employees)
     payroll_balance = sum(e.balance for e in employees)
 
     # ─── Loans (lifetime) ───
-    lenders = OpLender.query.all()
+    lenders = apply_admin_scope(OpLender.query, OpLender, module='finance_lenders').all()
     loan_original = sum(float(l.original_amount or 0) for l in lenders)
     loan_paid = sum(l.total_paid for l in lenders)
     loan_balance = sum(l.balance for l in lenders)
 
-    # ─── Expenses (filtered) ───
-    exp_q = db.session.query(func.coalesce(func.sum(OpMonthlyExpense.amount), 0))
+    # ─── Expenses (filtered) — scope by category ownership ───
+    visible_cat_ids = [c.id for c in apply_admin_scope(
+        OpExpenseCategory.query, OpExpenseCategory, module='finance_expenses').all()]
+    exp_q = db.session.query(func.coalesce(func.sum(OpMonthlyExpense.amount), 0)).filter(
+        OpMonthlyExpense.category_id.in_(visible_cat_ids)
+    )
     if year_filter:
         exp_q = exp_q.filter(OpMonthlyExpense.year == year_filter)
     if month_filter:
@@ -50,7 +58,10 @@ def finance_dashboard():
     expenses_total = float(exp_q.scalar() or 0)
 
     # ─── Income (filtered by income_date year/month) ───
-    inc_q = db.session.query(func.coalesce(func.sum(OpIncome.amount), 0))
+    inc_q = apply_admin_scope(
+        db.session.query(func.coalesce(func.sum(OpIncome.amount), 0)),
+        OpIncome, module='finance_income',
+    )
     if year_filter:
         inc_q = inc_q.filter(extract('year', OpIncome.income_date) == year_filter)
     if month_filter:

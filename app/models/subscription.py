@@ -21,6 +21,7 @@ class SubscriptionPlan(db.Model):
     is_public = db.Column(db.Boolean, default=True)
     # Self-service: tenants can subscribe directly. Otherwise needs admin intervention.
     self_service = db.Column(db.Boolean, default=True)
+    created_by_admin_id = db.Column(db.Integer, db.ForeignKey('admin_users.id'), nullable=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

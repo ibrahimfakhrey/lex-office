@@ -7,7 +7,10 @@ from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from app.extensions import db
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required, admin_permission_required
+from app.admin.decorators import (
+    super_admin_required, admin_permission_required,
+    apply_admin_scope, get_or_404_with_scope,
+)
 from app.admin.finance.audit import log_finance_action
 from app.models.op_finance import OpEmployee
 
@@ -33,7 +36,7 @@ def _parse_date(value):
 @admin_bp.route('/finance/employees')
 @admin_permission_required('finance_employees', 'view')
 def finance_employees_list():
-    employees = OpEmployee.query.order_by(OpEmployee.created_at.desc()).all()
+    employees = apply_admin_scope(OpEmployee.query, OpEmployee).order_by(OpEmployee.created_at.desc()).all()
     return render_template(
         'admin/finance/employees/list.html',
         employees=employees,
@@ -46,6 +49,7 @@ def finance_employees_list():
 @admin_permission_required('finance_employees', 'add')
 def finance_employees_create():
     try:
+        from flask import g
         emp = OpEmployee(
             full_name=request.form['full_name'].strip(),
             employment_type=request.form['employment_type'],
@@ -54,6 +58,7 @@ def finance_employees_create():
             contact_phone=(request.form.get('contact_phone') or '').strip() or None,
             status=request.form.get('status', 'active'),
             notes=(request.form.get('notes') or '').strip() or None,
+            created_by_admin_id=g.current_admin.id,
         )
         db.session.add(emp)
         db.session.flush()
@@ -75,7 +80,7 @@ def finance_employees_create():
 @admin_bp.route('/finance/employees/<int:emp_id>/edit', methods=['POST'])
 @admin_permission_required('finance_employees', 'edit')
 def finance_employees_edit(emp_id):
-    emp = OpEmployee.query.get_or_404(emp_id)
+    emp = get_or_404_with_scope(OpEmployee, emp_id)
     try:
         old = {
             'full_name': emp.full_name,
@@ -108,7 +113,7 @@ def finance_employees_edit(emp_id):
 @admin_bp.route('/finance/employees/<int:emp_id>/delete', methods=['POST'])
 @admin_permission_required('finance_employees', 'delete')
 def finance_employees_delete(emp_id):
-    emp = OpEmployee.query.get_or_404(emp_id)
+    emp = get_or_404_with_scope(OpEmployee, emp_id)
     name = emp.full_name
     try:
         log_finance_action(
@@ -131,7 +136,10 @@ def finance_employees_delete(emp_id):
 @admin_permission_required('finance_employees', 'view')
 def finance_employees_json():
     """Lightweight dropdown source for payroll payment forms."""
-    employees = OpEmployee.query.filter(OpEmployee.status != 'terminated').order_by(OpEmployee.full_name).all()
+    employees = apply_admin_scope(
+        OpEmployee.query.filter(OpEmployee.status != 'terminated'),
+        OpEmployee,
+    ).order_by(OpEmployee.full_name).all()
     return jsonify([
         {'id': e.id, 'name': e.full_name, 'salary': float(e.monthly_salary)}
         for e in employees

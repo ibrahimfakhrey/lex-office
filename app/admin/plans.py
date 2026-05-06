@@ -64,6 +64,7 @@ def plans_create():
             is_public=request.form.get('is_public') == 'on',
             self_service=request.form.get('self_service') == 'on',
             is_active=True,
+            created_by_admin_id=g.current_admin.id,
         )
         plan.features = _build_features_from_form(request.form)
         db.session.add(plan)

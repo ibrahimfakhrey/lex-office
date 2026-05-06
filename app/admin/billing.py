@@ -363,6 +363,8 @@ def billing_invoice_remind(invoice_id):
         flash('لا يوجد بريد إلكتروني للمكتب', 'danger')
         return redirect(url_for('admin.billing_invoice_detail', invoice_id=invoice_id))
 
+    from app.models.admin import SystemSetting
+    product_name = SystemSetting.get('product_name', 'LexOffice') or 'LexOffice'
     subject = f'تذكير بفاتورة معلقة — {inv.invoice_number}'
     html = f"""
     <div dir='rtl' style='font-family: Tajawal, Arial; padding:24px'>
@@ -376,7 +378,7 @@ def billing_invoice_remind(invoice_id):
         <li>الحالة: {inv.status}</li>
       </ul>
       <p>يرجى الدفع في أقرب فرصة لتجنب تعليق الحساب.</p>
-      <p style='color:#666;font-size:12px;margin-top:30px'>LexOffice — Manasety</p>
+      <p style='color:#666;font-size:12px;margin-top:30px'>{product_name} — Manasety</p>
     </div>
     """
     sent = send_email(tenant.email, subject, html)
