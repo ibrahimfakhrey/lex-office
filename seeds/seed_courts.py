@@ -9,7 +9,7 @@ from app.utils.constants import CourtType
 
 COURTS = [
     # محاكم النقض
-    {'name': 'محكمة النقض', 'name_en': 'Court of Cassation', 'court_type': CourtType.CASSATION.value, 'governorate': 'القاهرة'},
+    {'name': 'محكمة النقض', 'name_en': 'Court of Cassation', 'court_type': CourtType.CASSATION.value, 'governorate': 'القاهرة', 'market': 'eg'},
 
     # محاكم الاستئناف
     {'name': 'محكمة استئناف القاهرة', 'name_en': 'Cairo Court of Appeal', 'court_type': CourtType.APPEAL.value, 'governorate': 'القاهرة'},
@@ -60,13 +60,24 @@ COURTS = [
 def seed():
     with app.app_context():
         count = 0
+        backfilled = 0
         for court_data in COURTS:
-            existing = Court.query.filter_by(name=court_data['name']).first()
+            data = dict(court_data)
+            data.setdefault('market', 'eg')
+            existing = Court.query.filter_by(name=data['name']).first()
             if not existing:
-                db.session.add(Court(**court_data))
+                db.session.add(Court(**data))
                 count += 1
+            elif existing.market != data['market']:
+                # Backfill market on legacy rows seeded before multi-market support.
+                existing.market = data['market']
+                backfilled += 1
         db.session.commit()
-        print(f"Seeded {count} courts (total: {Court.query.count()}).")
+        msg = f"Seeded {count} EG courts"
+        if backfilled:
+            msg += f" (+{backfilled} backfilled with market='eg')"
+        msg += f" — total in DB: {Court.query.count()}."
+        print(msg)
 
 
 if __name__ == '__main__':

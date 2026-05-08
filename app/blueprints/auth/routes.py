@@ -22,10 +22,13 @@ auth_bp = Blueprint('auth', __name__, template_folder='../../templates/auth')
 def register():
     """Step 1: New subscription registration."""
     if request.method == 'POST':
+        from app.utils.market import current_market
+        market = current_market()
+
         full_name = request.form.get('full_name', '').strip()
         email = request.form.get('email', '').strip().lower()
         phone_raw = request.form.get('phone', '').strip()
-        phone = normalize_phone(phone_raw)
+        phone = normalize_phone(phone_raw, market)
         password = request.form.get('password', '')
         office_size = request.form.get('office_size', '1-5')
         agree_terms = request.form.get('agree_terms') == 'on'
@@ -38,7 +41,7 @@ def register():
             errors.append('الاسم الكامل مطلوب')
         if not validate_email(email):
             errors.append('البريد الإلكتروني غير صالح')
-        if not validate_phone(phone_raw):
+        if not validate_phone(phone_raw, market):
             errors.append('رقم الهاتف غير صالح')
 
         valid_pw, pw_msg = validate_password(password)
@@ -59,9 +62,11 @@ def register():
             return render_template('auth/register.html',
                                    full_name=full_name, email=email, phone=phone)
 
-        # Create tenant placeholder
+        # Create tenant placeholder. Market is frozen at registration —
+        # subsequent visits use tenant.market regardless of where the user is.
         tenant = Tenant(name=f'مكتب {full_name}', subscription_status='trial',
-                        trial_ends_at=datetime.utcnow() + timedelta(days=14))
+                        trial_ends_at=datetime.utcnow() + timedelta(days=14),
+                        market=market)
         db.session.add(tenant)
         db.session.flush()
 

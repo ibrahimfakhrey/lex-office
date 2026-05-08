@@ -108,14 +108,21 @@ class PaymentSchedule(str, enum.Enum):
 
 # ── Court ──
 class CourtType(str, enum.Enum):
-    PRIMARY = 'primary'              # ابتدائي
+    # Shared
+    PRIMARY = 'primary'              # ابتدائي / عامة (KSA: General Courts)
     APPEAL = 'appeal'                # استئنافي
-    CASSATION = 'cassation'          # نقض
+    CASSATION = 'cassation'          # نقض (EG)
     CONSTITUTIONAL = 'constitutional'  # دستوري
-    ECONOMIC = 'economic'            # اقتصادي
-    FAMILY = 'family'                # أسرة
+    ECONOMIC = 'economic'            # اقتصادي (EG)
+    FAMILY = 'family'                # أسرة / أحوال شخصية
     MILITARY = 'military'            # عسكري
-    STATE_COUNCIL = 'state_council'  # مجلس الدولة
+    STATE_COUNCIL = 'state_council'  # مجلس الدولة (EG) / ديوان المظالم (KSA)
+    # KSA-specific additions
+    SUPREME = 'supreme'              # المحكمة العليا (KSA top tier)
+    CRIMINAL = 'criminal'            # المحاكم الجزائية
+    COMMERCIAL = 'commercial'        # المحاكم التجارية
+    LABOR = 'labor'                  # المحاكم العمالية
+    ENFORCEMENT = 'enforcement'      # محاكم التنفيذ
 
 
 # ── Session ──

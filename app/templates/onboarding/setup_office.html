@@ -42,7 +42,7 @@
 
         <div class="field-row">
             <div class="field">
-                <label>رقم القيد بالنقابة</label>
+                <label>{{ market_config.bar_registration_label_ar }}</label>
                 <input type="text" name="bar_registration_no" value="{{ tenant.bar_registration_no or '' }}" placeholder="12345">
             </div>
             <div class="field">
@@ -59,7 +59,7 @@
         <div class="field-row">
             <div class="field">
                 <label>رقم الهاتف</label>
-                <input type="tel" name="phone" value="{{ tenant.phone or '' }}" dir="ltr" placeholder="01xxxxxxxxx">
+                <input type="tel" name="phone" value="{{ tenant.phone or '' }}" dir="ltr" placeholder="{{ market_config.phone_placeholder }}">
             </div>
             <div class="field">
                 <label>الفاكس</label>

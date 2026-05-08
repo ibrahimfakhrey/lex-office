@@ -11,6 +11,8 @@ class Court(db.Model):
     court_type = db.Column(db.String(30), nullable=False)
     governorate = db.Column(db.String(100), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
+    # 'eg' | 'sa' — onboarding filters dropdown by tenant.market.
+    market = db.Column(db.String(2), nullable=False, default='eg', index=True)
 
     def to_dict(self):
         return {
@@ -20,6 +22,7 @@ class Court(db.Model):
             'court_type': self.court_type,
             'governorate': self.governorate,
             'is_active': self.is_active,
+            'market': self.market,
         }
 
     def __repr__(self):

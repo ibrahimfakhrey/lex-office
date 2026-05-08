@@ -14,12 +14,16 @@ print("\n--- Seeding Roles & Permissions ---")
 from seeds.seed_roles import seed as seed_roles
 seed_roles()
 
-print("\n--- Seeding Courts ---")
+print("\n--- Seeding EG Courts ---")
 from seeds.seed_courts import seed as seed_courts
 seed_courts()
 
-print("\n--- Seeding Subscription Plans ---")
-from seeds.seed_subscriptions import seed as seed_subscriptions
-seed_subscriptions()
+print("\n--- Seeding KSA Courts ---")
+from seeds.seed_courts_sa import seed as seed_courts_sa
+seed_courts_sa()
+
+print("\n--- Seeding Subscription Plans (EG + SA) ---")
+from seeds.seed_plans_market import seed as seed_plans_market
+seed_plans_market()
 
 print("\nAll seeds completed successfully!")
