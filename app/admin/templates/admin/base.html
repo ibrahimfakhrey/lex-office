@@ -313,6 +313,13 @@
                     </a>
                 </li>
                 {% endif %}
+                {% if g.current_admin.has_admin_permission('tenants', 'view') %}
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.ai_usage') }}" href="{{ url_for('admin.ai_usage_list') }}">
+                        <i class="bi bi-stars"></i> استخدام الذكاء الاصطناعي
+                    </a>
+                </li>
+                {% endif %}
                 {% if g.current_admin.has_admin_permission('audit_log', 'view') %}
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if request.endpoint and 'audit' in (request.endpoint or '') }}" href="{{ url_for('admin.audit_log') }}">

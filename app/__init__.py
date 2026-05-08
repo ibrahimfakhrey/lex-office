@@ -67,7 +67,7 @@ def create_app(config_name=None):
             tenant, user, subscription, client, case, session,
             judgment, enforcement, power_of_attorney, financial,
             task, document, notification, audit, admin, op_finance,
-            admin_rbac,
+            admin_rbac, ai_usage,
         )
 
     return app

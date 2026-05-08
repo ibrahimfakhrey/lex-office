@@ -115,12 +115,23 @@ def extract():
     except ExtractionError as exc:
         return jsonify({'ok': False, 'error': str(exc)}), 422
 
-    # Analyze with Claude
+    # Analyze with Claude (governance-aware: quota + per-call usage log)
     from app.services.judgment_ai import (
         analyze_judgment, AnalysisError, AnalysisRateLimitError,
     )
+    from app.services.ai_usage import (
+        AIDisabledError, QuotaExceededError, QuotaError,
+    )
+    from app.models.tenant import Tenant
+    tenant = Tenant.query.get(g.tenant_id)
     try:
-        analysis = analyze_judgment(extracted.text)
+        analysis = analyze_judgment(extracted.text, tenant=tenant, user=g.current_user)
+    except AIDisabledError as exc:
+        return jsonify({'ok': False, 'error': str(exc), 'reason': 'ai_disabled'}), 402
+    except QuotaExceededError as exc:
+        return jsonify({'ok': False, 'error': str(exc), 'reason': 'quota_exceeded'}), 402
+    except QuotaError as exc:
+        return jsonify({'ok': False, 'error': str(exc), 'reason': 'quota_blocked'}), 402
     except AnalysisRateLimitError as exc:
         return jsonify({'ok': False, 'error': str(exc)}), 429
     except AnalysisError as exc:

@@ -28,6 +28,10 @@ class Tenant(db.Model):
     # 'eg' | 'sa' — frozen at registration from g.market. Drives plan list,
     # phone validation, currency display, courts dropdown, bar body label.
     market = db.Column(db.String(2), nullable=False, default='eg', index=True)
+    # Tracks the current calendar month (YYYY-MM) for which we already sent
+    # the 80% AI-quota warning email. Reset implicitly on month rollover by
+    # comparing against current month before sending again.
+    ai_warning_sent_month = db.Column(db.String(7), nullable=True)
     # organic / referral / paid_ad / direct
     acquisition_source = db.Column(db.String(40), nullable=True)
     # Which admin onboarded this tenant (NULL for public-signup tenants).

@@ -5,12 +5,13 @@ application code should use `tenant_has_feature(tenant, key)` from
 `app.admin.feature_utils` to check entitlement.
 """
 
-# Quantity limits (numeric). 0 or absence = unlimited.
+# Quantity limits (numeric). 0 or absence = unlimited; -1 also treated as unlimited.
 LIMIT_FEATURES = [
-    {'key': 'max_cases',           'label': 'الحد الأقصى للقضايا',          'group': 'limits'},
-    {'key': 'max_clients',         'label': 'الحد الأقصى للموكلين',         'group': 'limits'},
-    {'key': 'max_storage_gb',      'label': 'حد التخزين (GB)',              'group': 'limits'},
-    {'key': 'max_legal_templates', 'label': 'الحد الأقصى للقوالب القانونية', 'group': 'limits'},
+    {'key': 'max_cases',            'label': 'الحد الأقصى للقضايا',          'group': 'limits'},
+    {'key': 'max_clients',          'label': 'الحد الأقصى للموكلين',         'group': 'limits'},
+    {'key': 'max_storage_gb',       'label': 'حد التخزين (GB)',              'group': 'limits'},
+    {'key': 'max_legal_templates',  'label': 'الحد الأقصى للقوالب القانونية', 'group': 'limits'},
+    {'key': 'ai_calls_per_month',   'label': 'حد طلبات الذكاء الاصطناعي شهرياً', 'group': 'limits'},
 ]
 
 # Boolean feature flags
@@ -40,6 +41,7 @@ BOOLEAN_FEATURES = [
     {'key': 'whatsapp_notifications', 'label': 'إشعارات WhatsApp',             'group': 'notifications'},
 
     # AI / Advanced
+    {'key': 'ai_enabled',             'label': 'الذكاء الاصطناعي (مفعّل)',     'group': 'advanced'},
     {'key': 'ai_summary',             'label': 'الملخص الذكي (AI)',           'group': 'advanced'},
     {'key': 'api_access',             'label': 'الوصول للـ API',              'group': 'advanced'},
     {'key': 'mobile_app',             'label': 'تطبيق الموبايل',              'group': 'advanced'},

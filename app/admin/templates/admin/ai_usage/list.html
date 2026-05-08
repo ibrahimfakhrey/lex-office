@@ -1,0 +1,192 @@
+{% extends 'admin/base.html' %}
+{% block title %}استخدام الذكاء الاصطناعي{% endblock %}
+{% block page_title %}استخدام الذكاء الاصطناعي — {{ month_label }}{% endblock %}
+
+{% block content %}
+<style>
+.usage-bar {
+    height: 8px; border-radius: 4px; background: rgba(255,255,255,0.08);
+    overflow: hidden; min-width: 100px;
+}
+.usage-bar > div {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981 0%, #f59e0b 80%, #ef4444 100%);
+    transition: width 0.3s;
+}
+.usage-bar.warn  > div { background: #f59e0b; }
+.usage-bar.danger > div { background: #ef4444; }
+.usage-bar.ok    > div { background: #10b981; }
+.disabled-row td { opacity: 0.55; }
+</style>
+
+<!-- KPI strip -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="label">إجمالي الطلبات هذا الشهر</span>
+                <i class="bi bi-stars" style="color: var(--accent)"></i>
+            </div>
+            <div class="value" style="color: var(--accent)">{{ totals.total_calls }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="label">التكلفة الإجمالية</span>
+                <i class="bi bi-cash-coin text-success"></i>
+            </div>
+            <div class="value text-success">${{ '%.2f' | format(totals.total_cost_usd) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="label">مكاتب نشطة بالـ AI</span>
+                <i class="bi bi-building-fill text-info"></i>
+            </div>
+            <div class="value text-info">{{ totals.active_tenants }} <small style="font-size:0.85rem">من {{ totals.tenant_count }}</small></div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="label">قارب على النفاد (≥80%)</span>
+                <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+            </div>
+            <div class="value text-warning">{{ totals.over_80pct }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="btn-group btn-group-sm" role="group">
+            <a href="{{ url_for('admin.ai_usage_list', sort=sort) }}"
+               class="btn {{ 'btn-info' if not filter_market else 'btn-outline-info' }}">الكل</a>
+            <a href="{{ url_for('admin.ai_usage_list', market='eg', sort=sort) }}"
+               class="btn {{ 'btn-info' if filter_market == 'eg' else 'btn-outline-info' }}">🇪🇬 مصر</a>
+            <a href="{{ url_for('admin.ai_usage_list', market='sa', sort=sort) }}"
+               class="btn {{ 'btn-info' if filter_market == 'sa' else 'btn-outline-info' }}">🇸🇦 السعودية</a>
+        </div>
+
+        <div class="btn-group btn-group-sm" role="group">
+            <a href="{{ url_for('admin.ai_usage_list', market=filter_market or None, sort=sort) }}"
+               class="btn {{ 'btn-secondary' if not filter_kind else 'btn-outline-secondary' }}">الكل</a>
+            <a href="{{ url_for('admin.ai_usage_list', filter='active', market=filter_market or None, sort=sort) }}"
+               class="btn {{ 'btn-secondary' if filter_kind == 'active' else 'btn-outline-secondary' }}">نشطة فقط</a>
+            <a href="{{ url_for('admin.ai_usage_list', filter='high', market=filter_market or None, sort=sort) }}"
+               class="btn {{ 'btn-secondary' if filter_kind == 'high' else 'btn-outline-secondary' }}">≥80%</a>
+            <a href="{{ url_for('admin.ai_usage_list', filter='disabled', market=filter_market or None, sort=sort) }}"
+               class="btn {{ 'btn-secondary' if filter_kind == 'disabled' else 'btn-outline-secondary' }}">معطّلة</a>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+        <small class="text-muted">ترتيب:</small>
+        <select class="form-select form-select-sm" style="width:auto;"
+                onchange="window.location.href = this.value">
+            {% set base_url = url_for('admin.ai_usage_list', market=filter_market or None, filter=filter_kind or None) %}
+            <option value="{{ base_url }}?sort=usage_desc" {{ 'selected' if sort == 'usage_desc' }}>الأكثر استخداماً</option>
+            <option value="{{ base_url }}?sort=percent_desc" {{ 'selected' if sort == 'percent_desc' }}>الأعلى نسبة</option>
+            <option value="{{ base_url }}?sort=cost_desc" {{ 'selected' if sort == 'cost_desc' }}>الأعلى تكلفة</option>
+            <option value="{{ base_url }}?sort=name" {{ 'selected' if sort == 'name' }}>الاسم</option>
+        </select>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>المكتب</th>
+                    <th>السوق</th>
+                    <th>الخطة</th>
+                    <th>الاستخدام هذا الشهر</th>
+                    <th>الحد الشهري</th>
+                    <th style="min-width:120px;">النسبة</th>
+                    <th>التكلفة</th>
+                    <th>الحالة</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr class="{{ 'disabled-row' if not r.enabled }}">
+                    <td>
+                        <a href="{{ url_for('admin.ai_usage_detail', tenant_id=r.tenant.id) }}"
+                           class="text-decoration-none">
+                            <strong>{{ r.tenant.name }}</strong>
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary">
+                            {% if r.tenant.market == 'sa' %}🇸🇦{% else %}🇪🇬{% endif %}
+                        </span>
+                    </td>
+                    <td class="small">
+                        {{ r.tenant.subscription_plan.name if r.tenant.subscription_plan else '—' }}
+                    </td>
+                    <td><strong style="color: var(--accent)">{{ r.used }}</strong></td>
+                    <td>
+                        {% if r.unlimited %}
+                            <span class="text-success">غير محدود</span>
+                        {% else %}
+                            {{ r.limit }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if r.unlimited %}
+                            <span class="text-muted small">—</span>
+                        {% else %}
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="usage-bar
+                                     {% if r.percent >= 100 %}danger{% elif r.percent >= 80 %}warn{% else %}ok{% endif %}">
+                                    <div style="width: {{ [r.percent, 100] | min }}%"></div>
+                                </div>
+                                <small class="{% if r.percent >= 100 %}text-danger{% elif r.percent >= 80 %}text-warning{% endif %}">
+                                    {{ r.percent }}%
+                                </small>
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td><small>${{ '%.4f' | format(r.cost_usd) }}</small></td>
+                    <td>
+                        {% if r.enabled %}
+                            <span class="badge badge-soft-success"><i class="bi bi-check-circle"></i> مفعّل</span>
+                        {% else %}
+                            <span class="badge badge-soft-danger"><i class="bi bi-x-circle"></i> معطّل</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="{{ url_for('admin.ai_usage_detail', tenant_id=r.tenant.id) }}"
+                           class="btn btn-sm btn-outline-info" title="تفاصيل">
+                            <i class="bi bi-graph-up"></i>
+                        </a>
+                        <a href="{{ url_for('admin.tenant_features', tenant_id=r.tenant.id) }}"
+                           class="btn btn-sm btn-outline-light" title="إعدادات الميزات">
+                            <i class="bi bi-toggles2"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="9" class="text-center text-muted py-4">
+                    لا توجد مكاتب تطابق الفلاتر المختارة
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="alert alert-info mt-3 small">
+    <i class="bi bi-info-circle"></i>
+    لإيقاف أو تفعيل الذكاء الاصطناعي لمكتب معيّن، اضغط على
+    <i class="bi bi-toggles2"></i> ثم بدّل قيمة <strong>ai_enabled</strong>.
+    لتغيير الحد الشهري لجميع مكاتب خطة معيّنة، استخدم
+    <a href="{{ url_for('admin.plans_list') }}" class="alert-link">إدارة الخطط</a>.
+</div>
+{% endblock %}

@@ -118,18 +118,32 @@ def _client():
     return Anthropic(api_key=api_key)
 
 
-def analyze_judgment(text: str) -> JudgmentAnalysis:
+def analyze_judgment(text: str, tenant=None, user=None) -> JudgmentAnalysis:
     """Analyze an extracted judgment text. Returns a validated JudgmentAnalysis.
+
+    Args:
+        text: extracted Arabic text from the uploaded judgment.
+        tenant: required for governance (quota check + usage logging).
+                Routes that don't pass it will skip enforcement — so callers
+                must always pass it from inside a request context.
+        user: optional, for attribution in the usage log.
 
     Raises:
         AnalysisConfigError: missing API key.
         AnalysisRateLimitError: temporary 429 from Anthropic.
         AnalysisError: any other failure (with Arabic, user-safe message).
+        ai_usage.QuotaError: tenant blocked by entitlement or monthly cap.
+            Caller should catch and surface the message verbatim.
     """
     import anthropic
+    from app.services import ai_usage
 
     if not text or not text.strip():
         raise AnalysisError('النص فارغ — لا يمكن تحليله')
+
+    # 1. Governance check — raises QuotaError subclasses with Arabic messages.
+    if tenant is not None:
+        ai_usage.check_can_use(tenant)
 
     client = _client()
     model = current_app.config.get('ANTHROPIC_MODEL', 'claude-haiku-4-5')
@@ -139,6 +153,7 @@ def analyze_judgment(text: str) -> JudgmentAnalysis:
         f"--- بداية نص الحكم ---\n{text}\n--- نهاية نص الحكم ---"
     )
 
+    response = None
     try:
         response = client.messages.parse(
             model=model,
@@ -147,40 +162,69 @@ def analyze_judgment(text: str) -> JudgmentAnalysis:
             messages=[{"role": "user", "content": user_message}],
             output_format=JudgmentAnalysis,
         )
-    except anthropic.AuthenticationError:
+    except anthropic.AuthenticationError as e:
+        if tenant is not None:
+            ai_usage.record(tenant, user, feature='judgment_extract',
+                            model=model, response=None, success=False,
+                            error=f'auth: {e}')
         logger.exception('Anthropic auth failed — bad API key')
         raise AnalysisError(
             'فشل التحقق من مفتاح Claude — يرجى مراجعة إعدادات النظام'
         )
     except anthropic.RateLimitError as e:
+        if tenant is not None:
+            ai_usage.record(tenant, user, feature='judgment_extract',
+                            model=model, response=None, success=False,
+                            error=f'rate_limit: {e}')
         logger.warning('Anthropic rate limited')
         raise AnalysisRateLimitError(
             'تم تجاوز حد الطلبات — يرجى المحاولة بعد دقيقة'
         ) from e
     except anthropic.BadRequestError as e:
-        # Most likely cause: text too long or malformed. We already cap at
-        # MAX_CHARS in the extractor, so this is rare.
+        if tenant is not None:
+            ai_usage.record(tenant, user, feature='judgment_extract',
+                            model=model, response=None, success=False,
+                            error=f'bad_request: {getattr(e, "message", str(e))}')
         logger.exception('Anthropic 400: %s', getattr(e, 'message', str(e)))
         raise AnalysisError(
             'تعذّر تحليل النص — قد يكون طويلاً جداً. يرجى استخدام نسخة مختصرة'
         )
     except anthropic.APIStatusError as e:
+        if tenant is not None:
+            ai_usage.record(tenant, user, feature='judgment_extract',
+                            model=model, response=None, success=False,
+                            error=f'api_error: {e}')
         logger.exception('Anthropic API error: %s', e)
         raise AnalysisError(
             'حدث خطأ في خدمة التحليل — يرجى المحاولة لاحقاً'
         )
     except anthropic.APIConnectionError as e:
+        if tenant is not None:
+            ai_usage.record(tenant, user, feature='judgment_extract',
+                            model=model, response=None, success=False,
+                            error=f'connection: {e}')
         logger.exception('Anthropic connection error: %s', e)
         raise AnalysisError(
             'تعذّر الاتصال بخدمة التحليل — تحقق من اتصال الإنترنت'
         )
 
     if response.parsed_output is None:
-        # Either a refusal or schema validation failure on our side.
+        # Either a refusal or schema validation failure. Record as failure
+        # but still don't burn the tenant's quota for this.
+        if tenant is not None:
+            ai_usage.record(tenant, user, feature='judgment_extract',
+                            model=model, response=response, success=False,
+                            error='parse_failure_or_refusal')
         logger.warning('Claude returned unparsed response (stop_reason=%s)',
                        response.stop_reason)
         raise AnalysisError(
             'فشل التحليل التلقائي — يرجى إدخال البيانات يدوياً'
         )
+
+    # 2. Success — record usage. Quota is enforced on success counts, so this
+    # is what burns the tenant's monthly cap.
+    if tenant is not None:
+        ai_usage.record(tenant, user, feature='judgment_extract',
+                        model=model, response=response, success=True)
 
     return response.parsed_output
