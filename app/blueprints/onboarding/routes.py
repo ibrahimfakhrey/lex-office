@@ -55,14 +55,18 @@ def setup_office():
         if errors:
             for err in errors:
                 flash(err, 'danger')
-            courts = Court.query.filter_by(is_active=True).order_by(Court.name).all()
+            courts = (Court.query
+                      .filter_by(is_active=True, market=tenant.market)
+                      .order_by(Court.name).all())
             return render_template('onboarding/setup_office.html', tenant=tenant, courts=courts)
 
         db.session.commit()
         flash('تم حفظ بيانات المكتب بنجاح', 'success')
         return redirect(url_for('onboarding.choose_plan'))
 
-    courts = Court.query.filter_by(is_active=True).order_by(Court.name).all()
+    courts = (Court.query
+                  .filter_by(is_active=True, market=tenant.market)
+                  .order_by(Court.name).all())
     return render_template('onboarding/setup_office.html', tenant=tenant, courts=courts)
 
 
@@ -70,16 +74,29 @@ def setup_office():
 @login_required
 def choose_plan():
     """Step 2: Select subscription plan."""
+    from app.utils.market_config import PLAN_COMPARISON_ROWS
     tenant = Tenant.query.get(g.tenant_id)
+
+    # Plans available to this tenant — filtered by their frozen market.
+    plans = (SubscriptionPlan.query
+             .filter_by(market=tenant.market, is_active=True)
+             .order_by(SubscriptionPlan.price_monthly.asc())
+             .all())
 
     if request.method == 'POST':
         plan_name = request.form.get('plan_name', '')
         billing_cycle = request.form.get('billing_cycle', 'monthly')
 
-        plan = SubscriptionPlan.query.filter_by(name=plan_name, is_active=True).first()
+        # Lookup must respect the tenant's market — same plan name (Basic, etc.)
+        # exists in both markets.
+        plan = SubscriptionPlan.query.filter_by(
+            name=plan_name, market=tenant.market, is_active=True
+        ).first()
         if not plan:
             flash('الخطة غير موجودة', 'danger')
-            return render_template('onboarding/choose_plan.html', tenant=tenant)
+            return render_template('onboarding/choose_plan.html',
+                                   tenant=tenant, plans=plans,
+                                   comparison_rows=PLAN_COMPARISON_ROWS)
 
         tenant.subscription_plan_id = plan.id
         tenant.subscription_status = 'trial'
@@ -103,7 +120,9 @@ def choose_plan():
             flash('لم يتم إرسال إيصال الاشتراك على البريد الإلكتروني. يرجى التحقق من إعدادات البريد', 'warning')
         return redirect(url_for('onboarding.invite_team'))
 
-    return render_template('onboarding/choose_plan.html', tenant=tenant)
+    return render_template('onboarding/choose_plan.html',
+                           tenant=tenant, plans=plans,
+                           comparison_rows=PLAN_COMPARISON_ROWS)
 
 
 @onboarding_bp.route('/invite-team', methods=['GET', 'POST'])

@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from flask import Flask, redirect, url_for, request, g, jsonify
+from werkzeug.middleware.proxy_fix import ProxyFix
 from config import config
 from app.extensions import db, migrate, jwt, mail, csrf, limiter
 
@@ -13,6 +14,11 @@ def create_app(config_name=None):
     app = Flask(__name__)
     app.config.from_object(config.get(config_name, config['default']))
 
+    # Trust X-Forwarded-* headers from a single proxy hop (Cloudflare, nginx,
+    # PythonAnywhere). Required so request.remote_addr / rate-limiting / GeoIP
+    # see the real client IP rather than the proxy IP.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
     # Ensure upload folder exists
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -23,6 +29,10 @@ def create_app(config_name=None):
     mail.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
+
+    # Silent market detection (EG / SA). Sets g.market on every request.
+    from app.utils.market import install_market_hook
+    install_market_hook(app)
 
     # JWT error handlers — return JSON for API, redirect for web
     @jwt.expired_token_loader
@@ -158,6 +168,17 @@ def _register_context_processors(app):
             terms_url = ''
             support_email = ''
 
+        # Resolve effective market: post-signup tenants are frozen at
+        # tenant.market; pre-signup visitors use the request-scoped g.market.
+        from app.utils.market_config import get_config, normalize_market
+        from app.utils.market import current_market
+        effective_market = current_market()
+        if current_user is not None and getattr(current_user, 'tenant', None) is not None:
+            tm = getattr(current_user.tenant, 'market', None)
+            if tm:
+                effective_market = normalize_market(tm)
+        market_cfg = get_config(effective_market)
+
         return dict(
             current_user=current_user,
             now=datetime.utcnow,
@@ -169,4 +190,6 @@ def _register_context_processors(app):
             privacy_url=privacy_url,
             terms_url=terms_url,
             support_email=support_email,
+            market=effective_market,
+            market_config=market_cfg,
         )

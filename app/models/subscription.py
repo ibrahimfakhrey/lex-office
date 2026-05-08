@@ -14,6 +14,14 @@ class SubscriptionPlan(db.Model):
     price_monthly = db.Column(db.Numeric(10, 2), nullable=False)
     price_yearly = db.Column(db.Numeric(10, 2), nullable=False)
     features = db.Column(db.JSON, nullable=True)
+    # Multi-market: 'eg' | 'sa'. Tenants only see plans matching their market.
+    market = db.Column(db.String(2), nullable=False, default='eg', index=True)
+    currency_code = db.Column(db.String(3), nullable=False, default='EGP')
+    # Per-cell content for the choose_plan.html comparison table, keyed by
+    # PLAN_COMPARISON_ROWS[*].key in app/utils/market_config.py. Each value is
+    # either a string ("حتى 50 قضية"), a bool (renders as ✓/✗), or null
+    # (renders as ✗).
+    comparison = db.Column(db.JSON, nullable=True)
     # active / archived / draft
     status = db.Column(db.String(20), default='active', nullable=False)
     is_active = db.Column(db.Boolean, default=True)
@@ -36,6 +44,9 @@ class SubscriptionPlan(db.Model):
             'price_monthly': float(self.price_monthly) if self.price_monthly is not None else None,
             'price_yearly': float(self.price_yearly) if self.price_yearly is not None else None,
             'features': self.features,
+            'market': self.market,
+            'currency_code': self.currency_code,
+            'comparison': self.comparison,
             'status': self.status,
             'is_active': self.is_active,
             'is_public': self.is_public,

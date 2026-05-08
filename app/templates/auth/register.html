@@ -23,7 +23,7 @@
     <div class="mb-3">
         <label for="phone" class="form-label">رقم الهاتف</label>
         <input type="tel" class="form-control" id="phone" name="phone"
-               value="{{ phone|default('') }}" required placeholder="01xxxxxxxxx" dir="ltr">
+               value="{{ phone|default('') }}" required placeholder="{{ market_config.phone_placeholder }}" dir="ltr">
     </div>
 
     <div class="mb-3">

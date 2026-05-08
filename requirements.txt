@@ -38,3 +38,6 @@ openai>=1.59.2
 python-dotenv==1.0.1
 python-dateutil==2.9.0
 gunicorn==23.0.0
+
+# GeoIP — silent country detection for multi-market routing (EG / SA)
+geoip2==4.8.0

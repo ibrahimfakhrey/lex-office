@@ -72,86 +72,58 @@
     font-weight: 600;
     color: #078FD2;
 }
-.yearly-cell {
-    line-height: 1.4;
-}
+.yearly-cell { line-height: 1.4; }
 .yearly-cell .yearly-old {
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #94a3b8;
-    text-decoration: line-through;
+    display: block; font-size: 0.72rem; font-weight: 600;
+    color: #94a3b8; text-decoration: line-through;
 }
 .yearly-cell .yearly-new {
-    display: block;
-    font-size: 0.92rem;
-    font-weight: 800;
-    color: #F97316;
+    display: block; font-size: 0.92rem; font-weight: 800; color: #F97316;
 }
 .yearly-cell .yearly-save {
-    display: inline-block;
-    font-size: 0.66rem;
-    font-weight: 700;
-    background: rgba(249,115,22,0.12);
-    color: #F97316;
-    padding: 1px 7px;
-    border-radius: 6px;
-    border: 1px solid rgba(249,115,22,0.3);
-    margin-top: 2px;
+    display: inline-block; font-size: 0.66rem; font-weight: 700;
+    background: rgba(249,115,22,0.12); color: #F97316;
+    padding: 1px 7px; border-radius: 6px;
+    border: 1px solid rgba(249,115,22,0.3); margin-top: 2px;
 }
 .plans-table .check-icon { color: #078FD2; font-size: 1rem; }
 .plans-table .x-icon { color: #cbd5e1; font-size: 0.9rem; }
 .plans-table .detail-text {
-    font-size: 0.78rem;
-    color: #334155;
-    line-height: 1.5;
+    font-size: 0.78rem; color: #334155; line-height: 1.5;
 }
 
-.btn-row td {
-    padding: 1rem !important;
-    background: #f8fafc !important;
-}
+.btn-row td { padding: 1rem !important; background: #f8fafc !important; }
 .btn-row td:first-child { background: #f8fafc !important; }
 
 .plan-select-btn {
     display: inline-block;
     padding: 0.55rem 1.5rem;
     border-radius: 8px;
-    font-size: 0.82rem;
-    font-weight: 700;
+    font-size: 0.82rem; font-weight: 700;
     font-family: 'Cairo','Tajawal',sans-serif;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: none;
+    cursor: pointer; transition: all 0.2s; border: none;
 }
 .plan-select-primary {
     background: linear-gradient(135deg, #0C2461, #1849A9);
-    color: #fff;
-    box-shadow: 0 4px 14px rgba(12,36,97,0.2);
+    color: #fff; box-shadow: 0 4px 14px rgba(12,36,97,0.2);
 }
 .plan-select-primary:hover { box-shadow: 0 6px 20px rgba(12,36,97,0.3); transform: translateY(-1px); }
 .plan-select-outline {
-    background: #fff;
-    color: #1849A9;
-    border: 1.5px solid #1849A9;
+    background: #fff; color: #1849A9; border: 1.5px solid #1849A9;
 }
 .plan-select-outline:hover { background: rgba(24,73,169,0.05); }
 .plan-select-green {
     background: linear-gradient(135deg, #078FD2, #1849A9);
-    color: #fff;
-    box-shadow: 0 4px 14px rgba(24,73,169,0.25);
+    color: #fff; box-shadow: 0 4px 14px rgba(24,73,169,0.25);
 }
 .plan-select-green:hover { box-shadow: 0 6px 20px rgba(24,73,169,0.35); transform: translateY(-1px); }
 
 .discount-banner {
     background: linear-gradient(135deg, #078FD2, #1849A9);
-    color: #fff;
-    text-align: center;
+    color: #fff; text-align: center;
     padding: 0.75rem 1rem;
-    font-size: 0.9rem;
-    font-weight: 700;
-    border-radius: 0 0 12px 12px;
-    margin-top: -1px;
+    font-size: 0.9rem; font-weight: 700;
+    border-radius: 0 0 12px 12px; margin-top: -1px;
 }
 
 .col-featured { background: rgba(7,143,210,0.04); }
@@ -189,205 +161,111 @@
         <p>جميع الخطط تشمل تجربة مجانية <strong>14 يوماً</strong> — لا بطاقة ائتمان مطلوبة</p>
     </div>
 
+    {# ── Helper macros: render comparison cell + featured class ──────────── #}
+    {% macro plan_col_class(loop_index, total) -%}
+        {%- if total == 4 and loop_index == 3 %}col-featured{%- endif -%}
+        {%- if total == 3 and loop_index == 2 %}col-featured{%- endif -%}
+    {%- endmacro %}
+
+    {% macro render_cell(value) -%}
+        {%- if value is sameas true -%}
+            <i class="bi bi-check-circle-fill check-icon"></i>
+        {%- elif value is sameas false or value is none -%}
+            <i class="bi bi-x-circle x-icon"></i>
+        {%- else -%}
+            <span class="detail-text">{{ value }}</span>
+        {%- endif -%}
+    {%- endmacro %}
+
+    {% macro plan_cta_class(loop_index, total) -%}
+        {%- if total == 4 and loop_index == 3 -%}plan-select-green
+        {%- elif total == 4 and loop_index == 4 -%}plan-select-primary
+        {%- elif total == 3 and loop_index == 2 -%}plan-select-green
+        {%- elif total == 3 and loop_index == 3 -%}plan-select-primary
+        {%- else -%}plan-select-outline
+        {%- endif -%}
+    {%- endmacro %}
+
     <div class="plans-table-wrap">
         <table class="plans-table">
             <thead>
                 <tr>
                     <th>الميزة / النظام</th>
-                    <th>باقة: المحامي الفردي<small>(Basic)</small></th>
-                    <th>باقة: فريق النمو<small>(Starter)</small></th>
-                    <th class="col-featured">باقة: المكاتب الكبرى<small>(Professional)</small></th>
-                    <th>باقة: المؤسسات<small>(Business)</small></th>
+                    {% for plan in plans %}
+                    <th class="{{ plan_col_class(loop.index, plans|length) }}">
+                        باقة: {{ plan.name_ar }}<small>({{ plan.name }})</small>
+                    </th>
+                    {% endfor %}
                 </tr>
             </thead>
             <tbody>
+                {# Monthly price #}
                 <tr>
                     <td>السعر الشهري</td>
-                    <td class="price-cell">297 <small>ج.م</small></td>
-                    <td class="price-cell">497 <small>ج.م</small></td>
-                    <td class="price-cell col-featured">697 <small>ج.م</small></td>
-                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
+                    {% for plan in plans %}
+                        {% set is_custom = (plan.price_monthly|float == 0) %}
+                        <td class="{{ plan_col_class(loop.index, plans|length) }} {% if is_custom %}custom-cell{% else %}price-cell{% endif %}">
+                            {% if is_custom %}
+                                تخصيص حسب الاتفاق
+                            {% else %}
+                                {{ '%g' | format(plan.price_monthly|float) }}
+                                <small>{{ market_config.currency_symbol_ar }}</small>
+                            {% endif %}
+                        </td>
+                    {% endfor %}
                 </tr>
+
+                {# Yearly price (50% off banner stays the same — yearly = monthly*12*0.5) #}
                 <tr>
-                    <td>السعر السنوي <small style="color:#F97316;font-weight:700;display:block;font-size:0.68rem">خصم 50%</small></td>
-                    <td class="yearly-cell">
-                        <span class="yearly-old">3,564 ج.م</span>
-                        <span class="yearly-new">1,782 ج.م</span>
-                        <span class="yearly-save">وفّر 50%</span>
+                    <td>السعر السنوي
+                        <small style="color:#F97316;font-weight:700;display:block;font-size:0.68rem">خصم 50%</small>
                     </td>
-                    <td class="yearly-cell">
-                        <span class="yearly-old">5,964 ج.م</span>
-                        <span class="yearly-new">2,982 ج.م</span>
-                        <span class="yearly-save">وفّر 50%</span>
-                    </td>
-                    <td class="yearly-cell col-featured">
-                        <span class="yearly-old">8,364 ج.م</span>
-                        <span class="yearly-new">4,182 ج.م</span>
-                        <span class="yearly-save">وفّر 50%</span>
-                    </td>
-                    <td class="custom-cell">تواصل معنا للتفاصيل</td>
+                    {% for plan in plans %}
+                        {% set is_custom = (plan.price_monthly|float == 0) %}
+                        {% set monthly = plan.price_monthly|float %}
+                        {% set yearly = plan.price_yearly|float %}
+                        {% set old_price = (monthly * 12)|round(2) %}
+                        <td class="{{ plan_col_class(loop.index, plans|length) }} {% if is_custom %}custom-cell{% else %}yearly-cell{% endif %}">
+                            {% if is_custom %}
+                                تواصل معنا للتفاصيل
+                            {% else %}
+                                <span class="yearly-old">{{ '%g' | format(old_price) }} {{ market_config.currency_symbol_ar }}</span>
+                                <span class="yearly-new">{{ '%g' | format(yearly) }} {{ market_config.currency_symbol_ar }}</span>
+                                <span class="yearly-save">وفّر 50%</span>
+                            {% endif %}
+                        </td>
+                    {% endfor %}
                 </tr>
+
+                {# Comparison rows — fully data-driven from plan.comparison + PLAN_COMPARISON_ROWS #}
+                {% for row in comparison_rows %}
                 <tr>
-                    <td>المستخدمين (المحامين)</td>
-                    <td class="detail-text">محامي واحد</td>
-                    <td class="detail-text">حتى 3 محامين</td>
-                    <td class="detail-text col-featured">حتى 6 محامين</td>
-                    <td class="detail-text">غير محدود</td>
+                    <td>{{ row.label_ar }}</td>
+                    {% for plan in plans %}
+                        {% set value = (plan.comparison or {}).get(row.key) %}
+                        <td class="{{ plan_col_class(loop.index, plans|length) }}">
+                            {{ render_cell(value) }}
+                        </td>
+                    {% endfor %}
                 </tr>
-                <tr>
-                    <td>إدارة القضايا والجلسات</td>
-                    <td class="detail-text">حتى 50 قضية</td>
-                    <td class="detail-text">حتى 200 قضية</td>
-                    <td class="detail-text col-featured">غير محدود</td>
-                    <td class="detail-text">غير محدود</td>
-                </tr>
-                <tr>
-                    <td>التخزين السحابي</td>
-                    <td class="detail-text">3 جيجابايت</td>
-                    <td class="detail-text">5 جيجابايت</td>
-                    <td class="detail-text col-featured">10 جيجابايت</td>
-                    <td class="detail-text">غير محدود</td>
-                </tr>
-                <tr>
-                    <td>إدارة الموكلين والتوكيلات</td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td class="col-featured"><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                </tr>
-                <tr>
-                    <td>الأجندة والتقويم الرقمي</td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td class="col-featured"><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                </tr>
-                <tr>
-                    <td>إدارة المهام (Tasks)</td>
-                    <td class="detail-text">مهام شخصية فقط</td>
-                    <td class="detail-text">توزيع مهام + متابعة تنفيذ</td>
-                    <td class="detail-text col-featured">توزيع مهام + متابعة تنفيذ</td>
-                    <td class="detail-text">إدارة أقسام وصلاحيات متعددة</td>
-                </tr>
-                <tr>
-                    <td>سجل الأحكام والاستئناف</td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td class="col-featured"><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                </tr>
-                <tr>
-                    <td>متابعة التنفيذ</td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td class="col-featured"><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                </tr>
-                <tr>
-                    <td>النظام المالي (إيصالات/فواتير)</td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td class="col-featured"><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
-                </tr>
-                <tr>
-                    <td>إدارة المصاريف والأتعاب</td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td class="col-featured"><i class="bi bi-check-circle-fill check-icon"></i></td>
-                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
-                </tr>
-                <tr>
-                    <td>النماذج القانونية الجاهزة</td>
-                    <td class="detail-text">نموذج واحد</td>
-                    <td class="detail-text">3 نماذج</td>
-                    <td class="detail-text col-featured">5 نماذج</td>
-                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
-                </tr>
-                <tr>
-                    <td>قنوات التنبيهات</td>
-                    <td class="detail-text">إشعارات داخل النظام (In-app)</td>
-                    <td class="detail-text">إشعارات داخل النظام (In-app)</td>
-                    <td class="detail-text col-featured">البريد الإلكتروني + إشعارات داخل النظام (In-app)</td>
-                    <td class="detail-text">واتساب + الكل</td>
-                </tr>
-                <tr>
-                    <td>الذكاء الاصطناعي (AI)</td>
-                    <td><i class="bi bi-x-circle x-icon"></i></td>
-                    <td class="detail-text">مساعد ذكي أساسي</td>
-                    <td class="detail-text col-featured">تلخيص مستندات + تذكارات ذكية</td>
-                    <td class="custom-cell">تخصيص متقدم حسب الاتفاق</td>
-                </tr>
-                <tr>
-                    <td>لوحة التحكم (Dashboard)</td>
-                    <td class="detail-text">3 عناصر (Widgets)</td>
-                    <td class="detail-text">5 عناصر (Widgets)</td>
-                    <td class="detail-text col-featured">7 عناصر كاملة (Widgets)</td>
-                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
-                </tr>
-                <tr>
-                    <td>التقارير والتحليلات</td>
-                    <td><i class="bi bi-x-circle x-icon"></i></td>
-                    <td class="detail-text">تقارير أساسية</td>
-                    <td class="detail-text col-featured">متقدمة BI — 6 تقارير</td>
-                    <td class="custom-cell">تخصيص حسب الاتفاق</td>
-                </tr>
-                <tr>
-                    <td>الدعم الفني</td>
-                    <td class="detail-text">تذاكر دعم</td>
-                    <td class="detail-text">تذاكر دعم</td>
-                    <td class="detail-text col-featured">أولوية رد</td>
-                    <td class="detail-text">مدير حساب مخصص 24/7</td>
-                </tr>
-                <tr>
-                    <td>الاستضافة</td>
-                    <td class="detail-text">سحابة مشتركة</td>
-                    <td class="detail-text">سحابة مشتركة</td>
-                    <td class="detail-text col-featured">سحابة مشتركة</td>
-                    <td class="detail-text">سيرفر خاص (Dedicated)</td>
-                </tr>
-                <tr>
-                    <td>الربط التقني (API)</td>
-                    <td><i class="bi bi-x-circle x-icon"></i></td>
-                    <td><i class="bi bi-x-circle x-icon"></i></td>
-                    <td class="col-featured"><i class="bi bi-x-circle x-icon"></i></td>
-                    <td class="detail-text">ربط API كامل مع أنظمة أخرى</td>
-                </tr>
-                <!-- Plan selection buttons -->
+                {% endfor %}
+
+                {# Plan selection buttons #}
                 <tr class="btn-row">
                     <td></td>
-                    <td>
-                        <form method="POST">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="plan_name" value="Basic">
-                            <input type="hidden" name="billing_cycle" value="monthly">
-                            <button type="submit" class="plan-select-btn plan-select-outline">ابدأ التجربة المجانية</button>
-                        </form>
-                    </td>
-                    <td>
-                        <form method="POST">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="plan_name" value="Starter">
-                            <input type="hidden" name="billing_cycle" value="monthly">
-                            <button type="submit" class="plan-select-btn plan-select-outline">ابدأ التجربة المجانية</button>
-                        </form>
-                    </td>
-                    <td class="col-featured">
-                        <form method="POST">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="plan_name" value="Professional">
-                            <input type="hidden" name="billing_cycle" value="monthly">
-                            <button type="submit" class="plan-select-btn plan-select-green">ابدأ التجربة المجانية</button>
-                        </form>
-                    </td>
-                    <td>
-                        <form method="POST">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="plan_name" value="Business">
-                            <input type="hidden" name="billing_cycle" value="monthly">
-                            <button type="submit" class="plan-select-btn plan-select-primary">تواصل معنا</button>
-                        </form>
-                    </td>
+                    {% for plan in plans %}
+                        {% set is_custom = (plan.price_monthly|float == 0) %}
+                        <td class="{{ plan_col_class(loop.index, plans|length) }}">
+                            <form method="POST">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="plan_name" value="{{ plan.name }}">
+                                <input type="hidden" name="billing_cycle" value="monthly">
+                                <button type="submit" class="plan-select-btn {{ plan_cta_class(loop.index, plans|length) }}">
+                                    {% if is_custom %}تواصل معنا{% else %}ابدأ التجربة المجانية{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    {% endfor %}
                 </tr>
             </tbody>
         </table>

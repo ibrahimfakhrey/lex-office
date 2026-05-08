@@ -39,19 +39,69 @@
                             <textarea name="description" class="form-control" rows="2">{{ form.description or '' }}</textarea>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small fw-semibold">السعر الشهري (ج.م) *</label>
-                            <input type="number" step="0.01" name="price_monthly" value="{{ form.price_monthly or 0 }}" class="form-control" required>
+                            <label class="form-label small fw-semibold">السوق *</label>
+                            <select name="market" class="form-select" required>
+                                <option value="eg" {{ 'selected' if (form.market or 'eg') == 'eg' }}>🇪🇬 مصر (EG)</option>
+                                <option value="sa" {{ 'selected' if form.market == 'sa' }}>🇸🇦 السعودية (SA)</option>
+                            </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label small fw-semibold">السعر السنوي (ج.م) *</label>
-                            <input type="number" step="0.01" name="price_yearly" value="{{ form.price_yearly or 0 }}" class="form-control" required>
+                            <label class="form-label small fw-semibold">العملة *</label>
+                            <select name="currency_code" class="form-select" required>
+                                <option value="EGP" {{ 'selected' if (form.currency_code or 'EGP') == 'EGP' }}>EGP — جنيه مصري</option>
+                                <option value="SAR" {{ 'selected' if form.currency_code == 'SAR' }}>SAR — ريال سعودي</option>
+                            </select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-semibold">الحد الأقصى للمحامين *</label>
                             <input type="number" name="max_lawyers" value="{{ form.max_lawyers or 1 }}" class="form-control" required>
                             <small class="text-muted">-1 = غير محدود</small>
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">السعر الشهري *</label>
+                            <input type="number" step="0.01" name="price_monthly" value="{{ form.price_monthly or 0 }}" class="form-control" required>
+                            <small class="text-muted">0 = خطة مخصصة (Custom — تواصل معنا)</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">السعر السنوي *</label>
+                            <input type="number" step="0.01" name="price_yearly" value="{{ form.price_yearly or 0 }}" class="form-control" required>
+                        </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Pricing-table comparison rows (what shows on the choose_plan page) -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <i class="bi bi-table"></i> صفوف جدول المقارنة
+                    <small class="text-muted ms-2">يظهر في صفحة اختيار الخطة للمكاتب الجديدة</small>
+                </div>
+                <div class="card-body">
+                    {% set existing_comp = (plan.comparison or {}) if plan else {} %}
+                    {% for row in comparison_rows %}
+                        {% set val = existing_comp.get(row.key) %}
+                        {% set is_bool_true = val is sameas true %}
+                        {% set is_bool_false = (val is sameas false) %}
+                        {% set is_text = val is string and val|length > 0 %}
+                        <div class="row g-2 align-items-center mb-2">
+                            <div class="col-md-4">
+                                <label class="small fw-semibold mb-0">{{ row.label_ar }}</label>
+                            </div>
+                            <div class="col-md-3">
+                                <select name="comparison_{{ row.key }}_kind" class="form-select form-select-sm">
+                                    <option value="text"{{ ' selected' if is_text or (not is_bool_true and not is_bool_false) }}>نص</option>
+                                    <option value="yes"{{ ' selected' if is_bool_true }}>✓ متاح</option>
+                                    <option value="no"{{ ' selected' if is_bool_false }}>✗ غير متاح</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="text" name="comparison_{{ row.key }}_value"
+                                       class="form-control form-control-sm"
+                                       value="{{ val if is_text else '' }}"
+                                       placeholder="مثال: حتى 50 قضية">
+                            </div>
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
 

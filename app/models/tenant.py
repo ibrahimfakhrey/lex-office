@@ -25,6 +25,9 @@ class Tenant(db.Model):
     cancelled_at = db.Column(db.DateTime, nullable=True)
     country = db.Column(db.String(80), nullable=True)
     city = db.Column(db.String(120), nullable=True)
+    # 'eg' | 'sa' — frozen at registration from g.market. Drives plan list,
+    # phone validation, currency display, courts dropdown, bar body label.
+    market = db.Column(db.String(2), nullable=False, default='eg', index=True)
     # organic / referral / paid_ad / direct
     acquisition_source = db.Column(db.String(40), nullable=True)
     # Which admin onboarded this tenant (NULL for public-signup tenants).
@@ -64,6 +67,7 @@ class Tenant(db.Model):
             'cancelled_at': self.cancelled_at.isoformat() if self.cancelled_at else None,
             'country': self.country,
             'city': self.city,
+            'market': self.market,
             'acquisition_source': self.acquisition_source,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,

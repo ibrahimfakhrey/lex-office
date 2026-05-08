@@ -1,0 +1,65 @@
+{% extends 'admin/base.html' %}
+{% block title %}{{ 'تعديل محكمة' if court else 'محكمة جديدة' }}{% endblock %}
+{% block page_title %}{{ 'تعديل: ' + court.name if court else 'إضافة محكمة' }}{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('admin.courts_list') }}" class="text-decoration-none small text-muted">
+        <i class="bi bi-arrow-right"></i> العودة لقائمة المحاكم
+    </a>
+</div>
+
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card">
+        <div class="card-header"><i class="bi bi-bank"></i> بيانات المحكمة</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">الاسم (عربي) *</label>
+                    <input type="text" name="name" class="form-control"
+                           value="{{ form.name or '' }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">الاسم (English)</label>
+                    <input type="text" name="name_en" class="form-control"
+                           value="{{ form.name_en or '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">السوق *</label>
+                    <select name="market" class="form-select" required>
+                        <option value="eg" {{ 'selected' if (form.market or 'eg') == 'eg' }}>🇪🇬 مصر</option>
+                        <option value="sa" {{ 'selected' if form.market == 'sa' }}>🇸🇦 السعودية</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">نوع المحكمة *</label>
+                    <select name="court_type" class="form-select" required>
+                        {% for ct in court_types %}
+                        <option value="{{ ct.value }}" {{ 'selected' if form.court_type == ct.value }}>{{ ct.value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">المنطقة / المحافظة</label>
+                    <input type="text" name="governorate" class="form-control"
+                           value="{{ form.governorate or '' }}" placeholder="القاهرة / الرياض / ...">
+                </div>
+                <div class="col-12">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="is_active"
+                               {{ 'checked' if form.is_active or not court }}>
+                        <label class="form-check-label small" for="is_active">نشطة (تظهر للمكاتب في القائمة المنسدلة)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check2"></i> {{ 'حفظ التعديلات' if court else 'إضافة المحكمة' }}
+            </button>
+            <a href="{{ url_for('admin.courts_list') }}" class="btn btn-outline-light">إلغاء</a>
+        </div>
+    </div>
+</form>
+{% endblock %}
