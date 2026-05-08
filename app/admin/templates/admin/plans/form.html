@@ -105,6 +105,72 @@
                 </div>
             </div>
 
+            {# ── Per-AI-feature controls (granular: enable + sub-cap per feature) ── #}
+            <div class="card mt-3" style="border-right: 4px solid #078FD2;">
+                <div class="card-header"
+                     style="background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);">
+                    <i class="bi bi-stars" style="color:#078FD2;"></i>
+                    <strong>التحكم في ميزات الذكاء الاصطناعي</strong>
+                    <small class="text-muted ms-2">
+                        فعّل/عطّل كل ميزة وحدّد سقفاً شهرياً مخصصاً لها (اختياري — اتركه فارغاً ليستخدم السقف العام)
+                    </small>
+                </div>
+                <div class="card-body">
+                    {% set ai_features_existing = (plan.features.get('ai_features') if plan and plan.features else None) or {} %}
+                    {% if ai_features_registry %}
+                        {% for f in ai_features_registry %}
+                            {% set f_cfg = ai_features_existing.get(f.key, {}) %}
+                            {# Default to enabled if not yet configured (back-compat with plans seeded
+                               before per-feature flags existed) #}
+                            {% set f_enabled = f_cfg.get('enabled', True) %}
+                            {% set f_cap = f_cfg.get('monthly_cap') %}
+                            <div class="row g-2 align-items-center mb-3 pb-2"
+                                 style="border-bottom: 1px solid var(--border);">
+                                <div class="col-md-5">
+                                    <label class="form-label small fw-semibold mb-1">
+                                        {{ f.label_ar }}
+                                    </label>
+                                    {% if f.description_ar %}
+                                    <small class="text-muted d-block">{{ f.description_ar }}</small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox"
+                                               name="ai_feature_{{ f.key }}_enabled"
+                                               id="ai_feature_{{ f.key }}_enabled"
+                                               {{ 'checked' if f_enabled }}>
+                                        <label class="form-check-label small"
+                                               for="ai_feature_{{ f.key }}_enabled">
+                                            {{ 'مفعّلة' if f_enabled else 'معطّلة' }}
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="number" name="ai_feature_{{ f.key }}_cap"
+                                           class="form-control form-control-sm"
+                                           value="{{ f_cap if f_cap is not none else '' }}"
+                                           placeholder="سقف شهري مخصص (اختياري)">
+                                    <small class="text-muted">
+                                        فارغ = يستخدم السقف العام
+                                        ({% raw %}ai_calls_per_month{% endraw %})
+                                    </small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                    <p class="text-muted small mb-0">لا توجد ميزات ذكاء اصطناعي مسجّلة بعد.</p>
+                    {% endif %}
+                    <div class="alert alert-info small mb-0 mt-2">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>السقف العام</strong> (في حقل
+                        <code>ai_calls_per_month</code> ضمن "الحدود الكمية")
+                        يطبّق على مجموع الاستخدام عبر جميع الميزات.
+                        السقف المخصص لكل ميزة يطبّق إضافياً (الأقل أولاً).
+                    </div>
+                </div>
+            </div>
+
             <!-- Feature toggles by group -->
             {% for group_key, group_label in groups.items() %}
             <div class="card mt-3">

@@ -49,6 +49,7 @@ def plans_create():
     from app.utils.market_config import (
         normalize_market, get_config, PLAN_COMPARISON_ROWS, SUPPORTED_MARKETS,
     )
+    from app.services.ai_usage import KNOWN_AI_FEATURES
     if request.method == 'POST':
         name = (request.form.get('name') or '').strip()
         name_ar = (request.form.get('name_ar') or '').strip()
@@ -58,7 +59,9 @@ def plans_create():
             return render_template('admin/plans/form.html', plan=None,
                                    features_by_group=features_by_group(), groups=GROUPS,
                                    comparison_rows=PLAN_COMPARISON_ROWS,
-                                   markets=SUPPORTED_MARKETS, form=request.form)
+                                   markets=SUPPORTED_MARKETS,
+                                   ai_features_registry=KNOWN_AI_FEATURES,
+                                   form=request.form)
 
         # (name, market) is the natural key — same name allowed across markets.
         existing = SubscriptionPlan.query.filter_by(name=name, market=market).first()
@@ -67,7 +70,9 @@ def plans_create():
             return render_template('admin/plans/form.html', plan=None,
                                    features_by_group=features_by_group(), groups=GROUPS,
                                    comparison_rows=PLAN_COMPARISON_ROWS,
-                                   markets=SUPPORTED_MARKETS, form=request.form)
+                                   markets=SUPPORTED_MARKETS,
+                                   ai_features_registry=KNOWN_AI_FEATURES,
+                                   form=request.form)
 
         currency = (request.form.get('currency_code') or get_config(market)['currency_code']).upper()
         plan = SubscriptionPlan(
@@ -103,7 +108,8 @@ def plans_create():
     return render_template('admin/plans/form.html', plan=None,
                            features_by_group=features_by_group(), groups=GROUPS,
                            comparison_rows=PLAN_COMPARISON_ROWS,
-                           markets=SUPPORTED_MARKETS, form={})
+                           markets=SUPPORTED_MARKETS,
+                           ai_features_registry=KNOWN_AI_FEATURES, form={})
 
 
 # ───────────────────────────── edit ─────────────────────────────
@@ -115,6 +121,7 @@ def plans_edit(plan_id):
     from app.utils.market_config import (
         normalize_market, PLAN_COMPARISON_ROWS, SUPPORTED_MARKETS,
     )
+    from app.services.ai_usage import KNOWN_AI_FEATURES
     plan = _plan_or_404(plan_id)
     tenant_count = _tenant_count(plan_id)
 
@@ -161,7 +168,8 @@ def plans_edit(plan_id):
     return render_template('admin/plans/form.html', plan=plan, tenant_count=tenant_count,
                            features_by_group=features_by_group(), groups=GROUPS,
                            comparison_rows=PLAN_COMPARISON_ROWS,
-                           markets=SUPPORTED_MARKETS, form=form)
+                           markets=SUPPORTED_MARKETS,
+                           ai_features_registry=KNOWN_AI_FEATURES, form=form)
 
 
 # ───────────────────────────── archive / delete ─────────────────────────────
@@ -227,6 +235,27 @@ def _build_features_from_form(form):
         val = form.get(f'feature_{key}', type=int)
         if val is not None:
             features[key] = val
+
+    # Per-AI-feature config — nested map under 'ai_features'.
+    # Form fields per feature: ai_feature_<key>_enabled (checkbox) and
+    # ai_feature_<key>_cap (text input, blank = no per-feature cap).
+    from app.services.ai_usage import KNOWN_AI_FEATURES
+    ai_features = {}
+    for f in KNOWN_AI_FEATURES:
+        key = f['key']
+        enabled = form.get(f'ai_feature_{key}_enabled') == 'on'
+        cap_raw = (form.get(f'ai_feature_{key}_cap') or '').strip()
+        cap = None
+        if cap_raw:
+            try:
+                cap_int = int(cap_raw)
+                # Treat -1 / 0 / empty all as "no per-feature cap" → fall back
+                # to the umbrella ai_calls_per_month limit.
+                cap = cap_int if cap_int > 0 else None
+            except ValueError:
+                cap = None
+        ai_features[key] = {'enabled': enabled, 'monthly_cap': cap}
+    features['ai_features'] = ai_features
 
     return features
 

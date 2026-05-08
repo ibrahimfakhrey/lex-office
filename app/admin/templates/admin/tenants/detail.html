@@ -37,6 +37,35 @@
         <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#changePlanModal">
             <i class="bi bi-stack"></i> تغيير الخطة
         </button>
+
+        {# ── One-click master AI toggle ─────────────────────────────── #}
+        {% if ai_status %}
+            {% if not ai_status.plan_grants %}
+                {# Plan doesn't include AI — show informational badge, not a button #}
+                <span class="btn btn-sm btn-outline-secondary disabled" title="الخطة الحالية لا تشمل الذكاء الاصطناعي">
+                    <i class="bi bi-stars"></i> AI غير متاح بالخطة
+                </span>
+            {% elif ai_status.currently_enabled %}
+                <form method="POST" action="{{ url_for('admin.tenant_ai_toggle', tenant_id=tenant.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="intent" value="disable">
+                    <button class="btn btn-sm btn-outline-danger"
+                            onclick="return confirm('تعطيل الذكاء الاصطناعي لهذا المكتب؟ سيتم منع جميع طلبات AI فوراً.');">
+                        <i class="bi bi-stars"></i> تعطيل الذكاء الاصطناعي
+                    </button>
+                </form>
+            {% else %}
+                <form method="POST" action="{{ url_for('admin.tenant_ai_toggle', tenant_id=tenant.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="intent" value="enable">
+                    <button class="btn btn-sm btn-outline-success"
+                            onclick="return confirm('إعادة تفعيل الذكاء الاصطناعي لهذا المكتب؟');">
+                        <i class="bi bi-stars"></i> إعادة تفعيل الذكاء الاصطناعي
+                    </button>
+                </form>
+            {% endif %}
+        {% endif %}
+
         {% if tenant.subscription_status != 'cancelled' %}
         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
             <i class="bi bi-x-circle"></i> إلغاء الاشتراك

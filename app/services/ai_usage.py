@@ -48,6 +48,35 @@ _CACHE_WRITE_MULTIPLIER = Decimal('1.25')
 _CACHE_READ_MULTIPLIER = Decimal('0.10')
 
 
+# ── Feature registry ──────────────────────────────────────────────────────────
+# Single source of truth for every AI feature in the app. New features add
+# themselves here; the admin's plan-edit form auto-includes them. Absence of
+# a feature in plan.features.ai_features defaults to "enabled, no per-feature
+# cap" — backwards compatible with plans seeded before this registry existed.
+
+KNOWN_AI_FEATURES = [
+    {
+        'key': 'judgment_extract',
+        'label_ar': 'تحليل الأحكام (PDF/DOCX)',
+        'description_ar': 'استخراج بيانات الحكم تلقائياً من ملف PDF أو DOCX',
+    },
+    # Add new features here as they ship. The admin form re-renders automatically.
+    # {'key': 'poa_extract', 'label_ar': 'استخراج التوكيلات', 'description_ar': '...'},
+    # {'key': 'document_qa', 'label_ar': 'الإجابة على المستندات', 'description_ar': '...'},
+    # {'key': 'session_minutes', 'label_ar': 'تنظيم محاضر الجلسات', 'description_ar': '...'},
+]
+
+_KNOWN_FEATURE_KEYS = {f['key'] for f in KNOWN_AI_FEATURES}
+
+
+def feature_label(key: str) -> str:
+    """Human-readable Arabic label for a feature key."""
+    for f in KNOWN_AI_FEATURES:
+        if f['key'] == key:
+            return f['label_ar']
+    return key
+
+
 # ── Errors ────────────────────────────────────────────────────────────────────
 
 class QuotaError(Exception):
@@ -55,67 +84,133 @@ class QuotaError(Exception):
 
 
 class AIDisabledError(QuotaError):
-    """AI is disabled for this tenant (plan or admin override)."""
+    """AI is disabled for this tenant (plan-level or admin override)."""
+
+
+class FeatureDisabledError(QuotaError):
+    """Master AI is on, but THIS specific feature is disabled in the plan."""
 
 
 class QuotaExceededError(QuotaError):
-    """Monthly cap reached."""
+    """Umbrella monthly cap reached (across all features)."""
+
+
+class FeatureQuotaExceededError(QuotaError):
+    """Per-feature monthly cap reached, even though umbrella has room."""
 
 
 # ── Quota helpers ─────────────────────────────────────────────────────────────
 
 def is_ai_enabled(tenant: Tenant) -> bool:
-    """True if the tenant's plan grants AI AND no admin override disables it."""
+    """True if the tenant's plan grants AI AND no admin override disables it.
+
+    This is the **master kill switch** — checked before any per-feature flag.
+    """
     if tenant is None:
         return False
     return bool(tenant_has_feature(tenant, 'ai_enabled', default=False))
 
 
-def get_quota(tenant: Tenant) -> Tuple[int, int]:
-    """Return (used_this_calendar_month, limit). Limit -1 means unlimited.
+def _plan_features(tenant: Tenant) -> dict:
+    """Plan features dict, defaulting to {} if no plan or no features set."""
+    plan = getattr(tenant, 'subscription_plan', None) if tenant else None
+    return (plan.features or {}) if plan else {}
 
-    `used_this_calendar_month` counts SUCCESSFUL events only — failed calls
-    don't burn the quota, otherwise an upstream Anthropic outage would
-    exhaust the tenant's cap.
+
+def get_feature_config(tenant: Tenant, feature_key: str) -> dict:
+    """Return {'enabled': bool, 'monthly_cap': int|None} for a specific feature.
+
+    Resolution order:
+      1. plan.features.ai_features.<key> if present
+      2. otherwise default: enabled=True, monthly_cap=None (uses umbrella cap)
+
+    A feature absent from the map is implicitly enabled — we don't want to
+    silently disable existing features when adding new ones to the registry.
     """
-    limit_raw = tenant_feature_limit(tenant, 'ai_calls_per_month', default=0) or 0
+    ai_features_map = _plan_features(tenant).get('ai_features') or {}
+    cfg = ai_features_map.get(feature_key) or {}
+    enabled = cfg.get('enabled', True)
+    cap_raw = cfg.get('monthly_cap')
+    if cap_raw is None:
+        cap = None
+    else:
+        try:
+            cap_int = int(cap_raw)
+            cap = None if cap_int < 0 else cap_int
+        except (TypeError, ValueError):
+            cap = None
+    return {'enabled': bool(enabled), 'monthly_cap': cap}
+
+
+def is_feature_enabled(tenant: Tenant, feature_key: str) -> bool:
+    """Combined check: master AI on AND this feature not explicitly disabled."""
+    if not is_ai_enabled(tenant):
+        return False
+    return get_feature_config(tenant, feature_key)['enabled']
+
+
+def get_quota(tenant: Tenant, feature_key: Optional[str] = None) -> Tuple[int, int]:
+    """Return (used, limit) for the umbrella cap, or for a specific feature.
+
+    When `feature_key` is None → umbrella numbers from `ai_calls_per_month`.
+    When `feature_key` is given → per-feature numbers from `ai_features.<key>.monthly_cap`,
+    falling back to umbrella if no per-feature cap is set.
+
+    Limit -1 (or None / unset) means unlimited — caller treats it as "no cap".
+    Successful events only — failed calls don't burn the quota, otherwise an
+    upstream Anthropic outage would exhaust the tenant's cap.
+    """
+    used = _count_used_this_month(tenant, feature=feature_key)
+
+    if feature_key is None:
+        limit_raw = tenant_feature_limit(tenant, 'ai_calls_per_month', default=0) or 0
+    else:
+        cfg = get_feature_config(tenant, feature_key)
+        if cfg['monthly_cap'] is None:
+            # No per-feature cap set; reuse umbrella as the effective cap so
+            # callers see consistent (used, limit) pairs.
+            limit_raw = tenant_feature_limit(tenant, 'ai_calls_per_month', default=0) or 0
+        else:
+            limit_raw = cfg['monthly_cap']
+
     try:
         limit = int(limit_raw)
     except (TypeError, ValueError):
         limit = 0
-
-    used = _count_used_this_month(tenant)
     return used, limit
 
 
-def _count_used_this_month(tenant: Tenant) -> int:
+def _count_used_this_month(tenant: Tenant, feature: Optional[str] = None) -> int:
     if tenant is None:
         return 0
     now = datetime.utcnow()
     month_start = datetime(now.year, now.month, 1)
-    return (
+    q = (
         db.session.query(func.count(AIUsageEvent.id))
         .filter(
             AIUsageEvent.tenant_id == tenant.id,
             AIUsageEvent.created_at >= month_start,
             AIUsageEvent.success.is_(True),
         )
-        .scalar() or 0
     )
+    if feature:
+        q = q.filter(AIUsageEvent.feature == feature)
+    return q.scalar() or 0
 
 
-def check_can_use(tenant: Tenant) -> None:
-    """Raise QuotaError if the tenant cannot make an AI call right now.
+def check_can_use(tenant: Tenant, feature_key: str) -> None:
+    """Raise QuotaError if the tenant cannot make this specific AI call.
 
-    Two distinct conditions:
-      1. AI not entitled (plan flag false, or admin override disabled)
-      2. Monthly quota exhausted
+    Resolution order, each raising a distinct exception:
+      1. Master AI off (plan flag or admin override) → AIDisabledError
+      2. This feature explicitly disabled in plan      → FeatureDisabledError
+      3. Per-feature cap exhausted (if cap set)        → FeatureQuotaExceededError
+      4. Umbrella monthly cap exhausted                → QuotaExceededError
 
-    Errors are Arabic and safe to display directly to the lawyer.
+    All errors carry Arabic, user-safe messages.
     """
+    # 1. Master kill switch
     if not is_ai_enabled(tenant):
-        # Distinguish "plan doesn't include it" vs "admin disabled it" so the
-        # admin override message is more actionable for the office manager.
         from app.models.admin import TenantFeatureOverride
         override = TenantFeatureOverride.query.filter_by(
             tenant_id=tenant.id, feature_key='ai_enabled',
@@ -130,10 +225,30 @@ def check_can_use(tenant: Tenant) -> None:
             'ترقّ إلى خطة أعلى للاستفادة من هذه الميزة'
         )
 
+    # 2. Per-feature on/off
+    feature_cfg = get_feature_config(tenant, feature_key)
+    if not feature_cfg['enabled']:
+        label = feature_label(feature_key)
+        raise FeatureDisabledError(
+            f'ميزة "{label}" غير مفعّلة في خطتك الحالية — '
+            f'ترقّ إلى خطة أعلى أو تواصل مع الإدارة'
+        )
+
+    # 3. Per-feature cap (if set)
+    if feature_cfg['monthly_cap'] is not None:
+        used_feature = _count_used_this_month(tenant, feature=feature_key)
+        cap = feature_cfg['monthly_cap']
+        if used_feature >= cap:
+            label = feature_label(feature_key)
+            raise FeatureQuotaExceededError(
+                f'وصلت إلى الحد الأقصى لاستخدام "{label}" هذا الشهر '
+                f'({used_feature} من {cap}) — يتجدد أول الشهر القادم'
+            )
+
+    # 4. Umbrella cap
     used, limit = get_quota(tenant)
     if limit < 0 or limit == 0:
-        # -1 (or 0/null with ai_enabled=true) → unlimited
-        return
+        return  # unlimited
     if used >= limit:
         raise QuotaExceededError(
             f'وصلت إلى الحد الأقصى لاستخدام الذكاء الاصطناعي هذا الشهر '
@@ -316,6 +431,20 @@ def usage_summary_for_tenant(tenant: Tenant) -> dict:
         .all()
     )
 
+    # Per-feature config (enabled + cap + used) — lets admin see the full
+    # picture: does the plan allow this feature? what's the per-feature cap?
+    feature_status = []
+    for f in KNOWN_AI_FEATURES:
+        cfg = get_feature_config(tenant, f['key'])
+        used_for_feature = _count_used_this_month(tenant, feature=f['key'])
+        feature_status.append({
+            'key': f['key'],
+            'label_ar': f['label_ar'],
+            'enabled': cfg['enabled'],
+            'monthly_cap': cfg['monthly_cap'],
+            'used_this_month': used_for_feature,
+        })
+
     return {
         'enabled': is_ai_enabled(tenant),
         'used_this_month': used,
@@ -329,4 +458,5 @@ def usage_summary_for_tenant(tenant: Tenant) -> dict:
             {'feature': r.feature, 'count': r.count, 'cost_usd': float(r.cost)}
             for r in by_feature
         ],
+        'feature_status': feature_status,
     }

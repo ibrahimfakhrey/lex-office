@@ -142,8 +142,10 @@ def analyze_judgment(text: str, tenant=None, user=None) -> JudgmentAnalysis:
         raise AnalysisError('النص فارغ — لا يمكن تحليله')
 
     # 1. Governance check — raises QuotaError subclasses with Arabic messages.
+    # Feature key must match the one used in record() below and in the
+    # KNOWN_AI_FEATURES registry.
     if tenant is not None:
-        ai_usage.check_can_use(tenant)
+        ai_usage.check_can_use(tenant, feature_key='judgment_extract')
 
     client = _client()
     model = current_app.config.get('ANTHROPIC_MODEL', 'claude-haiku-4-5')

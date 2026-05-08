@@ -120,7 +120,8 @@ def extract():
         analyze_judgment, AnalysisError, AnalysisRateLimitError,
     )
     from app.services.ai_usage import (
-        AIDisabledError, QuotaExceededError, QuotaError,
+        AIDisabledError, FeatureDisabledError,
+        QuotaExceededError, FeatureQuotaExceededError, QuotaError,
     )
     from app.models.tenant import Tenant
     tenant = Tenant.query.get(g.tenant_id)
@@ -128,6 +129,10 @@ def extract():
         analysis = analyze_judgment(extracted.text, tenant=tenant, user=g.current_user)
     except AIDisabledError as exc:
         return jsonify({'ok': False, 'error': str(exc), 'reason': 'ai_disabled'}), 402
+    except FeatureDisabledError as exc:
+        return jsonify({'ok': False, 'error': str(exc), 'reason': 'feature_disabled'}), 402
+    except FeatureQuotaExceededError as exc:
+        return jsonify({'ok': False, 'error': str(exc), 'reason': 'feature_quota_exceeded'}), 402
     except QuotaExceededError as exc:
         return jsonify({'ok': False, 'error': str(exc), 'reason': 'quota_exceeded'}), 402
     except QuotaError as exc:

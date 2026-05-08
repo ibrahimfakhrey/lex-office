@@ -188,6 +188,21 @@ def tenant_detail(tenant_id):
 
     plans = SubscriptionPlan.query.order_by(SubscriptionPlan.price_monthly).all()
 
+    # AI status drives the one-click toggle button rendered in the header.
+    from app.services.ai_usage import is_ai_enabled
+    plan_grants_ai = bool(
+        (tenant.subscription_plan.features or {}).get('ai_enabled')
+        if tenant.subscription_plan else False
+    )
+    ai_override = TenantFeatureOverride.query.filter_by(
+        tenant_id=tenant_id, feature_key='ai_enabled',
+    ).first()
+    ai_status = {
+        'plan_grants': plan_grants_ai,
+        'override_disabled': (ai_override is not None and not ai_override.enabled),
+        'currently_enabled': is_ai_enabled(tenant),
+    }
+
     return render_template(
         'admin/tenants/detail.html',
         tenant=tenant,
@@ -195,6 +210,7 @@ def tenant_detail(tenant_id):
         active_users=active_users,
         total_users=total_users,
         plans=plans,
+        ai_status=ai_status,
     )
 
 
@@ -623,3 +639,69 @@ def tenant_feature_remove(tenant_id, override_id):
     db.session.commit()
     flash(f'تم إزالة الـ Override: {feature_key}', 'warning')
     return redirect(url_for('admin.tenant_features', tenant_id=tenant_id))
+
+
+# ────────────── one-click AI master kill switch ──────────────
+
+@admin_bp.route('/tenants/<int:tenant_id>/ai/toggle', methods=['POST'])
+@admin_permission_required('tenants', 'edit')
+def tenant_ai_toggle(tenant_id):
+    """One-click toggle: master AI on/off for this tenant.
+
+    Three states the button cycles between:
+      - Plan grants AI, no override        → click writes override(enabled=False)
+      - Override(enabled=False) exists     → click DELETES the override
+                                              (reverts to plan default)
+      - Plan does not grant AI             → click is a no-op
+                                              (button hidden in template anyway)
+
+    Per-feature overrides are unaffected — admins still go to the Features
+    tab for granular per-feature toggling. This is the master kill switch.
+    """
+    tenant = _tenant_or_404(tenant_id)
+    intent = (request.form.get('intent') or '').strip()  # 'disable' | 'enable'
+
+    override = TenantFeatureOverride.query.filter_by(
+        tenant_id=tenant_id, feature_key='ai_enabled',
+    ).first()
+
+    if intent == 'disable':
+        if override is None:
+            override = TenantFeatureOverride(
+                tenant_id=tenant_id,
+                feature_key='ai_enabled',
+                enabled=False,
+                reason=(request.form.get('reason') or '').strip()
+                       or 'Disabled via one-click admin action',
+                created_by=g.current_admin.id,
+            )
+            db.session.add(override)
+        else:
+            override.enabled = False
+            override.expires_at = None  # any prior auto-expiry is cancelled
+            override.reason = ((request.form.get('reason') or '').strip()
+                              or override.reason or 'Disabled via one-click admin action')
+        log_action(
+            'TENANT_AI_DISABLED', entity_type='Tenant', entity_id=tenant_id,
+            new_value={'reason': override.reason},
+            description=f'AI disabled for {tenant.name} via one-click toggle',
+        )
+        db.session.commit()
+        flash(f'تم تعطيل الذكاء الاصطناعي لمكتب: {tenant.name}', 'warning')
+
+    elif intent == 'enable':
+        if override is not None and not override.enabled:
+            db.session.delete(override)
+            log_action(
+                'TENANT_AI_REENABLED', entity_type='Tenant', entity_id=tenant_id,
+                description=f'AI re-enabled for {tenant.name} (override removed)',
+            )
+            db.session.commit()
+            flash(f'تم إعادة تفعيل الذكاء الاصطناعي لمكتب: {tenant.name}', 'success')
+        else:
+            flash('الذكاء الاصطناعي مفعّل بالفعل لهذا المكتب', 'info')
+
+    else:
+        flash('قيمة intent غير صحيحة', 'danger')
+
+    return redirect(url_for('admin.tenant_detail', tenant_id=tenant_id))
