@@ -1,6 +1,12 @@
 """Judgment management routes."""
+import os
+import uuid
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g
+from flask import (
+    Blueprint, render_template, request, redirect, url_for, flash, g,
+    jsonify, current_app,
+)
+from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.utils.decorators import login_required, permission_required
 from app.models.judgment import Judgment
@@ -17,6 +23,36 @@ JUDGMENT_RESULTS = [
     ('postponement', 'تأجيل'), ('procedural', 'شكلي'), ('absence', 'غيابي'),
 ]
 APPEAL_DAYS = {'primary': 40, 'appeal': 60, 'cassation': 60}
+
+ALLOWED_UPLOAD_EXTS = {'.pdf', '.docx'}
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+def _save_uploaded_judgment(file_storage):
+    """Save the uploaded judgment file under static/uploads/judgments/<tenant>/.
+
+    Returns (absolute_path, web_relative_path) — web path is what we store on
+    the model so url_for('static', filename=...) can serve it.
+    """
+    filename = secure_filename(file_storage.filename or 'judgment')
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_UPLOAD_EXTS:
+        from app.services.judgment_extractor import UnsupportedFileTypeError
+        raise UnsupportedFileTypeError(
+            'نوع الملف غير مدعوم — يرجى رفع PDF أو DOCX فقط'
+        )
+
+    upload_dir = os.path.join(
+        current_app.root_path, 'static', 'uploads', 'judgments',
+        f'tenant_{g.tenant_id}',
+    )
+    os.makedirs(upload_dir, exist_ok=True)
+
+    unique_name = f'{uuid.uuid4().hex[:12]}_{filename}'
+    abs_path = os.path.join(upload_dir, unique_name)
+    file_storage.save(abs_path)
+    web_path = f'uploads/judgments/tenant_{g.tenant_id}/{unique_name}'
+    return abs_path, web_path
 
 
 @judgments_bp.route('/')
@@ -36,6 +72,68 @@ def index():
     judgments = query.order_by(Judgment.judgment_date.desc()).paginate(page=page, per_page=20)
     return render_template('judgments/index.html', judgments=judgments, case_id=case_id,
                            result=result, judgment_results=JUDGMENT_RESULTS)
+
+
+@judgments_bp.route('/extract', methods=['POST'])
+@permission_required('judgments', 'create')
+def extract():
+    """AJAX: receive an uploaded PDF/DOCX, extract text, run Claude analysis,
+    return structured JSON for client-side form pre-filling.
+
+    Saves the uploaded file so a follow-up POST /judgments/create can attach
+    it to the new Judgment row by passing back ``upload_path`` from this
+    response (round-tripped through a hidden form field).
+    """
+    file = request.files.get('file')
+    if not file or not file.filename:
+        return jsonify({'ok': False, 'error': 'لم يتم اختيار ملف'}), 400
+
+    # Size check (Flask config has MAX_CONTENT_LENGTH, but this gives a nicer
+    # Arabic error than the framework's 413).
+    file.stream.seek(0, os.SEEK_END)
+    size = file.stream.tell()
+    file.stream.seek(0)
+    if size > MAX_UPLOAD_BYTES:
+        return jsonify({
+            'ok': False,
+            'error': 'حجم الملف يتجاوز الحد المسموح (10 ميجا)'
+        }), 413
+
+    try:
+        abs_path, web_path = _save_uploaded_judgment(file)
+    except Exception as exc:
+        return jsonify({'ok': False, 'error': str(exc)}), 400
+
+    # Extract text
+    from app.services.judgment_extractor import (
+        extract_text, ExtractionError, ScannedPdfError,
+    )
+    try:
+        extracted = extract_text(abs_path)
+    except ScannedPdfError as exc:
+        return jsonify({'ok': False, 'error': str(exc), 'scanned': True}), 422
+    except ExtractionError as exc:
+        return jsonify({'ok': False, 'error': str(exc)}), 422
+
+    # Analyze with Claude
+    from app.services.judgment_ai import (
+        analyze_judgment, AnalysisError, AnalysisRateLimitError,
+    )
+    try:
+        analysis = analyze_judgment(extracted.text)
+    except AnalysisRateLimitError as exc:
+        return jsonify({'ok': False, 'error': str(exc)}), 429
+    except AnalysisError as exc:
+        return jsonify({'ok': False, 'error': str(exc)}), 502
+
+    return jsonify({
+        'ok': True,
+        'upload_path': web_path,
+        'extracted_text': extracted.text,
+        'analysis': analysis.model_dump(),
+        'page_count': extracted.page_count,
+        'char_count': extracted.char_count,
+    })
 
 
 @judgments_bp.route('/create', methods=['GET', 'POST'])
@@ -82,6 +180,19 @@ def create():
             if request.form.get('appeal_deadline'):
                 appeal_deadline = datetime.strptime(request.form['appeal_deadline'], '%Y-%m-%d').date()
 
+        # Round-tripped from /judgments/extract — both optional. The hidden
+        # field carries either a JSON-serialised analysis dict or empty string.
+        ai_analysis_raw = (request.form.get('ai_analysis_json') or '').strip()
+        ai_analysis_data = None
+        if ai_analysis_raw:
+            try:
+                import json as _json
+                ai_analysis_data = _json.loads(ai_analysis_raw)
+            except (ValueError, TypeError):
+                ai_analysis_data = None
+
+        judgment_file_path = (request.form.get('judgment_file_path') or '').strip() or None
+
         judgment = Judgment(
             tenant_id=g.tenant_id,
             case_id=case_id,
@@ -90,12 +201,14 @@ def create():
             judgment_type=judgment_type,
             result=result,
             judgment_text=request.form.get('judgment_text', '').strip() or None,
+            judgment_file_path=judgment_file_path,
             judge_name=request.form.get('judge_name', '').strip() or None,
             awarded_amount=request.form.get('awarded_amount', type=float) or None,
             notes=request.form.get('notes', '').strip() or None,
             appeal_tracking_enabled=appeal_tracking,
             appeal_type=judgment_type,
             appeal_deadline=appeal_deadline,
+            ai_analysis=ai_analysis_data,
         )
         db.session.add(judgment)
 

@@ -41,3 +41,8 @@ gunicorn==23.0.0
 
 # GeoIP — silent country detection for multi-market routing (EG / SA)
 geoip2==4.8.0
+
+# Judgment AI: Claude analysis of uploaded PDFs/DOCX
+# anthropic 0.50+ provides client.messages.parse() with Pydantic validation
+anthropic==0.100.0
+PyMuPDF==1.25.1

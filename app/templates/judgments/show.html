@@ -74,6 +74,73 @@
                 </div>
             </div>
         </div>
+
+        {# ── AI analysis panel — only shown when an AI extraction was saved ── #}
+        {% if judgment.ai_analysis %}
+        {% set ai = judgment.ai_analysis %}
+        <div class="card mb-3" style="border-right:4px solid #078FD2;">
+            <div class="card-header d-flex align-items-center gap-2"
+                 style="background:linear-gradient(180deg,#f0f9ff 0%, #ffffff 100%);">
+                <i class="bi bi-stars" style="color:#078FD2;"></i>
+                <strong>التحليل التلقائي بالذكاء الاصطناعي</strong>
+                <small class="text-muted ms-auto">تم استخراج هذا التحليل تلقائياً من الملف المرفوع</small>
+            </div>
+            <div class="card-body">
+                {% if ai.summary_ar %}
+                <div class="mb-3">
+                    <small class="text-muted d-block mb-1">ملخص الحكم</small>
+                    <p class="mb-0" style="line-height:1.8;">{{ ai.summary_ar }}</p>
+                </div>
+                {% endif %}
+
+                {% if ai.key_points_ar %}
+                <div class="mb-3">
+                    <small class="text-muted d-block mb-2">النقاط الرئيسية</small>
+                    <ul class="mb-0" style="line-height:1.8;">
+                        {% for point in ai.key_points_ar %}
+                        <li>{{ point }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if ai.parties and (ai.parties.plaintiff or ai.parties.defendant) %}
+                <div class="row g-3">
+                    {% if ai.parties.plaintiff %}
+                    <div class="col-md-6">
+                        <small class="text-muted">المدعي / الطرف الأول</small>
+                        <div><strong>{{ ai.parties.plaintiff }}</strong></div>
+                    </div>
+                    {% endif %}
+                    {% if ai.parties.defendant %}
+                    <div class="col-md-6">
+                        <small class="text-muted">المدعى عليه / الطرف الثاني</small>
+                        <div><strong>{{ ai.parties.defendant }}</strong></div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if ai.case_number %}
+                <div class="mt-2">
+                    <small class="text-muted">رقم الدعوى المستخرج</small>
+                    <div>{{ ai.case_number }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if judgment.judgment_file_path %}
+        <div class="card mb-3">
+            <div class="card-body py-2">
+                <a href="{{ url_for('static', filename=judgment.judgment_file_path) }}"
+                   target="_blank" class="text-decoration-none">
+                    <i class="bi bi-file-earmark-pdf me-1"></i> فتح نسخة الحكم المرفوعة
+                </a>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Sidebar: Appeal Tracking -->

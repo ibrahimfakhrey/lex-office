@@ -17,6 +17,11 @@ class Judgment(db.Model):
     judge_name = db.Column(db.String(200), nullable=True)
     awarded_amount = db.Column(db.Numeric(12, 2), nullable=True)
     notes = db.Column(db.Text, nullable=True)
+    # Structured analysis returned by Claude when the lawyer uploads a judgment
+    # PDF/DOCX on /judgments/create. Holds the keys: court_name, judgment_date,
+    # judgment_type, result, judge_name, case_number, awarded_amount,
+    # parties{plaintiff,defendant}, summary_ar, key_points_ar.
+    ai_analysis = db.Column(db.JSON, nullable=True)
 
     # Appeal tracking
     appeal_tracking_enabled = db.Column(db.Boolean, default=False)
@@ -50,6 +55,7 @@ class Judgment(db.Model):
             'judge_name': self.judge_name,
             'awarded_amount': float(self.awarded_amount) if self.awarded_amount is not None else None,
             'notes': self.notes,
+            'ai_analysis': self.ai_analysis,
             'appeal_tracking_enabled': self.appeal_tracking_enabled,
             'appeal_type': self.appeal_type,
             'appeal_deadline': self.appeal_deadline.isoformat() if self.appeal_deadline else None,

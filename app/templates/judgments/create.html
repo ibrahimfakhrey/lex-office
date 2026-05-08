@@ -7,10 +7,30 @@
     <a href="{{ url_for('judgments.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
 </div>
 
+<!-- Smart upload — drop a PDF/DOCX, AI fills the form. Optional. -->
+<div class="card mb-3" id="aiUploadCard"
+     style="border:2px dashed #cbd5e1; background:linear-gradient(180deg,#f0f9ff 0%, #fafcff 100%);">
+    <div class="card-body text-center py-4">
+        <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+            <i class="bi bi-stars" style="font-size:1.4rem; color:#078FD2;"></i>
+            <h5 class="mb-0" style="color:#0C2461;">رفع نسخة الحكم — استخراج تلقائي بالذكاء الاصطناعي</h5>
+        </div>
+        <p class="text-muted small mb-3">
+            ارفع ملف PDF أو DOCX للحكم وسنقوم بتعبئة الحقول تلقائياً (اختياري —
+            يمكنك تجاهل هذا القسم وإدخال البيانات يدوياً).
+        </p>
+        <input type="file" id="aiJudgmentFile" accept=".pdf,.docx" class="form-control" style="max-width:420px; margin:0 auto;">
+        <div id="aiUploadStatus" class="mt-2 small"></div>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-body">
-        <form method="POST">
+        <form method="POST" id="judgmentForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <!-- Filled by /judgments/extract; saved alongside the judgment -->
+            <input type="hidden" name="judgment_file_path" id="judgmentFilePath" value="">
+            <input type="hidden" name="ai_analysis_json" id="aiAnalysisJson" value="">
 
             <div class="row g-3">
                 <!-- Case -->
@@ -147,5 +167,86 @@ document.querySelector('[name="judgment_date"]').addEventListener('change', calc
 
 // Init on load
 if (document.getElementById('appealCheck').checked) toggleAppeal();
+
+// ── AI upload: send file → server extracts + analyzes → pre-fill form ──
+const csrfToken = document.querySelector('[name="csrf_token"]').value;
+const fileInput = document.getElementById('aiJudgmentFile');
+const status = document.getElementById('aiUploadStatus');
+
+function setStatus(msg, kind) {
+    // kind: '', 'info', 'success', 'danger'
+    status.className = 'mt-2 small ' + (kind ? 'text-' + kind : 'text-muted');
+    status.innerHTML = msg;
+}
+
+function fillIfEmpty(name, value) {
+    if (value === null || value === undefined || value === '') return false;
+    const el = document.querySelector(`[name="${name}"]`);
+    if (!el) return false;
+    if (!el.value || el.value === '') {
+        el.value = value;
+        // Re-fire change so dependent calcs run (e.g. appeal deadline)
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+    }
+    return false;
+}
+
+fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+        setStatus('⚠️ حجم الملف يتجاوز 10 ميجا', 'danger');
+        return;
+    }
+
+    setStatus('<span class="spinner-border spinner-border-sm me-2"></span> جاري استخراج النص وتحليله بالذكاء الاصطناعي… (10-15 ثانية)', 'info');
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('csrf_token', csrfToken);
+
+    try {
+        const resp = await fetch('{{ url_for("judgments.extract") }}', {
+            method: 'POST', body: formData,
+        });
+        const data = await resp.json();
+
+        if (!resp.ok || !data.ok) {
+            setStatus('⚠️ ' + (data.error || 'حدث خطأ غير متوقع'), 'danger');
+            return;
+        }
+
+        // Hidden carriers — round-trip into POST /judgments/create
+        document.getElementById('judgmentFilePath').value = data.upload_path || '';
+        document.getElementById('aiAnalysisJson').value = JSON.stringify(data.analysis);
+
+        // Pre-fill text + each structured field if not already typed
+        const a = data.analysis;
+        const filled = [];
+        if (fillIfEmpty('judgment_date',  a.judgment_date))  filled.push('التاريخ');
+        if (fillIfEmpty('judgment_type',  a.judgment_type))  filled.push('النوع');
+        if (fillIfEmpty('result',         a.result))         filled.push('النتيجة');
+        if (fillIfEmpty('judge_name',     a.judge_name))     filled.push('اسم القاضي');
+        if (fillIfEmpty('awarded_amount', a.awarded_amount)) filled.push('المبلغ');
+        // Use the extracted text as the manual judgment_text seed
+        if (fillIfEmpty('judgment_text',  data.extracted_text.slice(0, 4000))) filled.push('نص الحكم');
+        // Notes: append AI summary so the lawyer sees it inline
+        if (a.summary_ar) {
+            const notesEl = document.querySelector('[name="notes"]');
+            if (notesEl && !notesEl.value) {
+                notesEl.value = a.summary_ar;
+                filled.push('الملخص');
+            }
+        }
+
+        const filledMsg = filled.length
+            ? `<strong>تم تعبئة:</strong> ${filled.join('، ')}`
+            : 'لم يتم استخراج بيانات قابلة للتعبئة — يرجى الإدخال يدوياً';
+        setStatus(`✓ ${filledMsg}. <em class="text-muted">راجع الحقول قبل الحفظ.</em>`, 'success');
+    } catch (err) {
+        setStatus('⚠️ تعذّر الاتصال بالخادم: ' + err.message, 'danger');
+    }
+});
 </script>
 {% endblock %}
