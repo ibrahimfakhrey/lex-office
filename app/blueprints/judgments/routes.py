@@ -33,14 +33,30 @@ def _save_uploaded_judgment(file_storage):
 
     Returns (absolute_path, web_relative_path) — web path is what we store on
     the model so url_for('static', filename=...) can serve it.
+
+    Note: extension validation runs on the ORIGINAL filename, not the
+    werkzeug-secured one. secure_filename() strips non-ASCII characters,
+    so an Arabic filename like 'حكم.pdf' would collapse to 'pdf' (no
+    extension) and fail the check incorrectly. Real-world Arabic offices
+    name files in Arabic — we have to accept that.
     """
-    filename = secure_filename(file_storage.filename or 'judgment')
-    ext = os.path.splitext(filename)[1].lower()
+    raw_name = file_storage.filename or 'judgment'
+
+    # 1. Validate extension on the raw name (Arabic-safe)
+    ext = os.path.splitext(raw_name)[1].lower()
     if ext not in ALLOWED_UPLOAD_EXTS:
         from app.services.judgment_extractor import UnsupportedFileTypeError
         raise UnsupportedFileTypeError(
             'نوع الملف غير مدعوم — يرجى رفع PDF أو DOCX فقط'
         )
+
+    # 2. Build a safe storage filename. secure_filename() may strip the
+    # whole base (Arabic) — fall back to a uuid stem so the file always
+    # has a usable name on disk while preserving the validated extension.
+    safe_stem = secure_filename(os.path.splitext(raw_name)[0])
+    if not safe_stem:
+        safe_stem = 'judgment'
+    unique_name = f'{uuid.uuid4().hex[:12]}_{safe_stem}{ext}'
 
     upload_dir = os.path.join(
         current_app.root_path, 'static', 'uploads', 'judgments',
@@ -48,7 +64,6 @@ def _save_uploaded_judgment(file_storage):
     )
     os.makedirs(upload_dir, exist_ok=True)
 
-    unique_name = f'{uuid.uuid4().hex[:12]}_{filename}'
     abs_path = os.path.join(upload_dir, unique_name)
     file_storage.save(abs_path)
     web_path = f'uploads/judgments/tenant_{g.tenant_id}/{unique_name}'
