@@ -16,6 +16,12 @@ same governance (`ai_usage.check_can_use` / `record`), and burn the same
 `judgment_extract` feature key — the admin sees one combined feature, not
 two.
 
+Why we use tool-use (not `messages.parse`): Anthropic's constrained-grammar
+compiler intermittently times out on multi-page vision requests ("Grammar
+compilation timed out"). We use a regular tool (no `strict: true`) — Claude
+returns its result as the tool's `input` dict, pre-parsed JSON, no fragile
+text-extraction step. Pydantic validates on our side.
+
 Why no prompt caching: Haiku 4.5 needs a 4096-token prefix to cache. Our
 system prompt is ~1500 tokens, so caching costs more than it saves. Sonnet
 4.6 caches at 1024 tokens — worth revisiting if vision usage scales up.
@@ -41,41 +47,26 @@ _DEFAULT_VISION_MODEL = 'claude-sonnet-4-6'
 # ── Output schema ─────────────────────────────────────────────────────────────
 
 class JudgmentParties(BaseModel):
-    plaintiff: Optional[str] = Field(None, description='اسم المدعي / الطرف الأول')
-    defendant: Optional[str] = Field(None, description='اسم المدعى عليه / الطرف الثاني')
+    plaintiff: Optional[str] = None
+    defendant: Optional[str] = None
 
 
+# Short field descriptions only — Anthropic's structured-outputs grammar
+# compiler can time out when descriptions are long, especially with Arabic
+# multi-byte text. Detailed instructions live in the system prompt.
 class JudgmentAnalysis(BaseModel):
-    """Structured fields extracted from an Arabic legal judgment.
-
-    All fields nullable — the model returns null when not confident, which is
-    safer than guessing. Date is ISO-8601 (YYYY-MM-DD) or null.
-    """
-    court_name: Optional[str] = Field(None, description='اسم المحكمة الكامل')
-    judgment_date: Optional[str] = Field(
-        None, description='تاريخ الحكم بصيغة YYYY-MM-DD، أو null إذا غير واضح'
-    )
-    judgment_type: Optional[str] = Field(
-        None, description='نوع الحكم: primary | appeal | cassation | constitutional'
-    )
-    result: Optional[str] = Field(
-        None,
-        description='نتيجة الحكم: full_win | partial_win | loss | postponement '
-                    '| procedural | absence',
-    )
-    judge_name: Optional[str] = Field(None, description='اسم القاضي/المستشار')
-    case_number: Optional[str] = Field(None, description='رقم الدعوى/القضية')
-    awarded_amount: Optional[float] = Field(
-        None, description='المبلغ المحكوم به بالأرقام (بدون رمز عملة)'
-    )
+    court_name: Optional[str] = None
+    judgment_date: Optional[str] = None       # YYYY-MM-DD
+    judgment_type: Optional[str] = None       # primary | appeal | cassation | constitutional
+    result: Optional[str] = None              # full_win | partial_win | loss | postponement | procedural | absence
+    judge_name: Optional[str] = None
+    case_number: Optional[str] = None
+    awarded_amount: Optional[float] = None
     parties: Optional[JudgmentParties] = None
-    summary_ar: str = Field(
-        ..., description='ملخص الحكم في 2-4 جمل عربية واضحة'
-    )
-    key_points_ar: List[str] = Field(
-        default_factory=list,
-        description='3-5 نقاط رئيسية من الحكم باللغة العربية',
-    )
+    full_text_ar: Optional[str] = None        # entire verbatim ruling
+    dispositive_ar: Optional[str] = None      # operative ruling only
+    summary_ar: str                           # 2-4 sentence summary
+    key_points_ar: List[str] = Field(default_factory=list)
 
 
 # ── Errors ────────────────────────────────────────────────────────────────────
@@ -115,11 +106,55 @@ _SYSTEM_PROMPT = """أنت مساعد قانوني متخصص في تحليل ا
    - procedural: حكم شكلي (عدم الاختصاص، عدم القبول شكلاً)
    - absence: حكم غيابي
 6. awarded_amount: رقم فقط (بدون "ج.م" أو "ر.س"). إن كان "غير محدود" أو غير ذلك، اتركه null.
-7. summary_ar: ملخص في 2 إلى 4 جمل واضحة. ركّز على ما حُكم به ولماذا.
-8. key_points_ar: من 3 إلى 5 نقاط أساسية. كل نقطة جملة قصيرة.
+   ملحوظة: قضايا الأحوال الشخصية والطلاق وغيرها لا تتضمن مبلغاً مالياً عادةً — اتركه null.
+7. full_text_ar (النص الكامل): انسخ النص الكامل للحكم حرفياً كما يظهر في \
+الوثيقة، بكل فقراته (الديباجة، الوقائع، الأسباب، المنطوق). لا تختصر ولا تحذف \
+أي فقرة. حافظ على الترقيم والتنسيق ما أمكن. هذا هو ما سيُحفظ في حقل "نص الحكم / \
+المنطوق" الذي يراه المحامي.
+8. dispositive_ar (منطوق الحكم): انسخ النص الحرفي للجزء الذي تنطق به المحكمة \
+فقط ("حكمت المحكمة بـ..." أو "قضت المحكمة بـ..."). حقل مستقل يُستخدم \
+للبحث والفهرسة. اتركه null إن لم يظهر بوضوح.
+9. summary_ar: ملخص في 2 إلى 4 جمل واضحة. ركّز على ما حُكم به ولماذا.
+10. key_points_ar: من 3 إلى 5 نقاط أساسية. كل نقطة جملة قصيرة.
 
 تذكّر: المحامي سيراجع كل حقل ويصححه. هدفك أن توفّر عليه الكتابة، وليس أن تتظاهر بالمعرفة. \
-الـ null في حقل غير واضح أفضل من قيمة خاطئة."""
+الـ null في حقل غير واضح أفضل من قيمة خاطئة.
+
+استخدم أداة save_judgment_analysis لإرسال النتيجة. لا تجب بنص حر — \
+استدع الأداة فقط بالحقول المطلوبة."""
+
+
+# Tool schema — used in place of structured outputs to avoid the grammar
+# timeout issue. NOT marked strict, so Claude's output isn't constrained
+# at decode time; we validate with Pydantic on our side.
+_ANALYSIS_TOOL = {
+    'name': 'save_judgment_analysis',
+    'description': 'حفظ التحليل المنظم للحكم القضائي.',
+    'input_schema': {
+        'type': 'object',
+        'properties': {
+            'court_name':     {'type': ['string', 'null']},
+            'judgment_date':  {'type': ['string', 'null']},
+            'judgment_type':  {'type': ['string', 'null']},
+            'result':         {'type': ['string', 'null']},
+            'judge_name':     {'type': ['string', 'null']},
+            'case_number':    {'type': ['string', 'null']},
+            'awarded_amount': {'type': ['number', 'null']},
+            'parties': {
+                'type': ['object', 'null'],
+                'properties': {
+                    'plaintiff': {'type': ['string', 'null']},
+                    'defendant': {'type': ['string', 'null']},
+                },
+            },
+            'full_text_ar':   {'type': ['string', 'null']},
+            'dispositive_ar': {'type': ['string', 'null']},
+            'summary_ar':     {'type': 'string'},
+            'key_points_ar':  {'type': 'array', 'items': {'type': 'string'}},
+        },
+        'required': ['summary_ar'],
+    },
+}
 
 
 _VISION_USER_PREFIX = (
@@ -145,24 +180,28 @@ def _parse_with_governance(*, model: str, messages: list, max_tokens: int,
                            tenant, user) -> JudgmentAnalysis:
     """Shared call path for both text and vision routes.
 
-    Performs the API call, handles every Anthropic exception type with the
-    correct Arabic user message, records both successes and failures into
-    ai_usage. Quota check is done by the public callers BEFORE this runs —
-    no double-checking here.
+    Uses Anthropic's tool-use API: defines `save_judgment_analysis` as a
+    forced tool and reads the result from response.content's tool_use block.
+    The block's `input` is pre-parsed JSON — no fragile text extraction.
+
+    Records both successes and failures into ai_usage. Quota check is done
+    by the public callers BEFORE this runs.
     """
     import anthropic
+    from pydantic import ValidationError
     from app.services import ai_usage
 
     client = _client()
 
     response = None
     try:
-        response = client.messages.parse(
+        response = client.messages.create(
             model=model,
             max_tokens=max_tokens,
             system=_SYSTEM_PROMPT,
             messages=messages,
-            output_format=JudgmentAnalysis,
+            tools=[_ANALYSIS_TOOL],
+            tool_choice={'type': 'tool', 'name': _ANALYSIS_TOOL['name']},
         )
     except anthropic.AuthenticationError as e:
         if tenant is not None:
@@ -210,16 +249,45 @@ def _parse_with_governance(*, model: str, messages: list, max_tokens: int,
             'تعذّر الاتصال بخدمة التحليل — تحقق من اتصال الإنترنت'
         )
 
-    if response.parsed_output is None:
+    # Find the tool_use block — Claude was forced to call our tool, so
+    # this should always be present on success.
+    payload = None
+    for block in (response.content or []):
+        if getattr(block, 'type', None) == 'tool_use' \
+                and getattr(block, 'name', '') == _ANALYSIS_TOOL['name']:
+            payload = block.input
+            break
+
+    if not isinstance(payload, dict):
         if tenant is not None:
             ai_usage.record(tenant, user, feature='judgment_extract',
                             model=model, response=response, success=False,
-                            error='parse_failure_or_refusal')
-        logger.warning('Claude returned unparsed response (stop_reason=%s)',
+                            error=f'no_tool_use_in_response stop={response.stop_reason}')
+        logger.warning('Claude returned no tool_use block (stop=%s)',
                        response.stop_reason)
         raise AnalysisError(
             'فشل التحليل التلقائي — يرجى إدخال البيانات يدوياً'
         )
+
+    try:
+        analysis = JudgmentAnalysis.model_validate(payload)
+    except ValidationError as e:
+        # Be lenient: the only required field is summary_ar. If it's
+        # missing/blank, synthesize an empty one so the lawyer at least
+        # sees whatever else Claude produced.
+        if not payload.get('summary_ar'):
+            payload['summary_ar'] = ''
+        try:
+            analysis = JudgmentAnalysis.model_validate(payload)
+        except ValidationError:
+            if tenant is not None:
+                ai_usage.record(tenant, user, feature='judgment_extract',
+                                model=model, response=response, success=False,
+                                error=f'pydantic_validation: {e!s}'[:500])
+            logger.warning('Tool input failed Pydantic validation: %s', e)
+            raise AnalysisError(
+                'فشل التحليل التلقائي — يرجى إدخال البيانات يدوياً'
+            )
 
     # Record the successful call. Quota is enforced on success counts, so
     # this is what burns the tenant's monthly cap.
@@ -227,7 +295,7 @@ def _parse_with_governance(*, model: str, messages: list, max_tokens: int,
         ai_usage.record(tenant, user, feature='judgment_extract',
                         model=model, response=response, success=True)
 
-    return response.parsed_output
+    return analysis
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -257,8 +325,9 @@ def analyze_judgment(text: str, tenant=None, user=None) -> JudgmentAnalysis:
     )
     messages = [{"role": "user", "content": user_message}]
 
+    # Same reasoning as the vision path: full_text_ar can be long.
     return _parse_with_governance(
-        model=model, messages=messages, max_tokens=2000,
+        model=model, messages=messages, max_tokens=12000,
         tenant=tenant, user=user,
     )
 
@@ -299,9 +368,11 @@ def analyze_judgment_images(
     content_blocks.append({'type': 'text', 'text': _VISION_USER_PREFIX})
     messages = [{"role": "user", "content": content_blocks}]
 
-    # Vision needs more output room — Sonnet on a multi-page judgment may
-    # produce a longer summary. Headroom doesn't cost anything until used.
+    # Vision returns full transcribed text in `full_text_ar` (verbatim, no
+    # summarization) — that's what populates the "نص الحكم / المنطوق" field
+    # on the form. A 1-page Arabic judgment is typically 1.5-3K output
+    # tokens; multi-page can hit 8-10K. Headroom only costs when used.
     return _parse_with_governance(
-        model=model, messages=messages, max_tokens=4000,
+        model=model, messages=messages, max_tokens=12000,
         tenant=tenant, user=user,
     )

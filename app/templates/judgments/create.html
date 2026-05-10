@@ -200,7 +200,7 @@ fileInput.addEventListener('change', async () => {
         return;
     }
 
-    setStatus('<span class="spinner-border spinner-border-sm me-2"></span> جاري استخراج النص وتحليله بالذكاء الاصطناعي… (10-15 ثانية)', 'info');
+    setStatus('<span class="spinner-border spinner-border-sm me-2"></span> جاري استخراج النص وتحليله بالذكاء الاصطناعي… قد يستغرق حتى دقيقتين للملفات متعددة الصفحات. لا تغلق الصفحة.', 'info');
 
     const formData = new FormData();
     formData.append('file', file);
@@ -250,10 +250,14 @@ fileInput.addEventListener('change', async () => {
         if (fillIfEmpty('judge_name',     a.judge_name))     filled.push('اسم القاضي');
         if (fillIfEmpty('awarded_amount', a.awarded_amount)) filled.push('المبلغ');
         // Use the extracted text as the manual judgment_text seed
-        // For scanned PDFs (mode='vision') extracted_text is empty — skip
-        // pre-filling judgment_text in that case. The lawyer can paste a
-        // transcript later, or rely on the AI summary in 'notes'.
-        if (data.extracted_text && fillIfEmpty('judgment_text',  data.extracted_text.slice(0, 4000))) filled.push('نص الحكم');
+        // Fill judgment_text with the FULL verbatim text Claude transcribed.
+        // Falls back to the dispositive (operative ruling), then to raw
+        // text-mode extraction. The lawyer wants the entire ruling, not a
+        // summary — the summary lives in notes below.
+        const judgmentTextSeed = a.full_text_ar
+            || a.dispositive_ar
+            || (data.extracted_text ? data.extracted_text.slice(0, 8000) : '');
+        if (judgmentTextSeed && fillIfEmpty('judgment_text', judgmentTextSeed)) filled.push('نص الحكم');
         // Notes: append AI summary so the lawyer sees it inline
         if (a.summary_ar) {
             const notesEl = document.querySelector('[name="notes"]');
