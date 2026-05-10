@@ -27,6 +27,41 @@ from typing import List
 # 200 chars even on a single short page.
 _MIN_USEFUL_CHARS_PER_PAGE = 80
 
+# Some PDFs embed Arabic *visually* (using fonts with no toUnicode mapping)
+# so PyMuPDF extracts characters from the Arabic Presentation Forms blocks
+# (U+FB50–U+FDFF, U+FE70–U+FEFF) — the disconnected isolated/initial/medial/
+# final glyphs — instead of base Arabic letters (U+0600–U+06FF). This text
+# is unreadable for Claude (it's gibberish even to Arabic readers). We
+# detect this and route to vision OCR, which can read the rendered page.
+#
+# Real digital Arabic PDFs have ~0% presentation-form chars; real-world
+# broken encodings we've seen are 50-80%. 30% is a conservative threshold.
+_MAX_PRESENTATION_FORM_RATIO = 0.30
+
+
+def _is_presentation_form(c: str) -> bool:
+    """True if char is in Arabic Presentation Forms-A or -B."""
+    cp = ord(c)
+    return (0xFB50 <= cp <= 0xFDFF) or (0xFE70 <= cp <= 0xFEFF)
+
+
+def _is_base_arabic(c: str) -> bool:
+    """True if char is a base Arabic letter (Arabic block + Supplement)."""
+    cp = ord(c)
+    return 0x0600 <= cp <= 0x06FF or 0x0750 <= cp <= 0x077F
+
+
+def _has_broken_arabic_encoding(text: str) -> bool:
+    """Heuristic: text has so many presentation-form glyphs that it's likely
+    a PDF with broken Unicode mapping — should be re-OCR'd via vision.
+    """
+    pres = sum(1 for c in text if _is_presentation_form(c))
+    base = sum(1 for c in text if _is_base_arabic(c))
+    total = pres + base
+    if total < 50:
+        return False  # not enough Arabic to judge
+    return (pres / total) > _MAX_PRESENTATION_FORM_RATIO
+
 # Cap text we send to Claude. Most judgments are under ~30K chars; a hard cap
 # keeps us under Haiku's input limits and bounds cost predictably.
 MAX_CHARS = 60_000
@@ -97,10 +132,14 @@ def _extract_pdf(path: str) -> ExtractResult:
         if page_count == 0:
             raise ExtractionError('الملف فارغ أو تالف — يرجى المحاولة بنسخة أخرى')
 
-        # Scanned PDF? Switch to vision OCR — render pages and return them.
-        # Caller (judgment_ai) will recognise mode='vision' and dispatch to
-        # the multimodal Claude path.
-        if len(text) < _MIN_USEFUL_CHARS_PER_PAGE * page_count:
+        # Three reasons to fall through to vision OCR:
+        #  (a) Scanned PDF: no embedded text at all
+        #  (b) Broken-Unicode PDF: text exists but uses presentation forms,
+        #      not base Arabic letters — gibberish to Claude
+        #  (c) Mixed/partial: too little usable text per page
+        too_short = len(text) < _MIN_USEFUL_CHARS_PER_PAGE * page_count
+        broken_arabic = _has_broken_arabic_encoding(text)
+        if too_short or broken_arabic:
             images = _render_pdf_pages_to_images(doc)
             if not images:
                 raise ExtractionError(
