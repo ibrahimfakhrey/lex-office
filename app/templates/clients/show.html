@@ -1,322 +1,604 @@
 {% extends "base.html" %}
 {% block title %}{{ client.full_name }} - LexOffice{% endblock %}
 
-{% block content %}
-<div class="page-header">
-    <div>
-        <h3>{{ client.full_name }}</h3>
-        <small class="text-muted">{{ client.client_number or '' }} | {{ 'فرد' if client.client_type == 'individual' else 'شركة' }}</small>
-    </div>
-    <div class="d-flex gap-2">
-        <a href="{{ url_for('clients.edit', id=client.id) }}" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-pencil me-1"></i> تعديل
-        </a>
-        <a href="{{ url_for('clients.print_profile', id=client.id) }}" target="_blank" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-printer me-1"></i> طباعة الملف
-        </a>
-        <a href="{{ url_for('clients.index') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-right me-1"></i> العودة
-        </a>
-    </div>
-</div>
+{% set type_map = {'individual':'فرد','company':'شركة','government':'جهة حكومية'} %}
+{% set case_type_map = {'criminal':'جنائية','civil':'مدنية','commercial':'تجارية','administrative':'إدارية','labor':'عمالية','family':'أسرة','constitutional':'دستورية','enforcement':'تنفيذ'} %}
+{% set status_map = {'new':'جديدة','active':'نشطة','in_progress':'قيد النظر','awaiting_judgment':'منتظرة حكم','suspended':'موقوفة','closed':'مغلقة'} %}
+{% set status_class = {'new':'b-pen','active':'b-open','in_progress':'b-pen','awaiting_judgment':'b-pen','suspended':'b-hold','closed':'b-done'} %}
+{% set inv_status_map = {'draft':'مسودة','sent':'مرسلة','paid':'مسددة','overdue':'متأخرة','cancelled':'ملغاة'} %}
+{% set inv_status_class = {'draft':'b-draft','sent':'b-due','paid':'b-paid','overdue':'b-over','cancelled':'b-draft'} %}
+{% set _curr = market_config.currency_symbol_ar if market_config else 'ج.م' %}
+{% set _palette = ['#1849A9','#0F7A55','#7A5000','#9B2020','#7B3F9E','#078FD2'] %}
 
-<div class="row g-3">
-    <!-- Client Info Card -->
-    <div class="col-md-8">
-        <div class="card mb-3">
-            <div class="card-header">البيانات الشخصية</div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <small class="text-muted">الاسم بالعربية</small>
-                        <div>{{ client.full_name }}</div>
-                    </div>
-                    {% if client.full_name_en %}
-                    <div class="col-md-6">
-                        <small class="text-muted">الاسم بالإنجليزية</small>
-                        <div dir="ltr">{{ client.full_name_en }}</div>
-                    </div>
-                    {% endif %}
-                    {% if client.national_id %}
-                    <div class="col-md-4">
-                        <small class="text-muted">الرقم القومي</small>
-                        <div dir="ltr">{{ client.national_id }}</div>
-                    </div>
-                    {% endif %}
-                    {% if client.commercial_reg %}
-                    <div class="col-md-4">
-                        <small class="text-muted">السجل التجاري</small>
-                        <div dir="ltr">{{ client.commercial_reg }}</div>
-                    </div>
-                    {% endif %}
-                    {% if client.date_of_birth %}
-                    <div class="col-md-4">
-                        <small class="text-muted">تاريخ الميلاد</small>
-                        <div>{{ client.date_of_birth.strftime('%Y-%m-%d') }}</div>
-                    </div>
-                    {% endif %}
-                    {% if client.nationality %}
-                    <div class="col-md-4">
-                        <small class="text-muted">الجنسية</small>
-                        <div>{{ client.nationality }}</div>
-                    </div>
-                    {% endif %}
-                    {% if client.profession %}
-                    <div class="col-md-4">
-                        <small class="text-muted">المهنة</small>
-                        <div>{{ client.profession }}</div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+{% block extra_css %}
+<style>
+.lex-client{
+  --ink:#0C2461;--blue:#1849A9;--acc:#078FD2;
+  --bg:#F0F2F5;--sur:#fff;--sur2:#F7F8FA;
+  --bdr:#E3E7EE;--bdr2:#D0D7E3;
+  --tp:#0C2461;--ts:#4A5A7A;--tm:#8090B0;
+  --green:#0F7A55;--gbg:#EAF5F0;--gtx:#0A5A3A;
+  --amb:#7A5000;--abg:#FFF4DC;--atx:#5A3800;
+  --red:#9B2020;--rbg:#FEF0F0;--rtx:#7A1515;
+  --bbg:#EBF2FE;--btx:#0C447C;
+  --pur:#6B3FA0;--pubg:#F3EEF9;--putx:#4A2070;
+  font-size:13px;line-height:1.5;
+}
+.lex-client *{box-sizing:border-box}
+.lex-client .shell{background:var(--bg);border:1px solid var(--bdr2);border-radius:12px;overflow:hidden}
+.lex-client .topbar{background:var(--sur);border-bottom:1px solid var(--bdr);height:50px;display:flex;align-items:center;gap:10px;padding:0 20px;flex-wrap:wrap}
+.lex-client .breadcrumb{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--tm);margin:0;padding:0;background:none}
+.lex-client .breadcrumb a{color:var(--tm);text-decoration:none}
+.lex-client .breadcrumb a:hover{color:var(--acc)}
+.lex-client .breadcrumb .sep{color:var(--bdr2)}
+.lex-client .breadcrumb .cur{color:var(--tp);font-weight:500}
+.lex-client .sp{flex:1}
+.lex-client .tbtn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--bdr);background:var(--sur);color:var(--ts);white-space:nowrap;text-decoration:none}
+.lex-client .tbtn:hover{background:var(--sur2);color:var(--tp)}
+.lex-client .tbtn-p{background:var(--blue);color:#fff;border-color:var(--blue)}
+.lex-client .tbtn-p:hover{background:#143575;color:#fff}
+.lex-client .tbtn-d{background:var(--rbg);color:var(--rtx);border-color:#F0BCBC}
+.lex-client .tbtn i{font-size:12px}
 
-        {% if client.full_address %}
-        <div class="card mb-3">
-            <div class="card-header">العنوان</div>
-            <div class="card-body">{{ client.full_address }}</div>
-        </div>
-        {% endif %}
+.lex-client .client-header{background:var(--sur);border-bottom:1px solid var(--bdr);padding:18px 20px}
+.lex-client .ch-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.lex-client .av{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;color:#fff;flex-shrink:0;background:#1849A9}
+.lex-client .ch-info{flex:1;min-width:200px}
+.lex-client .ch-name{font-size:18px;font-weight:600;color:var(--tp);margin-bottom:3px;letter-spacing:-.3px}
+.lex-client .ch-meta{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:6px}
+.lex-client .ch-meta-item{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ts)}
+.lex-client .ch-meta-item i{font-size:12px;color:var(--tm)}
+.lex-client .ch-actions{display:flex;align-items:center;gap:7px;flex-shrink:0}
 
-        <div class="card mb-3">
-            <div class="card-header">بيانات التواصل</div>
-            <div class="card-body">
-                <div class="row g-3">
-                    {% if client.phone_primary %}
-                    <div class="col-md-3">
-                        <small class="text-muted">الهاتف الأساسي</small>
-                        <div dir="ltr">{{ client.phone_primary }}</div>
-                    </div>
-                    {% endif %}
-                    {% if client.phone_secondary %}
-                    <div class="col-md-3">
-                        <small class="text-muted">هاتف ثانوي</small>
-                        <div dir="ltr">{{ client.phone_secondary }}</div>
-                    </div>
-                    {% endif %}
-                    {% if client.email %}
-                    <div class="col-md-3">
-                        <small class="text-muted">البريد</small>
-                        <div dir="ltr">{{ client.email }}</div>
-                    </div>
-                    {% endif %}
-                    {% if client.whatsapp %}
-                    <div class="col-md-3">
-                        <small class="text-muted">واتساب</small>
-                        <div dir="ltr">{{ client.whatsapp }}</div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+.lex-client .badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;padding:3px 9px;border-radius:4px;font-weight:500;white-space:nowrap}
+.lex-client .badge::before{content:'';width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
+.lex-client .b-act{background:var(--gbg);color:var(--gtx)}.lex-client .b-act::before{background:var(--green)}
+.lex-client .b-arch{background:var(--sur2);color:var(--tm)}.lex-client .b-arch::before{background:var(--bdr2)}
+.lex-client .b-pen{background:var(--abg);color:var(--atx)}.lex-client .b-pen::before{background:#EF9F27}
+.lex-client .b-open{background:var(--bbg);color:var(--btx)}.lex-client .b-open::before{background:var(--blue)}
+.lex-client .b-done{background:var(--gbg);color:var(--gtx)}.lex-client .b-done::before{background:var(--green)}
+.lex-client .b-hold{background:var(--pubg);color:var(--putx)}.lex-client .b-hold::before{background:var(--pur)}
+.lex-client .b-over{background:var(--rbg);color:var(--rtx)}.lex-client .b-over::before{background:#E24B4A}
+.lex-client .b-paid{background:var(--gbg);color:var(--gtx)}.lex-client .b-paid::before{background:var(--green)}
+.lex-client .b-due{background:var(--abg);color:var(--atx)}.lex-client .b-due::before{background:#EF9F27}
+.lex-client .b-draft{background:var(--sur2);color:var(--tm)}.lex-client .b-draft::before{background:var(--bdr2)}
 
-        {% if client.emergency_contact_name %}
-        <div class="card mb-3">
-            <div class="card-header">جهة اتصال الطوارئ</div>
-            <div class="card-body">
-                {{ client.emergency_contact_name }}
-                {% if client.emergency_contact_relation %} ({{ client.emergency_contact_relation }}){% endif %}
-                {% if client.emergency_contact_phone %} - <span dir="ltr">{{ client.emergency_contact_phone }}</span>{% endif %}
-            </div>
-        </div>
-        {% endif %}
+.lex-client .ch-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border-top:1px solid var(--bdr)}
+.lex-client .kpi{background:var(--sur);padding:13px 16px}
+.lex-client .kpi-lbl{font-size:11px;color:var(--tm);margin-bottom:5px}
+.lex-client .kpi-val{font-size:18px;font-weight:600;color:var(--tp);letter-spacing:-.3px}
+.lex-client .kpi-val small{font-size:11px;font-weight:400;color:var(--tm)}
+.lex-client .kpi-delta{font-size:11px;margin-top:3px;color:var(--tm)}
+.lex-client .kpi-delta.up{color:var(--green)}
+.lex-client .kpi-delta.dn{color:var(--red)}
 
-        {% if client.internal_notes %}
-        <div class="card mb-3">
-            <div class="card-header">ملاحظات داخلية</div>
-            <div class="card-body">{{ client.internal_notes }}</div>
-        </div>
-        {% endif %}
+.lex-client .body{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;padding:18px 20px}
+.lex-client .main-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.lex-client .side-col{display:flex;flex-direction:column;gap:12px}
 
-        <!-- Cases -->
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-briefcase me-1"></i> القضايا ({{ cases|length }})</span>
-                <a href="{{ url_for('cases.create') }}?client_id={{ client.id }}" class="btn btn-sm btn-outline-primary">إضافة قضية</a>
-            </div>
-            <div class="card-body p-0">
-                {% if cases %}
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr><th>رقم القضية</th><th>الموضوع</th><th>الحالة</th><th>المحامي</th></tr>
-                        </thead>
-                        <tbody>
-                            {% for case in cases %}
-                            <tr>
-                                <td><a href="{{ url_for('cases.show', id=case.id) }}">{{ case.case_number or '-' }}</a></td>
-                                <td>{{ case.subject[:50] if case.subject else '-' }}</td>
-                                <td><span class="badge bg-{{ 'success' if case.status == 'active' else 'secondary' }}">{{ case.status }}</span></td>
-                                <td>{{ case.responsible_lawyer.full_name if case.responsible_lawyer else '-' }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="empty-state py-3">
-                    <p class="mb-0 small text-muted">لا توجد قضايا</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+.lex-client .card{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;overflow:hidden}
+.lex-client .card-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--bdr);gap:8px;flex-wrap:wrap}
+.lex-client .card-title{font-size:12.5px;font-weight:600;color:var(--tp)}
+.lex-client .card-link{font-size:11px;color:var(--acc);text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.lex-client .card-link:hover{text-decoration:underline}
 
-    <!-- Sidebar -->
-    <div class="col-md-4">
-        <!-- Financial Summary -->
-        <div class="card mb-3">
-            <div class="card-header">الملخص المالي</div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between mb-2">
-                    <span>إجمالي الأتعاب</span>
-                    <strong>{{ client.total_fees|int }} ج.م</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span>إجمالي المدفوع</span>
-                    <strong class="text-success">{{ client.total_paid|int }} ج.م</strong>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between">
-                    <span>المتبقي</span>
-                    <strong class="{% if client.balance > 0 %}text-danger{% else %}text-success{% endif %}">
-                        {{ client.balance|int }} ج.م
-                    </strong>
-                </div>
-            </div>
-        </div>
+.lex-client .cases-tbl,.lex-client .inv-tbl{width:100%;border-collapse:collapse}
+.lex-client .cases-tbl th,.lex-client .inv-tbl th{text-align:right;font-size:10.5px;font-weight:600;color:var(--tm);padding:9px 14px;border-bottom:1px solid var(--bdr);background:var(--sur2);white-space:nowrap}
+.lex-client .cases-tbl td,.lex-client .inv-tbl td{padding:11px 14px;border-bottom:1px solid var(--bdr);font-size:12px;vertical-align:middle}
+.lex-client .cases-tbl tr:last-child td,.lex-client .inv-tbl tr:last-child td{border-bottom:none}
+.lex-client .cases-tbl tr:hover td{background:#F7FAFF;cursor:pointer}
+.lex-client .cn{font-weight:500;color:var(--tp)}
+.lex-client .ct{font-size:11.5px;color:var(--ts)}
+.lex-client .case-id,.lex-client .inv-num{font-size:11px;font-weight:700;color:var(--tm);font-variant-numeric:tabular-nums}
+.lex-client .inv-amt{font-weight:600;color:var(--tp)}
 
-        <!-- Documents -->
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-file-earmark me-1"></i> المستندات</span>
-            </div>
-            <div class="card-body">
-                {% if documents %}
-                <ul class="list-unstyled mb-3">
-                    {% for doc in documents %}
-                    <li class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span><i class="bi bi-file-earmark-text me-1"></i>
-                                <span class="filename-cell" title="{{ doc.file_name }}">{{ doc.file_name }}</span>
-                            </span>
-                            <small class="text-muted">{{ doc.document_type }}</small>
-                        </div>
-                        {% if doc.file_path %}
-                            {% set ext = doc.file_path.rsplit('.', 1)[-1].lower() if '.' in doc.file_path else '' %}
-                            {% if ext in ['jpg','jpeg','png'] %}
-                            <img src="{{ url_for('static', filename='uploads/' + doc.file_path) }}"
-                                 class="img-fluid rounded mb-1" style="max-height:200px;" alt="معاينة المستند" loading="lazy">
-                            {% endif %}
-                            <a href="{{ url_for('static', filename='uploads/' + doc.file_path) }}" target="_blank"
-                               class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i> تحميل</a>
-                        {% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
+.lex-client .doc-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--bdr);text-decoration:none;color:inherit}
+.lex-client .doc-item:last-child{border-bottom:none}
+.lex-client .doc-item:hover{background:var(--sur2)}
+.lex-client .doc-ico{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+.lex-client .doc-ico.pdf{background:var(--rbg);color:var(--red)}
+.lex-client .doc-ico.word{background:var(--bbg);color:var(--blue)}
+.lex-client .doc-ico.sheet{background:var(--gbg);color:var(--green)}
+.lex-client .doc-ico.other{background:var(--sur2);color:var(--tm)}
+.lex-client .doc-name{font-size:12.5px;font-weight:500;color:var(--tp);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lex-client .doc-meta{font-size:10.5px;color:var(--tm);margin-top:1px}
 
-                <form method="POST" action="{{ url_for('clients.upload_document', id=client.id) }}" enctype="multipart/form-data">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="mb-2">
-                        <select name="document_type" class="form-select form-select-sm">
-                            <option value="national_id">صورة بطاقة</option>
-                            <option value="passport">جواز سفر</option>
-                            <option value="commercial_reg">سجل تجاري</option>
-                            <option value="power_of_attorney">توكيل</option>
-                            <option value="other">أخرى</option>
-                        </select>
-                    </div>
-                    <div class="mb-2">
-                        <input type="file" name="file" class="form-control form-control-sm" id="clientFileInput" required>
-                        <div id="clientFilePreview" class="mt-1" style="display:none;">
-                            <small class="text-muted"><i class="bi bi-file-earmark-check me-1"></i><span id="clientFileName"></span></small>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-sm btn-outline-primary w-100">
-                        <i class="bi bi-upload me-1"></i> رفع مستند
-                    </button>
-                </form>
-            </div>
-        </div>
+.lex-client .info-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;border-bottom:1px solid var(--bdr)}
+.lex-client .info-row:last-child{border-bottom:none}
+.lex-client .ilbl{font-size:11px;color:var(--tm);white-space:nowrap}
+.lex-client .ival{font-size:12px;font-weight:500;color:var(--tp);text-align:left;word-break:break-word}
 
-        <!-- Powers of Attorney -->
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-file-earmark-text me-1"></i> التوكيلات</span>
-                <a href="{{ url_for('poa.create') }}?client_id={{ client.id }}" class="btn btn-sm btn-outline-primary">إضافة توكيل</a>
-            </div>
-            <div class="card-body p-0">
-                {% set poas = client.powers_of_attorney.order_by('created_at').all() %}
-                {% if poas %}
-                <ul class="list-unstyled mb-0">
-                    {% for poa in poas %}
-                    {% set cs = poa.computed_status %}
-                    <li class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-                        <div>
-                            <a href="{{ url_for('poa.show', id=poa.id) }}" class="fw-semibold text-decoration-none">
-                                {{ poa.notarization_number or 'توكيل' }} — {{ {'general':'عام','special':'خاص','litigation':'تقاضي','real_estate':'عقاري'}.get(poa.poa_type, poa.poa_type) }}
-                            </a>
-                            {% if poa.file_path %}
-                            <a href="{{ url_for('static', filename=poa.file_path) }}" target="_blank" class="ms-2 text-muted small"><i class="bi bi-paperclip"></i></a>
-                            {% endif %}
-                            <div class="small text-muted">{{ poa.issue_date.strftime('%Y-%m-%d') if poa.issue_date else '' }}</div>
-                        </div>
-                        <span class="badge bg-{{ 'danger' if cs == 'expired' else 'warning' if cs == 'expiring_soon' else 'success' }}">
-                            {{ 'منتهي' if cs == 'expired' else 'ينتهي قريباً' if cs == 'expiring_soon' else 'ساري' }}
-                        </span>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <div class="p-3 text-center text-muted small">لا توجد توكيلات</div>
-                {% endif %}
-            </div>
-        </div>
+.lex-client .contact-action{display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid var(--bdr);text-decoration:none;color:inherit}
+.lex-client .contact-action:last-child{border-bottom:none}
+.lex-client .contact-action:hover{background:var(--sur2)}
+.lex-client .ca-ico{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+.lex-client .ca-label{font-size:11.5px;color:var(--ts);flex:1}
+.lex-client .ca-val{font-size:11.5px;font-weight:500;color:var(--tp);direction:ltr}
 
-        <!-- Metadata -->
-        <div class="card">
-            <div class="card-body small text-muted">
-                <div class="d-flex justify-content-between mb-1">
-                    <span>تاريخ التسجيل</span>
-                    <span>{{ client.created_at.strftime('%Y-%m-%d') }}</span>
-                </div>
-                {% if client.registrar %}
-                <div class="d-flex justify-content-between mb-1">
-                    <span>سجّل بواسطة</span>
-                    <span>{{ client.registrar.full_name }}</span>
-                </div>
-                {% endif %}
-                <div class="d-flex justify-content-between">
-                    <span>الحالة</span>
-                    <span>{% if client.is_active %}نشط{% else %}غير نشط{% endif %}</span>
-                </div>
-            </div>
-        </div>
+.lex-client .fin-bar-row{padding:10px 14px;border-bottom:1px solid var(--bdr)}
+.lex-client .fin-bar-row:last-child{border-bottom:none}
+.lex-client .fbr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.lex-client .fbr-lbl{font-size:11.5px;color:var(--tp)}
+.lex-client .fbr-val{font-size:11.5px;font-weight:600;color:var(--tp)}
+.lex-client .track{background:var(--bdr);border-radius:3px;height:5px;overflow:hidden}
+.lex-client .fill{height:100%;border-radius:3px;background:var(--blue)}
 
-        <!-- Delete -->
-        <form method="POST" action="{{ url_for('clients.delete', id=client.id) }}" class="mt-2">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-outline-danger btn-sm w-100" data-confirm="هل أنت متأكد من حذف هذا الموكل؟">
-                <i class="bi bi-trash me-1"></i> حذف الموكل
-            </button>
-        </form>
-    </div>
-</div>
+.lex-client .team-item{display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid var(--bdr)}
+.lex-client .team-item:last-child{border-bottom:none}
+.lex-client .team-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:600;color:#fff;flex-shrink:0}
+.lex-client .team-name{font-size:12.5px;font-weight:500;color:var(--tp);flex:1;min-width:0}
+.lex-client .team-role{font-size:11px;color:var(--tm)}
 
-{% block scripts %}
-<script>
-document.getElementById('clientFileInput').addEventListener('change', function() {
-    const file = this.files[0];
-    const preview = document.getElementById('clientFilePreview');
-    const nameEl = document.getElementById('clientFileName');
-    if (file) {
-        nameEl.textContent = file.name;
-        preview.style.display = 'block';
-    } else {
-        preview.style.display = 'none';
-    }
-});
-</script>
+.lex-client .tl-item{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bdr)}
+.lex-client .tl-item:last-child{border-bottom:none}
+.lex-client .tl-left{display:flex;flex-direction:column;align-items:center}
+.lex-client .tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.lex-client .tl-dot.blue{background:var(--blue)}
+.lex-client .tl-dot.green{background:var(--green)}
+.lex-client .tl-dot.amber{background:#EF9F27}
+.lex-client .tl-dot.gray{background:var(--bdr2)}
+.lex-client .tl-line{width:1px;flex:1;background:var(--bdr);margin-top:3px;min-height:14px}
+.lex-client .tl-body{flex:1;min-width:0}
+.lex-client .tl-what{font-size:12px;font-weight:500;color:var(--tp)}
+.lex-client .tl-who{font-size:11px;color:var(--tm);margin-top:2px}
+
+.lex-client .empty{padding:30px 16px;text-align:center;color:var(--tm);font-size:12.5px}
+.lex-client .empty i{font-size:24px;display:block;margin-bottom:6px;opacity:0.5}
+
+@media(max-width:980px){
+  .lex-client .body{grid-template-columns:1fr}
+  .lex-client .ch-kpis{grid-template-columns:repeat(2,1fr)}
+}
+</style>
 {% endblock %}
+
+{% block content %}
+{% set _initials = (client.full_name or '?')[:2] %}
+{% set _av_color = _palette[client.id % _palette|length] %}
+{% set _coll_pct = ((total_paid / total_fees) * 100) | round(0, 'floor') | int if total_fees > 0 else 0 %}
+
+<div class="lex-client">
+<div class="shell">
+
+  {# ── Topbar ────────────────────────────────────────────────────────── #}
+  <div class="topbar">
+    <nav class="breadcrumb">
+      <a href="{{ url_for('clients.index') }}">الموكلون</a>
+      <span class="sep">/</span>
+      <span class="cur">{{ client.full_name }}</span>
+    </nav>
+    <div class="sp"></div>
+    <a class="tbtn" href="{{ url_for('clients.print_profile', id=client.id) }}" target="_blank">
+      <i class="bi bi-printer"></i> تقرير موكل
+    </a>
+    <a class="tbtn" href="{{ url_for('clients.edit', id=client.id) }}">
+      <i class="bi bi-pencil"></i> تعديل البيانات
+    </a>
+    <a class="tbtn tbtn-p" href="{{ url_for('cases.create') }}?client_id={{ client.id }}">
+      <i class="bi bi-plus-lg"></i> قضية جديدة
+    </a>
+  </div>
+
+  {# ── Header ────────────────────────────────────────────────────────── #}
+  <div class="client-header">
+    <div class="ch-top">
+      <div class="av" style="background:{{ _av_color }}">{{ _initials }}</div>
+      <div class="ch-info">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+          <div class="ch-name">{{ client.full_name }}</div>
+          {% if client.is_active %}
+          <span class="badge b-act">نشط</span>
+          {% else %}
+          <span class="badge b-arch">مؤرشف</span>
+          {% endif %}
+          {% if client.client_number %}
+          <span style="font-size:10.5px;background:var(--sur2);color:var(--tm);border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;font-weight:500">
+            #{{ client.client_number }}
+          </span>
+          {% endif %}
+        </div>
+        {% if client.full_name_en %}
+        <div style="font-size:11.5px;color:var(--tm);direction:ltr;text-align:right;margin-bottom:4px">{{ client.full_name_en }}</div>
+        {% endif %}
+        <div class="ch-meta">
+          <div class="ch-meta-item">
+            <i class="bi bi-{{ 'building' if client.client_type == 'company' else 'person' if client.client_type == 'individual' else 'bank' }}"></i>
+            {{ type_map.get(client.client_type, client.client_type) }}
+            {% if client.profession %} · {{ client.profession }}{% endif %}
+          </div>
+          {% if client.created_at %}
+          <div class="ch-meta-item">
+            <i class="bi bi-clock-history"></i>
+            موكل منذ {{ client.created_at.strftime('%Y-%m-%d') }}
+          </div>
+          {% endif %}
+          {% if client.governorate or client.city %}
+          <div class="ch-meta-item">
+            <i class="bi bi-geo-alt"></i>
+            {{ client.governorate or '' }}{% if client.governorate and client.city %} · {% endif %}{{ client.city or '' }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="ch-actions">
+        {% if client.phone_primary %}
+        <a class="tbtn" href="tel:{{ client.phone_primary }}">
+          <i class="bi bi-telephone"></i> اتصال
+        </a>
+        {% endif %}
+        {% if client.email %}
+        <a class="tbtn" href="mailto:{{ client.email }}">
+          <i class="bi bi-envelope"></i> مراسلة
+        </a>
+        {% endif %}
+        {% if client.whatsapp %}
+        <a class="tbtn" href="https://wa.me/{{ client.whatsapp|replace('+','')|replace(' ','') }}" target="_blank">
+          <i class="bi bi-whatsapp"></i> واتساب
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── KPIs strip ─────────────────────────────────────────────────── #}
+    <div class="ch-kpis">
+      <div class="kpi">
+        <div class="kpi-lbl">إجمالي الأتعاب</div>
+        <div class="kpi-val">{{ '{:,.0f}'.format(total_fees) }} <small>{{ _curr }}</small></div>
+        <div class="kpi-delta">{{ cases|length }} قضية</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">المحصّل</div>
+        <div class="kpi-val" style="color:var(--green)">{{ '{:,.0f}'.format(total_paid) }} <small>{{ _curr }}</small></div>
+        <div class="kpi-delta {{ 'up' if _coll_pct >= 75 else '' }}">نسبة {{ _coll_pct }}%</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">المستحق</div>
+        <div class="kpi-val" style="color:{% if total_due > 0 %}var(--amb){% else %}var(--green){% endif %}">
+          {{ '{:,.0f}'.format(total_due) }} <small>{{ _curr }}</small>
+        </div>
+        <div class="kpi-delta">
+          {% if total_due > 0 %}
+            {{ invoices|selectattr('status','in',['sent','overdue'])|list|length }} فاتورة مفتوحة
+          {% else %}
+            لا مستحقات
+          {% endif %}
+        </div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">القضايا النشطة</div>
+        <div class="kpi-val">{{ active_cases_count }} <small>قضية</small></div>
+        <div class="kpi-delta">{{ closed_cases_count }} منتهية · {{ active_cases_count }} جارية</div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Body ──────────────────────────────────────────────────────────── #}
+  <div class="body">
+
+    <div class="main-col">
+
+      {# Cases #}
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">القضايا</div>
+          <a class="card-link" href="{{ url_for('cases.create') }}?client_id={{ client.id }}">
+            <i class="bi bi-plus-lg"></i> إضافة قضية
+          </a>
+        </div>
+        {% if cases %}
+        <div style="overflow-x:auto">
+        <table class="cases-tbl">
+          <thead>
+            <tr>
+              <th style="width:80px">الرقم</th>
+              <th>الموضوع</th>
+              <th style="width:90px">النوع</th>
+              <th style="width:110px">الحالة</th>
+              <th style="width:140px">أقرب جلسة</th>
+              <th style="width:120px">المحامي</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in cases %}
+            {% set _next = sessions_by_case.get(c.id) %}
+            <tr onclick="window.location='{{ url_for('cases.show', id=c.id) }}'">
+              <td><span class="case-id">#{{ c.case_number or c.id }}</span></td>
+              <td><span class="cn">{{ c.subject[:40] if c.subject else '—' }}{% if c.subject and c.subject|length > 40 %}…{% endif %}</span></td>
+              <td><span class="ct">{{ case_type_map.get(c.case_type, c.case_type) }}</span></td>
+              <td><span class="badge {{ status_class.get(c.status, 'b-open') }}">{{ status_map.get(c.status, c.status) }}</span></td>
+              <td>
+                {% if _next %}
+                  {% set _delta = (_next.session_date - today).days %}
+                  <span class="ct" style="color:{% if _delta == 0 %}var(--red);font-weight:500{% elif _delta <= 7 %}var(--amb){% endif %}">
+                    {{ _next.session_date.strftime('%Y-%m-%d') }}
+                    {% if _next.session_time %} · {{ _next.session_time.strftime('%I:%M') }}{% endif %}
+                  </span>
+                {% else %}
+                  <span class="ct" style="color:var(--tm)">—</span>
+                {% endif %}
+              </td>
+              <td><span class="ct">{{ c.responsible_lawyer.full_name if c.responsible_lawyer else '—' }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        {% else %}
+        <div class="empty">
+          <i class="bi bi-folder-x"></i> لم تُسجَّل قضايا لهذا الموكل بعد
+        </div>
+        {% endif %}
+      </div>
+
+      {# Invoices #}
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">الفواتير والمدفوعات</div>
+          <a class="tbtn" href="{{ url_for('financial.index') }}" style="font-size:11px;padding:4px 10px">
+            <i class="bi bi-plus-lg"></i> فاتورة جديدة
+          </a>
+        </div>
+        {% if invoices %}
+        <div style="overflow-x:auto">
+        <table class="inv-tbl">
+          <thead>
+            <tr>
+              <th style="width:100px">الفاتورة</th>
+              <th>الوصف</th>
+              <th style="width:120px">المبلغ</th>
+              <th style="width:100px">الحالة</th>
+              <th style="width:110px">التاريخ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inv in invoices[:8] %}
+            <tr>
+              <td><span class="inv-num">{{ inv.invoice_number or '—' }}</span></td>
+              <td>
+                <span style="font-size:11.5px">
+                  {% if inv.case %}القضية {{ inv.case.case_number or inv.case_id }} — {{ case_type_map.get(inv.case.case_type, inv.case.case_type) }}
+                  {% else %}—{% endif %}
+                </span>
+              </td>
+              <td><span class="inv-amt">{{ '{:,.0f}'.format(inv.total|float) }} {{ _curr }}</span></td>
+              <td><span class="badge {{ inv_status_class.get(inv.status, 'b-draft') }}">{{ inv_status_map.get(inv.status, inv.status) }}</span></td>
+              <td><span style="font-size:11px;color:var(--tm)">{{ inv.issue_date.strftime('%Y-%m-%d') if inv.issue_date else '—' }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        <div style="padding:10px 14px;border-top:1px solid var(--bdr);background:var(--sur2);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--tm)">الإجمالي: <strong style="color:var(--tp)">{{ '{:,.0f}'.format(total_fees) }} {{ _curr }}</strong></span>
+            <span style="font-size:11px;color:var(--tm)">المحصّل: <strong style="color:var(--green)">{{ '{:,.0f}'.format(total_paid) }} {{ _curr }}</strong></span>
+            <span style="font-size:11px;color:var(--tm)">المتبقي: <strong style="color:var(--amb)">{{ '{:,.0f}'.format(total_due) }} {{ _curr }}</strong></span>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty">
+          <i class="bi bi-receipt"></i> لا توجد فواتير
+        </div>
+        {% endif %}
+      </div>
+
+      {# Documents #}
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">المستندات</div>
+          <a class="tbtn" href="#upload" style="font-size:11px;padding:4px 10px">
+            <i class="bi bi-plus-lg"></i> رفع ملف
+          </a>
+        </div>
+        {% if documents %}
+          {% for doc in documents[:8] %}
+            {% set _ext = (doc.file_type or '').lower() %}
+            {% set _icc = 'other' %}
+            {% set _ic = 'bi-file-earmark' %}
+            {% if _ext == 'pdf' %}{% set _icc = 'pdf' %}{% set _ic = 'bi-file-earmark-pdf-fill' %}
+            {% elif _ext in ['doc','docx'] %}{% set _icc = 'word' %}{% set _ic = 'bi-file-earmark-word-fill' %}
+            {% elif _ext in ['xls','xlsx'] %}{% set _icc = 'sheet' %}{% set _ic = 'bi-file-earmark-spreadsheet-fill' %}
+            {% endif %}
+            <a class="doc-item" href="{{ url_for('static', filename='uploads/' + doc.file_path) }}" target="_blank">
+              <div class="doc-ico {{ _icc }}"><i class="bi {{ _ic }}"></i></div>
+              <div style="flex:1;min-width:0">
+                <div class="doc-name">{{ doc.file_name }}</div>
+                <div class="doc-meta">
+                  {% if doc.created_at %}{{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}
+                  {% if doc.document_type %} · {{ doc.document_type }}{% endif %}
+                </div>
+              </div>
+              <span class="tbtn" style="font-size:10.5px;padding:3px 9px">تنزيل</span>
+            </a>
+          {% endfor %}
+        {% else %}
+          <div class="empty"><i class="bi bi-file-earmark"></i> لم تُرفع مستندات</div>
+        {% endif %}
+      </div>
+
+      {# Notes #}
+      {% if client.internal_notes %}
+      <div class="card">
+        <div class="card-head"><div class="card-title">ملاحظات داخلية</div></div>
+        <div style="padding:14px;font-size:12.5px;color:var(--ts);line-height:1.7;white-space:pre-wrap">{{ client.internal_notes }}</div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    {# ── Side column ─────────────────────────────────────────────────── #}
+    <div class="side-col">
+
+      {# Contact #}
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">بيانات الاتصال</div>
+          <a class="card-link" href="{{ url_for('clients.edit', id=client.id) }}">تعديل</a>
+        </div>
+        {% if client.phone_primary %}
+        <a class="contact-action" href="tel:{{ client.phone_primary }}">
+          <div class="ca-ico" style="background:var(--bbg);color:var(--blue)"><i class="bi bi-telephone-fill"></i></div>
+          <div class="ca-label">جوال</div>
+          <div class="ca-val">{{ client.phone_primary }}</div>
+        </a>
+        {% endif %}
+        {% if client.phone_secondary %}
+        <a class="contact-action" href="tel:{{ client.phone_secondary }}">
+          <div class="ca-ico" style="background:var(--sur2);color:var(--ts)"><i class="bi bi-telephone"></i></div>
+          <div class="ca-label">هاتف ثاني</div>
+          <div class="ca-val">{{ client.phone_secondary }}</div>
+        </a>
+        {% endif %}
+        {% if client.email %}
+        <a class="contact-action" href="mailto:{{ client.email }}">
+          <div class="ca-ico" style="background:var(--gbg);color:var(--green)"><i class="bi bi-envelope-fill"></i></div>
+          <div class="ca-label">البريد</div>
+          <div class="ca-val" style="font-size:11px">{{ client.email }}</div>
+        </a>
+        {% endif %}
+        {% if client.whatsapp %}
+        <a class="contact-action" href="https://wa.me/{{ client.whatsapp|replace('+','')|replace(' ','') }}" target="_blank">
+          <div class="ca-ico" style="background:var(--gbg);color:var(--green)"><i class="bi bi-whatsapp"></i></div>
+          <div class="ca-label">واتساب</div>
+          <div class="ca-val">{{ client.whatsapp }}</div>
+        </a>
+        {% endif %}
+        {% if client.governorate or client.city or client.street %}
+        <div class="contact-action">
+          <div class="ca-ico" style="background:var(--abg);color:var(--amb)"><i class="bi bi-geo-alt-fill"></i></div>
+          <div class="ca-label">العنوان</div>
+          <div class="ca-val" style="font-size:11px">
+            {% if client.governorate %}{{ client.governorate }}{% endif %}
+            {% if client.city %}{% if client.governorate %}, {% endif %}{{ client.city }}{% endif %}
+            {% if client.district %}{% if client.governorate or client.city %}, {% endif %}{{ client.district }}{% endif %}
+            {% if client.street %} - {{ client.street }}{% endif %}
+          </div>
+        </div>
+        {% endif %}
+        {% if not (client.phone_primary or client.email or client.whatsapp or client.governorate) %}
+        <div class="empty"><i class="bi bi-info-circle"></i> لم تُسجَّل بيانات اتصال</div>
+        {% endif %}
+      </div>
+
+      {# Identity / Business data #}
+      {% if client.client_type == 'company' or client.commercial_reg or client.national_id or client.profession or client.date_of_birth or client.nationality %}
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">{{ 'البيانات التجارية' if client.client_type == 'company' else 'البيانات الشخصية' }}</div>
+          <a class="card-link" href="{{ url_for('clients.edit', id=client.id) }}">تعديل</a>
+        </div>
+        {% if client.commercial_reg %}
+        <div class="info-row"><span class="ilbl">السجل التجاري</span><span class="ival">{{ client.commercial_reg }}</span></div>
+        {% endif %}
+        {% if client.national_id %}
+        <div class="info-row"><span class="ilbl">{{ 'رقم الهوية' if client.client_type == 'individual' else 'الرقم الضريبي' }}</span><span class="ival" dir="ltr">{{ client.national_id }}</span></div>
+        {% endif %}
+        {% if client.client_type == 'individual' and client.date_of_birth %}
+        <div class="info-row"><span class="ilbl">تاريخ الميلاد</span><span class="ival">{{ client.date_of_birth.strftime('%Y-%m-%d') }}</span></div>
+        {% endif %}
+        {% if client.nationality %}
+        <div class="info-row"><span class="ilbl">الجنسية</span><span class="ival">{{ client.nationality }}</span></div>
+        {% endif %}
+        {% if client.profession %}
+        <div class="info-row"><span class="ilbl">{{ 'القطاع' if client.client_type == 'company' else 'المهنة' }}</span><span class="ival">{{ client.profession }}</span></div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# Financial performance #}
+      {% if total_fees > 0 %}
+      <div class="card">
+        <div class="card-head"><div class="card-title">الأداء المالي</div></div>
+        <div class="fin-bar-row">
+          <div class="fbr-top">
+            <span class="fbr-lbl">نسبة التحصيل</span>
+            <span class="fbr-val" style="color:{% if _coll_pct >= 75 %}var(--green){% elif _coll_pct >= 50 %}var(--blue){% else %}var(--amb){% endif %}">{{ _coll_pct }}%</span>
+          </div>
+          <div class="track">
+            <div class="fill" style="width:{{ [_coll_pct, 100]|min }}%;background:{% if _coll_pct >= 75 %}var(--green){% elif _coll_pct >= 50 %}var(--blue){% else %}var(--amb){% endif %}"></div>
+          </div>
+        </div>
+        <div class="fin-bar-row">
+          <div class="fbr-top">
+            <span class="fbr-lbl">عدد الفواتير</span>
+            <span class="fbr-val">{{ invoices|length }}</span>
+          </div>
+          <div class="track">
+            <div class="fill" style="width:{{ [invoices|length * 12, 100]|min }}%;background:var(--blue)"></div>
+          </div>
+        </div>
+        <div class="fin-bar-row">
+          <div class="fbr-top">
+            <span class="fbr-lbl">عدد الدفعات</span>
+            <span class="fbr-val">{{ payments|length }}</span>
+          </div>
+          <div class="track">
+            <div class="fill" style="width:{{ [payments|length * 12, 100]|min }}%;background:var(--acc)"></div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {# Team #}
+      {% if team_users %}
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">الفريق المسؤول</div>
+        </div>
+        {% for u in team_users %}
+        {% set _ti = (u.full_name or '?')[:2] %}
+        {% set _tb = _palette[u.id % _palette|length] %}
+        <div class="team-item">
+          <div class="team-av" style="background:{{ _tb }}">{{ _ti }}</div>
+          <div style="flex:1;min-width:0">
+            <div class="team-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ u.full_name or u.email }}</div>
+            <div class="team-role">
+              {% if u.role %}{{ u.role.name_ar or u.role.name }}{% else %}عضو فريق{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {# Recent activity #}
+      {% if activity %}
+      <div class="card">
+        <div class="card-head"><div class="card-title">آخر نشاط</div></div>
+        {% for a in activity %}
+          {% set _dot = 'gray' %}
+          {% if a.kind == 'session' and not a.past %}{% set _dot = 'blue' %}
+          {% elif a.kind == 'session' %}{% set _dot = 'amber' %}
+          {% elif a.kind == 'invoice' %}{% set _dot = 'green' %}
+          {% endif %}
+          <div class="tl-item">
+            <div class="tl-left">
+              <div class="tl-dot {{ _dot }}"></div>
+              {% if not loop.last %}<div class="tl-line"></div>{% endif %}
+            </div>
+            <div class="tl-body">
+              <div class="tl-what">{{ a.title }}</div>
+              <div class="tl-who">
+                {{ a.date.strftime('%Y-%m-%d') }}{% if a.time %} · {{ a.time.strftime('%I:%M') }}{% endif %}
+                {% if a.who %} · {{ a.who }}{% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {# Archive button #}
+      <form method="POST" action="{{ url_for('clients.delete', id=client.id) }}" style="margin:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="tbtn tbtn-d" type="submit" style="width:100%;justify-content:center"
+                onclick="return confirm('هل أنت متأكد من أرشفة هذا الموكل؟')">
+          <i class="bi bi-archive"></i> أرشفة الموكل
+        </button>
+      </form>
+
+    </div>
+  </div>
+</div>
+</div>
 {% endblock %}

@@ -130,10 +130,107 @@ def create():
 @permission_required('clients', 'view')
 def show(id):
     """Show client details with cases, payments, documents."""
+    from app.utils.helpers import egypt_today
+    from datetime import time as _t
+    from app.models.financial import Invoice, Payment
+    from app.models.session import Session
+    from app.models.user import User
+
     client = Client.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
     cases = client.cases.order_by(db.text('created_at desc')).all()
     documents = client.documents.order_by(db.text('created_at desc')).all()
-    return render_template('clients/show.html', client=client, cases=cases, documents=documents)
+
+    # Invoices for this client across all their cases
+    invoices = (
+        Invoice.query.filter_by(client_id=client.id, tenant_id=g.tenant_id)
+        .order_by(Invoice.issue_date.desc()).all()
+    )
+
+    # Payments — used for KPI totals
+    payments = (
+        Payment.query.filter_by(client_id=client.id, tenant_id=g.tenant_id)
+        .order_by(Payment.payment_date.desc()).all()
+    )
+
+    # KPI totals
+    total_fees = sum(float(c.fee_amount or 0) for c in cases)
+    total_paid = sum(float(p.amount or 0) for p in payments)
+    total_due = max(total_fees - total_paid, 0)
+    active_cases_count = sum(
+        1 for c in cases if c.status in ('new', 'active', 'in_progress', 'awaiting_judgment')
+    )
+    closed_cases_count = sum(1 for c in cases if c.status == 'closed')
+
+    # Earliest upcoming session per case → "next session" column
+    today = egypt_today()
+    sessions_by_case = {}
+    if cases:
+        case_ids = [c.id for c in cases]
+        upcoming = (
+            Session.query.filter(
+                Session.tenant_id == g.tenant_id,
+                Session.case_id.in_(case_ids),
+                Session.session_date >= today,
+            ).all()
+        )
+        for s in upcoming:
+            existing = sessions_by_case.get(s.case_id)
+            if not existing or (s.session_date, s.session_time or _t(0, 0)) < (
+                existing.session_date, existing.session_time or _t(0, 0)
+            ):
+                sessions_by_case[s.case_id] = s
+
+    # Team members assigned to this client's cases
+    team_user_ids = set()
+    for c in cases:
+        if c.responsible_lawyer_id:
+            team_user_ids.add(c.responsible_lawyer_id)
+        if c.assistant_lawyer_id:
+            team_user_ids.add(c.assistant_lawyer_id)
+    team_users = (
+        User.query.filter(User.id.in_(team_user_ids)).all() if team_user_ids else []
+    )
+
+    # Build a mini activity feed: most recent sessions + invoices + cases
+    activity = []
+    for s in (
+        Session.query.filter(
+            Session.tenant_id == g.tenant_id,
+            Session.case_id.in_([c.id for c in cases]) if cases else False,
+        ).order_by(Session.session_date.desc()).limit(8).all()
+    ):
+        activity.append({
+            'kind': 'session',
+            'date': s.session_date,
+            'time': s.session_time,
+            'title': 'جلسة' + (' (' + s.case.case_number + ')' if s.case and s.case.case_number else ''),
+            'who': s.case.responsible_lawyer.full_name if s.case and s.case.responsible_lawyer else '',
+            'past': s.session_date and s.session_date < today,
+        })
+    for inv in invoices[:5]:
+        activity.append({
+            'kind': 'invoice',
+            'date': inv.issue_date,
+            'time': None,
+            'title': f'فاتورة {inv.invoice_number or "—"} — {inv.status}',
+            'who': 'النظام',
+            'past': True,
+        })
+    activity = [a for a in activity if a['date']]
+    activity.sort(key=lambda a: a['date'], reverse=True)
+
+    return render_template(
+        'clients/show.html',
+        client=client, cases=cases, documents=documents,
+        invoices=invoices, payments=payments,
+        total_fees=total_fees, total_paid=total_paid, total_due=total_due,
+        active_cases_count=active_cases_count,
+        closed_cases_count=closed_cases_count,
+        sessions_by_case=sessions_by_case,
+        team_users=team_users,
+        activity=activity[:8],
+        today=today,
+    )
 
 
 @clients_bp.route('/<int:id>/edit', methods=['GET', 'POST'])
