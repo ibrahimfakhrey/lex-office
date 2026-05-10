@@ -179,6 +179,49 @@ function setStatus(msg, kind) {
     status.innerHTML = msg;
 }
 
+// ── Phased waiting UX ───────────────────────────────────────────────
+// Long uploads (multi-page scans → vision OCR) can take 90-180s. A static
+// "wait" message looks frozen after 30s and users abandon. Instead, we
+// rotate reassuring messages tied to elapsed time + show a live counter.
+const WAITING_PHASES = [
+    { after:   0, msg: 'جاري رفع الملف...' },
+    { after:   3, msg: 'جاري استخراج النص من الملف...' },
+    { after:  15, msg: 'جاري التحليل بالذكاء الاصطناعي... نحن نعمل على ملفك' },
+    { after:  45, msg: 'هذا ملف كبير، نحن نعالجه. شكراً لصبرك' },
+    { after:  90, msg: 'ما زلنا نعمل على ملفك، لا تغلق الصفحة' },
+    { after: 150, msg: 'تحليل الملفات متعددة الصفحات قد يستغرق وقتاً أطول من المتوقع. ما زلنا نعالج ملفك' },
+    { after: 240, msg: 'الملف يستغرق وقتاً طويلاً. إن لم تنتهِ العملية قريباً يمكنك إعادة المحاولة أو إدخال البيانات يدوياً' },
+];
+
+let waitingTimer = null;
+let waitingStart = 0;
+
+function startWaiting() {
+    waitingStart = Date.now();
+    renderWaiting();
+    waitingTimer = setInterval(renderWaiting, 1000);
+}
+
+function stopWaiting() {
+    if (waitingTimer) { clearInterval(waitingTimer); waitingTimer = null; }
+}
+
+function renderWaiting() {
+    const elapsed = Math.floor((Date.now() - waitingStart) / 1000);
+    let phase = WAITING_PHASES[0];
+    for (const p of WAITING_PHASES) {
+        if (elapsed >= p.after) phase = p;
+    }
+    const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const ss = String(elapsed % 60).padStart(2, '0');
+    setStatus(
+        '<span class="spinner-border spinner-border-sm me-2"></span> '
+        + phase.msg
+        + ` <span class="text-muted ms-2" dir="ltr">(${mm}:${ss})</span>`,
+        'info'
+    );
+}
+
 function fillIfEmpty(name, value) {
     if (value === null || value === undefined || value === '') return false;
     const el = document.querySelector(`[name="${name}"]`);
@@ -200,7 +243,7 @@ fileInput.addEventListener('change', async () => {
         return;
     }
 
-    setStatus('<span class="spinner-border spinner-border-sm me-2"></span> جاري استخراج النص وتحليله بالذكاء الاصطناعي… قد يستغرق حتى دقيقتين للملفات متعددة الصفحات. لا تغلق الصفحة.', 'info');
+    startWaiting();
 
     const formData = new FormData();
     formData.append('file', file);
@@ -223,6 +266,7 @@ fileInput.addEventListener('change', async () => {
         if (!ct.includes('application/json')) {
             const text = await resp.text();
             const looksLikeLogin = /login/i.test(resp.url) || /<form/i.test(text);
+            stopWaiting();
             if (looksLikeLogin) {
                 setStatus('⚠️ انتهت جلستك — يرجى إعادة تسجيل الدخول', 'danger');
             } else {
@@ -233,6 +277,7 @@ fileInput.addEventListener('change', async () => {
 
         const data = await resp.json();
         if (!resp.ok || !data.ok) {
+            stopWaiting();
             setStatus('⚠️ ' + (data.error || 'حدث خطأ غير متوقع'), 'danger');
             return;
         }
@@ -270,8 +315,10 @@ fileInput.addEventListener('change', async () => {
         const filledMsg = filled.length
             ? `<strong>تم تعبئة:</strong> ${filled.join('، ')}`
             : 'لم يتم استخراج بيانات قابلة للتعبئة — يرجى الإدخال يدوياً';
+        stopWaiting();
         setStatus(`✓ ${filledMsg}. <em class="text-muted">راجع الحقول قبل الحفظ.</em>`, 'success');
     } catch (err) {
+        stopWaiting();
         setStatus('⚠️ تعذّر الاتصال بالخادم: ' + err.message, 'danger');
     }
 });
