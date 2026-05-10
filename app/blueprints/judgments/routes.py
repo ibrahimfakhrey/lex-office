@@ -104,20 +104,20 @@ def extract():
     except Exception as exc:
         return jsonify({'ok': False, 'error': str(exc)}), 400
 
-    # Extract text
+    # Extract — returns either text (digital file) or rendered page images
+    # (scanned PDF). The downstream analyze_* call dispatches based on mode.
     from app.services.judgment_extractor import (
-        extract_text, ExtractionError, ScannedPdfError,
+        extract_text, ExtractionError,
     )
     try:
         extracted = extract_text(abs_path)
-    except ScannedPdfError as exc:
-        return jsonify({'ok': False, 'error': str(exc), 'scanned': True}), 422
     except ExtractionError as exc:
         return jsonify({'ok': False, 'error': str(exc)}), 422
 
     # Analyze with Claude (governance-aware: quota + per-call usage log)
     from app.services.judgment_ai import (
-        analyze_judgment, AnalysisError, AnalysisRateLimitError,
+        analyze_judgment, analyze_judgment_images,
+        AnalysisError, AnalysisRateLimitError,
     )
     from app.services.ai_usage import (
         AIDisabledError, FeatureDisabledError,
@@ -126,7 +126,14 @@ def extract():
     from app.models.tenant import Tenant
     tenant = Tenant.query.get(g.tenant_id)
     try:
-        analysis = analyze_judgment(extracted.text, tenant=tenant, user=g.current_user)
+        if extracted.mode == 'vision':
+            analysis = analyze_judgment_images(
+                extracted.images, tenant=tenant, user=g.current_user,
+            )
+        else:
+            analysis = analyze_judgment(
+                extracted.text, tenant=tenant, user=g.current_user,
+            )
     except AIDisabledError as exc:
         return jsonify({'ok': False, 'error': str(exc), 'reason': 'ai_disabled'}), 402
     except FeatureDisabledError as exc:
@@ -145,10 +152,12 @@ def extract():
     return jsonify({
         'ok': True,
         'upload_path': web_path,
+        # Empty for scanned PDFs — frontend already handles falsy values
         'extracted_text': extracted.text,
         'analysis': analysis.model_dump(),
         'page_count': extracted.page_count,
         'char_count': extracted.char_count,
+        'mode': extracted.mode,  # 'text' or 'vision' — UI can show a hint
     })
 
 

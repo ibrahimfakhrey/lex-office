@@ -1,24 +1,41 @@
-"""Claude analysis of extracted judgment text.
+"""Claude analysis of extracted judgment text — text and vision paths.
 
-Uses Claude Haiku 4.5 with structured outputs (Pydantic via
-`client.messages.parse()`) to extract the fields a lawyer would otherwise
-type by hand on /judgments/create. The output is shape-validated by the
-SDK before it reaches the caller.
+Two entry points:
+
+  - analyze_judgment(text, tenant, user)
+        Digital judgments. Uses Claude Haiku 4.5 (cheap, fast). Default path.
+
+  - analyze_judgment_images(images, tenant, user)
+        Scanned PDFs. Uses Claude Sonnet 4.6 with vision — Sonnet's Arabic
+        OCR quality is materially better than Haiku's on scanned documents,
+        and the per-call cost (~$0.02-0.05) is still trivial relative to
+        manual data entry.
+
+Both produce the same Pydantic-validated JudgmentAnalysis, route through the
+same governance (`ai_usage.check_can_use` / `record`), and burn the same
+`judgment_extract` feature key — the admin sees one combined feature, not
+two.
 
 Why no prompt caching: Haiku 4.5 needs a 4096-token prefix to cache. Our
-system prompt is ~1500 tokens, so caching would cost more (1.25× write
-premium) without giving any read benefit. If we ever switch to Sonnet 4.6
-(1024-token min), revisit.
+system prompt is ~1500 tokens, so caching costs more than it saves. Sonnet
+4.6 caches at 1024 tokens — worth revisiting if vision usage scales up.
 """
 from __future__ import annotations
 
+import base64
 import logging
-from typing import Optional, List
+from typing import Optional, List, Sequence
 
 from flask import current_app
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
+
+# Model used for vision OCR. Sonnet 4.6 reads Arabic significantly better
+# than Haiku on scanned/photo'd docs and supports structured outputs the
+# same way. Override via env var ANTHROPIC_VISION_MODEL if needed.
+_DEFAULT_VISION_MODEL = 'claude-sonnet-4-6'
 
 
 # ── Output schema ─────────────────────────────────────────────────────────────
@@ -105,7 +122,13 @@ _SYSTEM_PROMPT = """أنت مساعد قانوني متخصص في تحليل ا
 الـ null في حقل غير واضح أفضل من قيمة خاطئة."""
 
 
-# ── Public API ────────────────────────────────────────────────────────────────
+_VISION_USER_PREFIX = (
+    "هذه صور الصفحات الممسوحة ضوئياً لحكم قضائي. اقرأ النص العربي من الصور "
+    "(OCR) واستخرج بياناته المنظمة وفق نفس القواعد:"
+)
+
+
+# ── Internals ─────────────────────────────────────────────────────────────────
 
 def _client():
     """Lazy Anthropic client — built once per app config, validates the key."""
@@ -118,50 +141,27 @@ def _client():
     return Anthropic(api_key=api_key)
 
 
-def analyze_judgment(text: str, tenant=None, user=None) -> JudgmentAnalysis:
-    """Analyze an extracted judgment text. Returns a validated JudgmentAnalysis.
+def _parse_with_governance(*, model: str, messages: list, max_tokens: int,
+                           tenant, user) -> JudgmentAnalysis:
+    """Shared call path for both text and vision routes.
 
-    Args:
-        text: extracted Arabic text from the uploaded judgment.
-        tenant: required for governance (quota check + usage logging).
-                Routes that don't pass it will skip enforcement — so callers
-                must always pass it from inside a request context.
-        user: optional, for attribution in the usage log.
-
-    Raises:
-        AnalysisConfigError: missing API key.
-        AnalysisRateLimitError: temporary 429 from Anthropic.
-        AnalysisError: any other failure (with Arabic, user-safe message).
-        ai_usage.QuotaError: tenant blocked by entitlement or monthly cap.
-            Caller should catch and surface the message verbatim.
+    Performs the API call, handles every Anthropic exception type with the
+    correct Arabic user message, records both successes and failures into
+    ai_usage. Quota check is done by the public callers BEFORE this runs —
+    no double-checking here.
     """
     import anthropic
     from app.services import ai_usage
 
-    if not text or not text.strip():
-        raise AnalysisError('النص فارغ — لا يمكن تحليله')
-
-    # 1. Governance check — raises QuotaError subclasses with Arabic messages.
-    # Feature key must match the one used in record() below and in the
-    # KNOWN_AI_FEATURES registry.
-    if tenant is not None:
-        ai_usage.check_can_use(tenant, feature_key='judgment_extract')
-
     client = _client()
-    model = current_app.config.get('ANTHROPIC_MODEL', 'claude-haiku-4-5')
-
-    user_message = (
-        f"حلّل الحكم التالي واستخرج بياناته المنظمة:\n\n"
-        f"--- بداية نص الحكم ---\n{text}\n--- نهاية نص الحكم ---"
-    )
 
     response = None
     try:
         response = client.messages.parse(
             model=model,
-            max_tokens=2000,
+            max_tokens=max_tokens,
             system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
+            messages=messages,
             output_format=JudgmentAnalysis,
         )
     except anthropic.AuthenticationError as e:
@@ -189,7 +189,7 @@ def analyze_judgment(text: str, tenant=None, user=None) -> JudgmentAnalysis:
                             error=f'bad_request: {getattr(e, "message", str(e))}')
         logger.exception('Anthropic 400: %s', getattr(e, 'message', str(e)))
         raise AnalysisError(
-            'تعذّر تحليل النص — قد يكون طويلاً جداً. يرجى استخدام نسخة مختصرة'
+            'تعذّر تحليل المحتوى — قد يكون كبيراً جداً. يرجى المحاولة بنسخة مختصرة'
         )
     except anthropic.APIStatusError as e:
         if tenant is not None:
@@ -211,8 +211,6 @@ def analyze_judgment(text: str, tenant=None, user=None) -> JudgmentAnalysis:
         )
 
     if response.parsed_output is None:
-        # Either a refusal or schema validation failure. Record as failure
-        # but still don't burn the tenant's quota for this.
         if tenant is not None:
             ai_usage.record(tenant, user, feature='judgment_extract',
                             model=model, response=response, success=False,
@@ -223,10 +221,87 @@ def analyze_judgment(text: str, tenant=None, user=None) -> JudgmentAnalysis:
             'فشل التحليل التلقائي — يرجى إدخال البيانات يدوياً'
         )
 
-    # 2. Success — record usage. Quota is enforced on success counts, so this
-    # is what burns the tenant's monthly cap.
+    # Record the successful call. Quota is enforced on success counts, so
+    # this is what burns the tenant's monthly cap.
     if tenant is not None:
         ai_usage.record(tenant, user, feature='judgment_extract',
                         model=model, response=response, success=True)
 
     return response.parsed_output
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
+
+def analyze_judgment(text: str, tenant=None, user=None) -> JudgmentAnalysis:
+    """Analyze digital judgment text. Returns a validated JudgmentAnalysis.
+
+    Raises:
+        AnalysisConfigError: missing API key.
+        AnalysisRateLimitError: temporary 429 from Anthropic.
+        AnalysisError: any other failure (with Arabic, user-safe message).
+        ai_usage.QuotaError: tenant blocked by entitlement or monthly cap.
+            Caller should catch and surface the message verbatim.
+    """
+    from app.services import ai_usage
+
+    if not text or not text.strip():
+        raise AnalysisError('النص فارغ — لا يمكن تحليله')
+
+    if tenant is not None:
+        ai_usage.check_can_use(tenant, feature_key='judgment_extract')
+
+    model = current_app.config.get('ANTHROPIC_MODEL', 'claude-haiku-4-5')
+    user_message = (
+        f"حلّل الحكم التالي واستخرج بياناته المنظمة:\n\n"
+        f"--- بداية نص الحكم ---\n{text}\n--- نهاية نص الحكم ---"
+    )
+    messages = [{"role": "user", "content": user_message}]
+
+    return _parse_with_governance(
+        model=model, messages=messages, max_tokens=2000,
+        tenant=tenant, user=user,
+    )
+
+
+def analyze_judgment_images(
+    images: Sequence[bytes], tenant=None, user=None,
+) -> JudgmentAnalysis:
+    """Analyze a scanned judgment via Claude vision (OCR + extraction in one call).
+
+    `images` is an ordered sequence of PNG byte strings — one per PDF page,
+    in reading order. Sent to Claude Sonnet 4.6 as base64 image blocks.
+    """
+    from app.services import ai_usage
+
+    if not images:
+        raise AnalysisError('لا توجد صور للتحليل')
+
+    if tenant is not None:
+        # Same feature key as text path — admins manage one feature, not two.
+        ai_usage.check_can_use(tenant, feature_key='judgment_extract')
+
+    model = current_app.config.get('ANTHROPIC_VISION_MODEL') or _DEFAULT_VISION_MODEL
+
+    # Build the multimodal message: each page as an image block, then the
+    # instruction text. Anthropic SDK accepts base64 image blocks per the
+    # claude-api skill (Vision section).
+    content_blocks = []
+    for img_bytes in images:
+        b64 = base64.standard_b64encode(img_bytes).decode('ascii')
+        content_blocks.append({
+            'type': 'image',
+            'source': {
+                'type': 'base64',
+                'media_type': 'image/png',
+                'data': b64,
+            },
+        })
+    content_blocks.append({'type': 'text', 'text': _VISION_USER_PREFIX})
+    messages = [{"role": "user", "content": content_blocks}]
+
+    # Vision needs more output room — Sonnet on a multi-page judgment may
+    # produce a longer summary. Headroom doesn't cost anything until used.
+    return _parse_with_governance(
+        model=model, messages=messages, max_tokens=4000,
+        tenant=tenant, user=user,
+    )
