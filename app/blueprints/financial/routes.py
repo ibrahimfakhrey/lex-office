@@ -1,5 +1,6 @@
 """Financial management routes: Payments, Invoices, Expenses."""
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+from calendar import monthrange
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from sqlalchemy import func, extract
 from app.extensions import db
@@ -43,47 +44,176 @@ def index():
     current_year = today.year
 
     # Monthly totals
-    monthly_payments = db.session.query(func.coalesce(func.sum(Payment.amount), 0)).filter(
+    monthly_payments = float(db.session.query(func.coalesce(func.sum(Payment.amount), 0)).filter(
         Payment.tenant_id == g.tenant_id,
         extract('month', Payment.payment_date) == current_month,
         extract('year', Payment.payment_date) == current_year
-    ).scalar()
+    ).scalar())
 
-    monthly_expenses = db.session.query(func.coalesce(func.sum(Expense.amount), 0)).filter(
+    monthly_expenses = float(db.session.query(func.coalesce(func.sum(Expense.amount), 0)).filter(
         Expense.tenant_id == g.tenant_id,
         extract('month', Expense.expense_date) == current_month,
         extract('year', Expense.expense_date) == current_year
-    ).scalar()
+    ).scalar())
 
-    # Pending invoices
+    monthly_invoiced = float(db.session.query(func.coalesce(func.sum(Invoice.total), 0)).filter(
+        Invoice.tenant_id == g.tenant_id,
+        extract('month', Invoice.issue_date) == current_month,
+        extract('year', Invoice.issue_date) == current_year
+    ).scalar())
+
+    # Previous month for delta
+    if current_month == 1:
+        prev_month, prev_year = 12, current_year - 1
+    else:
+        prev_month, prev_year = current_month - 1, current_year
+    prev_month_payments = float(db.session.query(func.coalesce(func.sum(Payment.amount), 0)).filter(
+        Payment.tenant_id == g.tenant_id,
+        extract('month', Payment.payment_date) == prev_month,
+        extract('year', Payment.payment_date) == prev_year
+    ).scalar())
+    prev_month_invoiced = float(db.session.query(func.coalesce(func.sum(Invoice.total), 0)).filter(
+        Invoice.tenant_id == g.tenant_id,
+        extract('month', Invoice.issue_date) == prev_month,
+        extract('year', Invoice.issue_date) == prev_year
+    ).scalar())
+
+    # 6-month series for chart (invoiced vs collected)
+    arabic_months_short = ['', 'يناير', 'فبراير', 'مارس', 'إبريل', 'مايو', 'يونيو',
+                           'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']
+    monthly_series = []
+    # Walk back 5 months from current, then current = 6 points
+    series_year = current_year
+    series_month = current_month
+    points = []
+    for i in range(5, -1, -1):
+        m = current_month - i
+        y = current_year
+        while m <= 0:
+            m += 12
+            y -= 1
+        invoiced = float(db.session.query(func.coalesce(func.sum(Invoice.total), 0)).filter(
+            Invoice.tenant_id == g.tenant_id,
+            extract('month', Invoice.issue_date) == m,
+            extract('year', Invoice.issue_date) == y
+        ).scalar())
+        collected = float(db.session.query(func.coalesce(func.sum(Payment.amount), 0)).filter(
+            Payment.tenant_id == g.tenant_id,
+            extract('month', Payment.payment_date) == m,
+            extract('year', Payment.payment_date) == y
+        ).scalar())
+        points.append({
+            'label': arabic_months_short[m],
+            'month': m,
+            'year': y,
+            'invoiced': invoiced,
+            'collected': collected,
+            'is_current': (m == current_month and y == current_year),
+        })
+    series_max = max((max(p['invoiced'], p['collected']) for p in points), default=0)
+    monthly_series = points
+
+    # Revenue by case type (current year, payments joined to cases)
+    rev_rows = db.session.query(
+        Case.case_type, func.coalesce(func.sum(Payment.amount), 0)
+    ).join(Payment, Payment.case_id == Case.id).filter(
+        Payment.tenant_id == g.tenant_id,
+        extract('year', Payment.payment_date) == current_year,
+    ).group_by(Case.case_type).all()
+    case_type_labels = {
+        'criminal': 'جنائية', 'civil': 'مدنية', 'commercial': 'تجارية',
+        'administrative': 'إدارية', 'labor': 'عمالية', 'family': 'أسرة',
+        'constitutional': 'دستورية', 'enforcement': 'تنفيذ',
+    }
+    revenue_by_case_type = sorted(
+        [{'type': r[0], 'label': case_type_labels.get(r[0], r[0]), 'amount': float(r[1])}
+         for r in rev_rows if r[1] and float(r[1]) > 0],
+        key=lambda x: x['amount'], reverse=True
+    )[:4]
+    rev_total_max = max((r['amount'] for r in revenue_by_case_type), default=0)
+
+    # Pending / overdue
     pending_invoices = Invoice.query.filter(
         Invoice.tenant_id == g.tenant_id,
         Invoice.status.in_(['sent', 'partially_paid', 'overdue'])
     ).count()
-
-    pending_invoice_total = db.session.query(func.coalesce(func.sum(Invoice.total), 0)).filter(
+    pending_invoice_total = float(db.session.query(func.coalesce(func.sum(Invoice.total), 0)).filter(
         Invoice.tenant_id == g.tenant_id,
         Invoice.status.in_(['sent', 'partially_paid', 'overdue'])
-    ).scalar()
+    ).scalar())
+    overdue_count = Invoice.query.filter(
+        Invoice.tenant_id == g.tenant_id, Invoice.status == 'overdue'
+    ).count()
+
+    # Collection rate (year): paid / invoiced
+    year_invoiced = float(db.session.query(func.coalesce(func.sum(Invoice.total), 0)).filter(
+        Invoice.tenant_id == g.tenant_id,
+        extract('year', Invoice.issue_date) == current_year,
+    ).scalar())
+    year_collected = float(db.session.query(func.coalesce(func.sum(Payment.amount), 0)).filter(
+        Payment.tenant_id == g.tenant_id,
+        extract('year', Payment.payment_date) == current_year,
+    ).scalar())
+    collection_rate = round((year_collected / year_invoiced * 100), 0) if year_invoiced > 0 else 0
+
+    # Average payment days for paid invoices this year (issue → updated_at)
+    paid_invoices = Invoice.query.filter(
+        Invoice.tenant_id == g.tenant_id,
+        Invoice.status == 'paid',
+        extract('year', Invoice.issue_date) == current_year,
+    ).all()
+    if paid_invoices:
+        days_list = [
+            (inv.updated_at.date() - inv.issue_date).days
+            for inv in paid_invoices
+            if inv.updated_at and inv.issue_date and (inv.updated_at.date() - inv.issue_date).days >= 0
+        ]
+        avg_payment_days = round(sum(days_list) / len(days_list)) if days_list else 0
+    else:
+        avg_payment_days = 0
 
     # Recent items
     recent_payments = Payment.query.filter_by(tenant_id=g.tenant_id).order_by(
-        Payment.payment_date.desc()).limit(10).all()
+        Payment.payment_date.desc()).limit(8).all()
     recent_invoices = Invoice.query.filter_by(tenant_id=g.tenant_id).order_by(
-        Invoice.created_at.desc()).limit(10).all()
+        Invoice.created_at.desc()).limit(6).all()
     recent_expenses = Expense.query.filter_by(tenant_id=g.tenant_id).order_by(
-        Expense.expense_date.desc()).limit(10).all()
+        Expense.expense_date.desc()).limit(6).all()
+
+    # Delta percentages
+    def _delta(curr, prev):
+        if prev <= 0:
+            return None
+        return round((curr - prev) / prev * 100)
 
     return render_template('financial/index.html',
-                           monthly_payments=float(monthly_payments),
-                           monthly_expenses=float(monthly_expenses),
+                           today=today,
+                           monthly_payments=monthly_payments,
+                           monthly_expenses=monthly_expenses,
+                           monthly_invoiced=monthly_invoiced,
+                           monthly_net=monthly_payments - monthly_expenses,
+                           prev_month_payments=prev_month_payments,
+                           prev_month_invoiced=prev_month_invoiced,
+                           delta_payments=_delta(monthly_payments, prev_month_payments),
+                           delta_invoiced=_delta(monthly_invoiced, prev_month_invoiced),
                            pending_invoices=pending_invoices,
-                           pending_invoice_total=float(pending_invoice_total),
+                           pending_invoice_total=pending_invoice_total,
+                           overdue_count=overdue_count,
+                           collection_rate=collection_rate,
+                           avg_payment_days=avg_payment_days,
+                           monthly_series=monthly_series,
+                           series_max=series_max,
+                           revenue_by_case_type=revenue_by_case_type,
+                           rev_total_max=rev_total_max,
                            recent_payments=recent_payments,
                            recent_invoices=recent_invoices,
                            recent_expenses=recent_expenses,
                            payment_methods=PAYMENT_METHODS,
-                           invoice_statuses=INVOICE_STATUSES)
+                           invoice_statuses=INVOICE_STATUSES,
+                           expense_types=EXPENSE_TYPES,
+                           arabic_months_short=arabic_months_short,
+                           current_month_label=arabic_months_short[current_month],
+                           current_year=current_year)
 
 
 # ============= PAYMENTS =============

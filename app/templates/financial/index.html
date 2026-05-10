@@ -1,142 +1,356 @@
 {% extends "base.html" %}
 {% block title %}المالية - LexOffice{% endblock %}
 
+{% set _curr = market_config.currency_symbol_ar if market_config else 'ج.م' %}
+{% set status_class = {'draft':'b-draft','sent':'b-due','partially_paid':'b-pen','paid':'b-paid','overdue':'b-over','cancelled':'b-arc'} %}
+{% set inv_status_map = dict(invoice_statuses) %}
+{% set exp_type_map = dict(expense_types) %}
+
 {% block content %}
-<div class="page-header">
-    <h3>النظرة المالية</h3>
-    <div class="d-flex gap-2">
-        <a href="{{ url_for('financial.create_payment') }}" class="btn btn-success btn-sm"><i class="bi bi-cash-stack me-1"></i> تسجيل دفعة</a>
-        <a href="{{ url_for('financial.create_invoice') }}" class="btn btn-primary btn-sm"><i class="bi bi-receipt me-1"></i> فاتورة جديدة</a>
-        <a href="{{ url_for('financial.create_expense') }}" class="btn btn-outline-danger btn-sm"><i class="bi bi-dash-circle me-1"></i> تسجيل مصروف</a>
-    </div>
-</div>
+<style>
+.lex-fin{--ink:#0C2461;--blue:#1849A9;--accent:#078FD2;--bg:#F0F2F5;--sur:#FFFFFF;--sur2:#F7F8FA;
+  --bdr:#E3E7EE;--bdr2:#D0D7E3;--tp:#0C2461;--ts:#4A5A7A;--tm:#8090B0;
+  --green:#0F7A55;--gbg:#EAF5F0;--gtx:#0A5A3A;--amb:#7A5000;--abg:#FFF4DC;--atx:#5A3800;
+  --red:#9B2020;--rbg:#FEF0F0;--rtx:#7A1515;--bbg:#EBF2FE;--btx:#0C447C;
+  --pur:#6B3FA0;--pubg:#F3EEF9;--putx:#4A2070;
+  font-family:'IBM Plex Sans Arabic','Cairo',sans-serif;color:var(--tp);direction:rtl}
+.lex-fin .pshell{background:var(--bg);border:1px solid var(--bdr2);border-radius:12px;overflow:hidden;margin-bottom:18px}
+.lex-fin .ptop{background:var(--sur);border-bottom:1px solid var(--bdr);padding:0 18px;min-height:48px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lex-fin .ptitle{font-size:13px;font-weight:600;color:var(--tp)}
+.lex-fin .sp{flex:1}
+.lex-fin .pc{padding:18px 20px}
+.lex-fin .tbtn{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:6px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--bdr);background:var(--sur);color:var(--ts);text-decoration:none}
+.lex-fin .tbtn:hover{border-color:var(--bdr2);color:var(--tp)}
+.lex-fin .tbtn-p{background:var(--blue);color:#fff;border-color:var(--blue)}
+.lex-fin .tbtn-p:hover{background:#143A8C;color:#fff}
+.lex-fin .tbtn-g{background:var(--green);color:#fff;border-color:var(--green)}
+.lex-fin .tbtn-g:hover{background:#0B5C40;color:#fff}
+.lex-fin .tbtn-r{background:var(--sur);color:var(--red);border-color:var(--rbg)}
+.lex-fin .tbtn svg{width:12px;height:12px}
+.lex-fin .seg{display:flex;align-items:center;gap:4px;background:var(--sur2);border:1px solid var(--bdr);border-radius:7px;padding:4px}
+.lex-fin .seg-on{background:var(--sur);border:1px solid var(--bdr2);font-weight:500;color:var(--tp);padding:4px 10px;font-size:11px;border-radius:5px}
+.lex-fin .seg-off{padding:4px 10px;font-size:11px;color:var(--tm);border:none;background:transparent;cursor:pointer}
 
-<!-- Stats Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card border-success">
-            <div class="card-body text-center">
-                <small class="text-muted">إيرادات الشهر</small>
-                <div class="display-6 text-success" dir="ltr">{{ '{:,.0f}'.format(monthly_payments) }}</div>
-                <small class="text-muted">ج.م</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-danger">
-            <div class="card-body text-center">
-                <small class="text-muted">مصروفات الشهر</small>
-                <div class="display-6 text-danger" dir="ltr">{{ '{:,.0f}'.format(monthly_expenses) }}</div>
-                <small class="text-muted">ج.م</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-info">
-            <div class="card-body text-center">
-                <small class="text-muted">صافي الشهر</small>
-                <div class="display-6 {% if monthly_payments - monthly_expenses >= 0 %}text-success{% else %}text-danger{% endif %}" dir="ltr">
-                    {{ '{:,.0f}'.format(monthly_payments - monthly_expenses) }}
-                </div>
-                <small class="text-muted">ج.م</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-warning">
-            <div class="card-body text-center">
-                <small class="text-muted">فواتير معلقة ({{ pending_invoices }})</small>
-                <div class="display-6 text-warning" dir="ltr">{{ '{:,.0f}'.format(pending_invoice_total) }}</div>
-                <small class="text-muted">ج.م</small>
-            </div>
-        </div>
-    </div>
-</div>
+.lex-fin .fin-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.lex-fin .fk{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:13px 15px}
+.lex-fin .fk-lbl{font-size:11px;color:var(--tm);margin-bottom:7px}
+.lex-fin .fk-val{font-size:20px;font-weight:600;color:var(--tp);letter-spacing:-.5px}
+.lex-fin .fk-val small{font-size:12px;font-weight:400;color:var(--tm);margin-right:3px}
+.lex-fin .fk-delta{font-size:11px;margin-top:5px;display:flex;align-items:center;gap:3px}
+.lex-fin .up{color:var(--green)}
+.lex-fin .dn{color:var(--red)}
+.lex-fin .nt{color:var(--tm)}
+.lex-fin .fk-delta svg{width:10px;height:10px}
 
-<div class="row g-3">
-    <!-- Recent Payments -->
-    <div class="col-md-4">
+.lex-fin .fin-grid{display:grid;grid-template-columns:1fr 300px;gap:14px;margin-bottom:14px}
+.lex-fin .fin-grid2{display:grid;grid-template-columns:1.15fr 1fr;gap:14px}
+
+.lex-fin .card{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;overflow:hidden}
+.lex-fin .ch{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--bdr)}
+.lex-fin .ct{font-size:12px;font-weight:600;color:var(--tp)}
+.lex-fin .cl{font-size:11px;color:var(--accent);cursor:pointer;text-decoration:none}
+.lex-fin .cl:hover{text-decoration:underline}
+
+.lex-fin .chart-bars{padding:16px 14px}
+.lex-fin .bar-grp{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.lex-fin .bar-cols{width:100%;display:flex;align-items:flex-end;justify-content:center;gap:2px;height:90px}
+.lex-fin .bar{border-radius:3px 3px 0 0;min-height:2px;width:48%}
+.lex-fin .bar-lbl{font-size:10px;color:var(--tm);text-align:center}
+.lex-fin .legend{display:flex;align-items:center;gap:14px;padding-top:8px;border-top:1px solid var(--bdr)}
+.lex-fin .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ts)}
+.lex-fin .legend-sw{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+.lex-fin .info-row{display:flex;align-items:baseline;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--bdr)}
+.lex-fin .info-row:last-of-type{border-bottom:none}
+.lex-fin .ilbl{font-size:11px;color:var(--tm)}
+.lex-fin .ival{font-size:12px;font-weight:500;color:var(--tp);text-align:left}
+
+.lex-fin .fin-bar-row{padding:9px 14px;border-bottom:1px solid var(--bdr)}
+.lex-fin .fin-bar-row:last-child{border-bottom:none}
+.lex-fin .fbr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.lex-fin .fbr-lbl{font-size:11.5px;color:var(--tp)}
+.lex-fin .fbr-vals{font-size:11px;color:var(--tm)}
+.lex-fin .fbr-vals strong{color:var(--tp);font-weight:600}
+.lex-fin .track{background:var(--bdr);border-radius:3px;height:5px;overflow:hidden}
+.lex-fin .fill{height:100%;border-radius:3px;transition:width .3s}
+
+.lex-fin .badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 8px;border-radius:4px;font-weight:500;white-space:nowrap}
+.lex-fin .badge::before{content:'';width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
+.lex-fin .b-paid{background:var(--gbg);color:var(--gtx)}.lex-fin .b-paid::before{background:var(--green)}
+.lex-fin .b-due{background:var(--abg);color:var(--atx)}.lex-fin .b-due::before{background:#EF9F27}
+.lex-fin .b-over{background:var(--rbg);color:var(--rtx)}.lex-fin .b-over::before{background:#E24B4A}
+.lex-fin .b-pen{background:var(--bbg);color:var(--btx)}.lex-fin .b-pen::before{background:var(--blue)}
+.lex-fin .b-draft{background:var(--sur2);color:var(--tm)}.lex-fin .b-draft::before{background:var(--bdr2)}
+.lex-fin .b-arc{background:var(--sur2);color:var(--tm)}.lex-fin .b-arc::before{background:var(--bdr2)}
+
+.lex-fin .inv-tbl{width:100%;border-collapse:collapse}
+.lex-fin .inv-tbl th{text-align:right;font-size:10px;font-weight:600;color:var(--tm);padding:9px 14px;border-bottom:1px solid var(--bdr);background:var(--sur2)}
+.lex-fin .inv-tbl td{padding:10px 14px;border-bottom:1px solid var(--bdr);font-size:12px;vertical-align:middle}
+.lex-fin .inv-tbl tr:last-child td{border-bottom:none}
+.lex-fin .inv-tbl tr:hover td{background:#F7FAFF;cursor:pointer}
+.lex-fin .inv-num{font-size:11px;font-weight:700;color:var(--tm);font-variant-numeric:tabular-nums}
+.lex-fin .inv-amt{font-weight:600;color:var(--tp)}
+.lex-fin .inv-cli{font-size:11.5px;color:var(--ts)}
+
+.lex-fin .exp-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bdr);text-decoration:none;color:inherit}
+.lex-fin .exp-row:last-of-type{border-bottom:none}
+.lex-fin .exp-row:hover{background:#F7FAFF}
+.lex-fin .exp-ico{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lex-fin .exp-ico svg{width:14px;height:14px}
+.lex-fin .exp-name{font-size:12px;font-weight:500;color:var(--tp)}
+.lex-fin .exp-cat{font-size:10px;color:var(--tm);margin-top:1px}
+.lex-fin .exp-amt{font-size:12px;font-weight:600;color:var(--tp);text-align:left}
+.lex-fin .exp-date{font-size:10px;color:var(--tm);text-align:left;margin-top:2px}
+
+.lex-fin .pay-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bdr);text-decoration:none;color:inherit}
+.lex-fin .pay-row:last-of-type{border-bottom:none}
+.lex-fin .pay-row:hover{background:#F7FAFF}
+.lex-fin .pay-cli{font-size:12px;font-weight:500;color:var(--tp)}
+.lex-fin .pay-when{font-size:10px;color:var(--tm);margin-top:1px}
+.lex-fin .pay-amt{font-size:12px;font-weight:600;color:var(--green);text-align:left;margin-right:auto}
+
+.lex-fin .empty{padding:32px 14px;text-align:center;color:var(--tm);font-size:12px}
+
+.lex-fin .summary-foot{padding:10px 14px;border-top:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:var(--sur2)}
+.lex-fin .summary-foot .lbl{font-size:11px;color:var(--tm)}
+.lex-fin .summary-foot .val{font-size:13px;font-weight:600;color:var(--tp)}
+
+@media (max-width: 992px){
+  .lex-fin .fin-kpis{grid-template-columns:repeat(2,1fr)}
+  .lex-fin .fin-grid{grid-template-columns:1fr}
+  .lex-fin .fin-grid2{grid-template-columns:1fr}
+}
+</style>
+
+<div class="lex-fin">
+  <div class="pshell">
+    <div class="ptop">
+      <div class="ptitle">التقارير المالية</div>
+      <div class="sp"></div>
+      <div class="seg">
+        <span class="seg-on">{{ current_month_label }} {{ current_year }}</span>
+      </div>
+      <a href="{{ url_for('financial.create_payment') }}" class="tbtn tbtn-g">
+        <i class="bi bi-cash-stack"></i> تسجيل دفعة
+      </a>
+      <a href="{{ url_for('financial.create_invoice') }}" class="tbtn tbtn-p">
+        <i class="bi bi-receipt"></i> فاتورة جديدة
+      </a>
+      <a href="{{ url_for('financial.create_expense') }}" class="tbtn tbtn-r">
+        <i class="bi bi-dash-circle"></i> تسجيل مصروف
+      </a>
+    </div>
+
+    <div class="pc">
+      <!-- KPI cards -->
+      <div class="fin-kpis">
+        <div class="fk">
+          <div class="fk-lbl">إيرادات الشهر</div>
+          <div class="fk-val">{{ '{:,.0f}'.format(monthly_payments) }} <small>{{ _curr }}</small></div>
+          {% if delta_payments is not none %}
+            <div class="fk-delta {% if delta_payments >= 0 %}up{% else %}dn{% endif %}">
+              <i class="bi bi-arrow-{% if delta_payments >= 0 %}up{% else %}down{% endif %}-short"></i>
+              {{ '+' if delta_payments >= 0 }}{{ delta_payments }}% عن الشهر السابق
+            </div>
+          {% else %}
+            <div class="fk-delta nt">لا توجد بيانات سابقة</div>
+          {% endif %}
+        </div>
+        <div class="fk">
+          <div class="fk-lbl">مصروفات الشهر</div>
+          <div class="fk-val">{{ '{:,.0f}'.format(monthly_expenses) }} <small>{{ _curr }}</small></div>
+          <div class="fk-delta nt">{{ current_month_label }}</div>
+        </div>
+        <div class="fk">
+          <div class="fk-lbl">صافي الشهر</div>
+          <div class="fk-val">{{ '{:,.0f}'.format(monthly_net) }} <small>{{ _curr }}</small></div>
+          <div class="fk-delta {% if monthly_net >= 0 %}up{% else %}dn{% endif %}">
+            <i class="bi bi-{% if monthly_net >= 0 %}check-circle{% else %}exclamation-triangle{% endif %}"></i>
+            {% if monthly_payments > 0 %}
+              هامش {{ '{:.0f}'.format(monthly_net / monthly_payments * 100) }}%
+            {% else %}
+              لا إيرادات بعد
+            {% endif %}
+          </div>
+        </div>
+        <div class="fk">
+          <div class="fk-lbl">فواتير معلقة</div>
+          <div class="fk-val">{{ '{:,.0f}'.format(pending_invoice_total) }} <small>{{ _curr }}</small></div>
+          <div class="fk-delta {% if overdue_count > 0 %}dn{% else %}nt{% endif %}">
+            {{ pending_invoices }} فاتورة{% if overdue_count > 0 %} • {{ overdue_count }} متأخرة{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart + side metrics -->
+      <div class="fin-grid">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>آخر الدفعات</span>
-                <a href="{{ url_for('financial.payments') }}" class="btn btn-sm btn-outline-success">عرض الكل</a>
-            </div>
-            <div class="card-body p-0">
-                {% if recent_payments %}
-                <div class="list-group list-group-flush">
-                    {% for p in recent_payments %}
-                    <a href="{{ url_for('financial.show_payment', id=p.id) }}" class="list-group-item list-group-item-action">
-                        <div class="d-flex justify-content-between">
-                            <small>{{ p.client.full_name[:25] if p.client else '-' }}</small>
-                            <strong class="text-success" dir="ltr">{{ '{:,.0f}'.format(p.amount) }}</strong>
-                        </div>
-                        <small class="text-muted">{{ p.payment_date.strftime('%Y-%m-%d') }}</small>
-                    </a>
-                    {% endfor %}
+          <div class="ch">
+            <div class="ct">الإيرادات الشهرية — {{ current_year }}</div>
+            <div class="cl" style="color:var(--tm);cursor:default">آخر 6 أشهر</div>
+          </div>
+          <div class="chart-bars">
+            <div style="display:flex;align-items:flex-end;gap:8px;height:120px;padding:0 4px;margin-bottom:8px">
+              {% for p in monthly_series %}
+              {% set inv_h = (p.invoiced / series_max * 90) if series_max > 0 else 0 %}
+              {% set col_h = (p.collected / series_max * 90) if series_max > 0 else 0 %}
+              <div class="bar-grp">
+                <div class="bar-cols">
+                  <div class="bar" style="height:{{ inv_h if inv_h > 2 or p.invoiced == 0 else 2 }}%;background:#B5D4F4" title="مصدر: {{ '{:,.0f}'.format(p.invoiced) }} {{ _curr }}"></div>
+                  <div class="bar" style="height:{{ col_h if col_h > 2 or p.collected == 0 else 2 }}%;background:#1849A9" title="محصّل: {{ '{:,.0f}'.format(p.collected) }} {{ _curr }}"></div>
                 </div>
-                {% else %}
-                <p class="text-muted text-center py-3 mb-0">لا توجد دفعات</p>
-                {% endif %}
+                <div class="bar-lbl" {% if p.is_current %}style="font-weight:600;color:var(--tp)"{% endif %}>{{ p.label }}</div>
+              </div>
+              {% endfor %}
             </div>
+            <div class="legend">
+              <div class="legend-item"><div class="legend-sw" style="background:#B5D4F4"></div>الفواتير المصدرة</div>
+              <div class="legend-item"><div class="legend-sw" style="background:#1849A9"></div>المحصّل فعلياً</div>
+              <div style="margin-right:auto;font-size:11px;color:var(--tm)">الأرقام بـ {{ _curr }}</div>
+            </div>
+          </div>
         </div>
-    </div>
 
-    <!-- Recent Invoices -->
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>آخر الفواتير</span>
-                <a href="{{ url_for('financial.invoices') }}" class="btn btn-sm btn-outline-primary">عرض الكل</a>
-            </div>
-            <div class="card-body p-0">
-                {% if recent_invoices %}
-                {% set status_color = {'draft':'secondary','sent':'info','paid':'success','partially_paid':'warning','overdue':'danger','cancelled':'dark'} %}
-                <div class="list-group list-group-flush">
-                    {% for inv in recent_invoices %}
-                    <a href="{{ url_for('financial.show_invoice', id=inv.id) }}" class="list-group-item list-group-item-action">
-                        <div class="d-flex justify-content-between">
-                            <small>{{ inv.invoice_number or '-' }}</small>
-                            <strong dir="ltr">{{ '{:,.0f}'.format(inv.total) }}</strong>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <small class="text-muted">{{ inv.client.full_name[:20] if inv.client else '-' }}</small>
-                            <span class="badge bg-{{ status_color.get(inv.status, 'secondary') }}">{{ dict(invoice_statuses).get(inv.status, inv.status) }}</span>
-                        </div>
-                    </a>
-                    {% endfor %}
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="card">
+            <div class="ch"><div class="ct">الإيرادات حسب نوع القضية</div></div>
+            {% if revenue_by_case_type %}
+              {% set palette = ['#1849A9','#078FD2','#6B3FA0','#EF9F27'] %}
+              {% for r in revenue_by_case_type %}
+              {% set pct = (r.amount / rev_total_max * 100) if rev_total_max > 0 else 0 %}
+              <div class="fin-bar-row">
+                <div class="fbr-top">
+                  <span class="fbr-lbl">{{ r.label }}</span>
+                  <span class="fbr-vals"><strong>{{ '{:,.0f}'.format(r.amount) }}</strong> {{ _curr }}</span>
                 </div>
-                {% else %}
-                <p class="text-muted text-center py-3 mb-0">لا توجد فواتير</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+                <div class="track"><div class="fill" style="width:{{ pct }}%;background:{{ palette[loop.index0] }}"></div></div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty">لم تُسجّل مدفوعات مرتبطة بقضايا هذا العام</div>
+            {% endif %}
+          </div>
 
-    <!-- Recent Expenses -->
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>آخر المصروفات</span>
-                <a href="{{ url_for('financial.expenses') }}" class="btn btn-sm btn-outline-danger">عرض الكل</a>
+          <div class="card">
+            <div class="ch"><div class="ct">أداء التحصيل</div></div>
+            <div class="info-row">
+              <span class="ilbl">معدل التحصيل (السنة)</span>
+              <span class="ival" style="color:{% if collection_rate >= 70 %}var(--green){% elif collection_rate >= 40 %}var(--amb){% else %}var(--red){% endif %};font-weight:600">{{ collection_rate|int }}%</span>
             </div>
-            <div class="card-body p-0">
-                {% if recent_expenses %}
-                <div class="list-group list-group-flush">
-                    {% for e in recent_expenses %}
-                    <a href="{{ url_for('financial.show_expense', id=e.id) }}" class="list-group-item list-group-item-action">
-                        <div class="d-flex justify-content-between">
-                            <small>{{ e.description[:30] if e.description else e.expense_type }}</small>
-                            <strong class="text-danger" dir="ltr">{{ '{:,.0f}'.format(e.amount) }}</strong>
-                        </div>
-                        <small class="text-muted">{{ e.expense_date.strftime('%Y-%m-%d') }}</small>
-                    </a>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted text-center py-3 mb-0">لا توجد مصروفات</p>
-                {% endif %}
+            <div class="info-row">
+              <span class="ilbl">متوسط مدة السداد</span>
+              <span class="ival">{% if avg_payment_days > 0 %}{{ avg_payment_days }} يوم{% else %}—{% endif %}</span>
             </div>
+            <div class="info-row">
+              <span class="ilbl">فواتير متأخرة</span>
+              <span class="ival" style="color:{% if overdue_count > 0 %}var(--red){% else %}var(--tp){% endif %};font-weight:{% if overdue_count > 0 %}600{% else %}500{% endif %}">{{ overdue_count }} {% if overdue_count == 1 %}فاتورة{% else %}فواتير{% endif %}</span>
+            </div>
+            <div class="info-row">
+              <span class="ilbl">فواتير معلقة</span>
+              <span class="ival">{{ pending_invoices }} {% if pending_invoices == 1 %}فاتورة{% else %}فواتير{% endif %}</span>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <!-- Recent invoices + expenses -->
+      <div class="fin-grid2">
+        <div class="card">
+          <div class="ch">
+            <div class="ct">آخر الفواتير</div>
+            <a href="{{ url_for('financial.invoices') }}" class="cl">عرض الكل</a>
+          </div>
+          {% if recent_invoices %}
+          <table class="inv-tbl">
+            <thead>
+              <tr><th>الفاتورة</th><th>الموكل</th><th>المبلغ</th><th>الحالة</th></tr>
+            </thead>
+            <tbody>
+              {% for inv in recent_invoices %}
+              <tr onclick="window.location='{{ url_for('financial.show_invoice', id=inv.id) }}'">
+                <td><span class="inv-num">{{ inv.invoice_number or ('#' ~ inv.id) }}</span></td>
+                <td><span class="inv-cli">{{ (inv.client.full_name[:24] if inv.client else '—') }}</span></td>
+                <td><span class="inv-amt">{{ '{:,.0f}'.format(inv.total or 0) }}</span></td>
+                <td><span class="badge {{ status_class.get(inv.status, 'b-arc') }}">{{ inv_status_map.get(inv.status, inv.status) }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+            <div class="empty">لا توجد فواتير بعد</div>
+          {% endif %}
+        </div>
+
+        <div class="card">
+          <div class="ch">
+            <div class="ct">آخر المصروفات — {{ current_month_label }}</div>
+            <a href="{{ url_for('financial.expenses') }}" class="cl">عرض الكل</a>
+          </div>
+          {% if recent_expenses %}
+            {% set ico_palette = [
+              ('var(--bbg)', '#1849A9'),
+              ('var(--gbg)', '#0F7A55'),
+              ('var(--abg)', '#8A5A00'),
+              ('var(--rbg)', '#9B2020'),
+              ('var(--pubg)', '#6B3FA0'),
+              ('var(--bbg)', '#0C447C'),
+            ] %}
+            {% for e in recent_expenses %}
+            {% set ico = ico_palette[loop.index0 % 6] %}
+            <a class="exp-row" href="{{ url_for('financial.show_expense', id=e.id) }}">
+              <div class="exp-ico" style="background:{{ ico[0] }}">
+                <i class="bi bi-receipt-cutoff" style="color:{{ ico[1] }};font-size:14px"></i>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div class="exp-name">{{ exp_type_map.get(e.expense_type, e.expense_type) }}</div>
+                <div class="exp-cat">
+                  {% if e.case %}القضية {{ e.case.case_number or e.case_id }}
+                  {% elif e.description %}{{ e.description[:30] }}
+                  {% else %}عام{% endif %}
+                </div>
+              </div>
+              <div>
+                <div class="exp-amt">{{ '{:,.0f}'.format(e.amount) }} {{ _curr }}</div>
+                <div class="exp-date">{{ e.expense_date.strftime('%Y-%m-%d') }}</div>
+              </div>
+            </a>
+            {% endfor %}
+            <div class="summary-foot">
+              <span class="lbl">إجمالي مصروفات الشهر</span>
+              <span class="val">{{ '{:,.0f}'.format(monthly_expenses) }} {{ _curr }}</span>
+            </div>
+          {% else %}
+            <div class="empty">لا توجد مصروفات</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Recent payments (full-width row) -->
+      <div class="card" style="margin-top:14px">
+        <div class="ch">
+          <div class="ct">آخر الدفعات</div>
+          <a href="{{ url_for('financial.payments') }}" class="cl">عرض الكل</a>
+        </div>
+        {% if recent_payments %}
+        <div style="display:grid;grid-template-columns:repeat(2,1fr)">
+          {% for p in recent_payments %}
+          <a class="pay-row" href="{{ url_for('financial.show_payment', id=p.id) }}">
+            <div class="exp-ico" style="background:var(--gbg)">
+              <i class="bi bi-cash-stack" style="color:#0F7A55;font-size:14px"></i>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div class="pay-cli">{{ (p.client.full_name[:28] if p.client else '—') }}</div>
+              <div class="pay-when">{{ p.payment_date.strftime('%Y-%m-%d') }}{% if p.case %} • قضية {{ p.case.case_number or p.case_id }}{% endif %}</div>
+            </div>
+            <div class="pay-amt">{{ '{:,.0f}'.format(p.amount) }} {{ _curr }}</div>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+          <div class="empty">لا توجد دفعات بعد</div>
+        {% endif %}
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}
