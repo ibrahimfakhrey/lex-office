@@ -64,9 +64,13 @@ def register():
 
         # Create tenant placeholder. Market is frozen at registration —
         # subsequent visits use tenant.market regardless of where the user is.
+        # Email + phone are seeded from the registration form so the office
+        # setup screen doesn't have to ask for them again.
         tenant = Tenant(name=f'مكتب {full_name}', subscription_status='trial',
                         trial_ends_at=datetime.utcnow() + timedelta(days=14),
-                        market=market)
+                        market=market,
+                        email=email,
+                        phone=phone)
         db.session.add(tenant)
         db.session.flush()
 

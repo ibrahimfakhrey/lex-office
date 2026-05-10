@@ -25,9 +25,9 @@ def setup_office():
         tenant.address = request.form.get('address', '').strip()
         tenant.bar_registration_no = request.form.get('bar_registration_no', '').strip()
         tenant.primary_court = request.form.get('primary_court', '').strip()
-        tenant.phone = request.form.get('phone', '').strip()
-        tenant.fax = request.form.get('fax', '').strip()
-        tenant.email = request.form.get('email', '').strip()
+        # Phone/fax/email are no longer collected here — phone + email are
+        # seeded from registration, fax is rarely used. Office manager can
+        # update either later from /settings if needed.
 
         # Handle logo upload
         logo = request.files.get('logo')
