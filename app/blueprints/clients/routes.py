@@ -21,14 +21,18 @@ EGYPTIAN_GOVERNORATES = [
 @clients_bp.route('/')
 @permission_required('clients', 'view')
 def index():
-    """List all clients with search and filters."""
+    """List all clients with search and filters — card-grid layout."""
+    from app.models.case import Case
+    from app.models.financial import Invoice
+
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '').strip()
     client_type = request.args.get('type', '')
     status = request.args.get('status', '')
 
-    query = Client.query.filter_by(tenant_id=g.tenant_id)
+    base_query = Client.query.filter_by(tenant_id=g.tenant_id)
 
+    query = base_query
     if search:
         query = query.filter(
             db.or_(
@@ -45,9 +49,68 @@ def index():
     elif status == 'inactive':
         query = query.filter_by(is_active=False)
 
-    clients = query.order_by(Client.created_at.desc()).paginate(page=page, per_page=20)
-    return render_template('clients/index.html', clients=clients, search=search,
-                           client_type=client_type, status=status)
+    clients = query.order_by(Client.created_at.desc()).paginate(page=page, per_page=18)
+
+    # Filter-strip counts (across the whole tenant, ignoring current filters)
+    type_counts = dict(
+        db.session.query(Client.client_type, db.func.count(Client.id))
+        .filter(Client.tenant_id == g.tenant_id)
+        .group_by(Client.client_type).all()
+    )
+    total_count = sum(type_counts.values())
+    active_count = (
+        base_query.filter(Client.is_active.is_(True)).count()
+    )
+
+    # Per-client stats for the card grid (only the visible page)
+    page_ids = [c.id for c in clients.items]
+    cases_by_client = {}
+    dues_by_client = {}
+    if page_ids:
+        # Active case counts
+        case_rows = (
+            db.session.query(Case.client_id, db.func.count(Case.id))
+            .filter(
+                Case.client_id.in_(page_ids),
+                Case.status.in_(['new', 'active', 'in_progress', 'awaiting_judgment']),
+            )
+            .group_by(Case.client_id).all()
+        )
+        cases_by_client = {row[0]: row[1] for row in case_rows}
+
+        # Outstanding dues per client
+        dues_rows = (
+            db.session.query(
+                Invoice.client_id,
+                db.func.coalesce(db.func.sum(Invoice.total), 0),
+            )
+            .filter(
+                Invoice.client_id.in_(page_ids),
+                Invoice.status.in_(['sent', 'overdue']),
+            )
+            .group_by(Invoice.client_id).all()
+        )
+        dues_by_client = {row[0]: float(row[1]) for row in dues_rows}
+
+    overdue_count = (
+        db.session.query(db.func.count(db.distinct(Invoice.client_id)))
+        .filter(
+            Invoice.tenant_id == g.tenant_id,
+            Invoice.status == 'overdue',
+        ).scalar() or 0
+    )
+
+    from app.utils.helpers import egypt_today
+    return render_template(
+        'clients/index.html',
+        clients=clients, search=search,
+        client_type=client_type, status=status,
+        type_counts=type_counts, total_count=total_count,
+        active_count=active_count, overdue_count=overdue_count,
+        cases_by_client=cases_by_client,
+        dues_by_client=dues_by_client,
+        today=egypt_today(),
+    )
 
 
 @clients_bp.route('/create', methods=['GET', 'POST'])

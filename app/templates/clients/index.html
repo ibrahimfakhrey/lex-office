@@ -1,142 +1,257 @@
 {% extends "base.html" %}
 {% block title %}الموكلون - LexOffice{% endblock %}
 
+{% set type_map = {'individual':'فرد','company':'شركة','government':'جهة حكومية'} %}
+{% set _curr = market_config.currency_symbol_ar if market_config else 'ج.م' %}
+{% set _palette = ['#1849A9','#0F7A55','#7A5000','#9B2020','#7B3F9E','#078FD2','#3B5A8A','#6B3FA0'] %}
+
+{% block extra_css %}
+<style>
+.lex-cli{
+  --ink:#0C2461;--blue:#1849A9;--accent:#078FD2;
+  --bg:#F0F2F5;--sur:#FFFFFF;--sur2:#F7F8FA;
+  --bdr:#E3E7EE;--bdr2:#D0D7E3;
+  --tp:#0C2461;--ts:#4A5A7A;--tm:#8090B0;
+  --green:#0F7A55;--gbg:#EAF5F0;--gtx:#0A5A3A;
+  --amb:#7A5000;--abg:#FFF4DC;--atx:#5A3800;
+  --red:#9B2020;--rbg:#FEF0F0;--rtx:#7A1515;
+  --bbg:#EBF2FE;--btx:#0C447C;
+  --pur:#6B3FA0;--pubg:#F3EEF9;--putx:#4A2070;
+  font-size:13px;line-height:1.5;
+}
+.lex-cli *{box-sizing:border-box}
+.lex-cli .pshell{background:var(--bg);border:1px solid var(--bdr2);border-radius:12px;overflow:hidden}
+.lex-cli .ptop{background:var(--sur);border-bottom:1px solid var(--bdr);padding:0 20px;height:52px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lex-cli .ptitle{font-size:14px;font-weight:600;color:var(--tp)}
+.lex-cli .ptop-meta{font-size:11.5px;color:var(--tm)}
+.lex-cli .sp{flex:1}
+.lex-cli .tbtn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--bdr);background:var(--sur);color:var(--ts);text-decoration:none;white-space:nowrap}
+.lex-cli .tbtn:hover{background:var(--sur2);color:var(--tp)}
+.lex-cli .tbtn-p{background:var(--blue);color:#fff;border-color:var(--blue)}
+.lex-cli .tbtn-p:hover{background:#143575;color:#fff}
+.lex-cli .tbtn i{font-size:11px}
+
+.lex-cli .pc{padding:18px 20px}
+
+.lex-cli .filter-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.lex-cli .search-input{display:flex;align-items:center;gap:7px;background:var(--sur);border:1px solid var(--bdr);border-radius:7px;padding:6px 11px;flex:1;max-width:320px}
+.lex-cli .search-input i{font-size:13px;color:var(--tm)}
+.lex-cli .search-input input{border:0;outline:0;background:transparent;font-size:12px;flex:1;font-family:inherit;color:var(--tp);padding:0}
+.lex-cli .filter-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:6px;font-size:11.5px;border:1px solid var(--bdr);background:var(--sur);color:var(--ts);cursor:pointer;text-decoration:none;white-space:nowrap}
+.lex-cli .filter-chip:hover{background:var(--sur2);color:var(--tp)}
+.lex-cli .filter-chip.active{background:var(--bbg);border-color:#A8C4F4;color:var(--btx);font-weight:500}
+.lex-cli .filter-count{font-size:9.5px;border-radius:8px;padding:1px 6px;font-weight:600;line-height:1.4;background:var(--sur2);color:var(--tm);border:1px solid var(--bdr)}
+.lex-cli .filter-chip.active .filter-count{background:var(--blue);color:#fff;border:none}
+
+.lex-cli .badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;padding:3px 9px;border-radius:4px;font-weight:500;white-space:nowrap}
+.lex-cli .badge::before{content:'';width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
+.lex-cli .b-act{background:var(--gbg);color:var(--gtx)}.lex-cli .b-act::before{background:var(--green)}
+.lex-cli .b-pen{background:var(--abg);color:var(--atx)}.lex-cli .b-pen::before{background:#EF9F27}
+.lex-cli .b-new{background:var(--bbg);color:var(--btx)}.lex-cli .b-new::before{background:var(--blue)}
+.lex-cli .b-arc{background:var(--sur2);color:var(--tm)}.lex-cli .b-arc::before{background:var(--bdr2)}
+
+.lex-cli .av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-weight:600;color:#fff;flex-shrink:0}
+
+.lex-cli .cl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+.lex-cli .cl-card{background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;text-decoration:none;color:inherit;display:flex;flex-direction:column}
+.lex-cli .cl-card:hover{border-color:var(--bdr2);box-shadow:0 2px 8px rgba(12,36,97,0.06)}
+.lex-cli .cl-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.lex-cli .cl-name{font-size:13.5px;font-weight:600;color:var(--tp);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.lex-cli .cl-type{font-size:11px;color:var(--tm)}
+
+.lex-cli .cl-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:auto;padding-top:10px;border-top:1px solid var(--bdr)}
+.lex-cli .cl-stat-item{background:var(--sur2);border-radius:6px;padding:7px 9px}
+.lex-cli .cl-stat-lbl{font-size:10px;color:var(--tm);margin-bottom:2px}
+.lex-cli .cl-stat-val{font-size:13px;font-weight:600;color:var(--tp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lex-cli .cl-stat-val.green{color:var(--green)}
+.lex-cli .cl-stat-val.amber{color:var(--amb)}
+
+.lex-cli .cl-card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr);gap:8px}
+.lex-cli .cl-since{font-size:10.5px;color:var(--tm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lex-cli .cl-acts{display:flex;gap:5px;flex-shrink:0}
+.lex-cli .mini-btn{font-size:10px;padding:4px 9px;border-radius:5px;border:1px solid var(--bdr);background:var(--sur);color:var(--ts);cursor:pointer;font-family:inherit;text-decoration:none}
+.lex-cli .mini-btn:hover{background:var(--sur2)}
+.lex-cli .mini-btn.primary{background:var(--bbg);color:var(--btx);border-color:#A8C4F4}
+.lex-cli .mini-btn.primary:hover{background:#DDEAF9}
+
+.lex-cli .pagination-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 0 0;flex-wrap:wrap;gap:8px}
+.lex-cli .pg-info{font-size:11.5px;color:var(--tm)}
+.lex-cli .pg-btns{display:flex;align-items:center;gap:4px}
+.lex-cli .pg-btn{min-width:28px;height:28px;border-radius:5px;border:1px solid var(--bdr);background:var(--sur);font-size:11.5px;color:var(--ts);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;padding:0 8px;font-family:inherit}
+.lex-cli .pg-btn:hover{background:var(--sur2);color:var(--tp)}
+.lex-cli .pg-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.lex-cli .pg-btn[aria-disabled="true"]{opacity:0.4;pointer-events:none}
+
+.lex-cli .empty{padding:60px 20px;text-align:center;color:var(--tm);background:var(--sur);border:1px solid var(--bdr);border-radius:10px}
+.lex-cli .empty i{font-size:32px;display:block;margin-bottom:8px;opacity:0.5}
+
+@media(max-width:1100px){
+  .lex-cli .cl-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:680px){
+  .lex-cli .cl-grid{grid-template-columns:1fr}
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="page-header">
-    <h3>الموكلون</h3>
-    <a href="{{ url_for('clients.create') }}" class="btn btn-primary">
-        <i class="bi bi-plus-circle me-1"></i> إضافة موكل
+<div class="lex-cli">
+<div class="pshell">
+
+  {# ── Topbar ────────────────────────────────────────────────────────── #}
+  <div class="ptop">
+    <div class="ptitle">الموكلون</div>
+    <div class="ptop-meta">{{ clients.total }} موكل</div>
+    <div class="sp"></div>
+    <a class="tbtn tbtn-p" href="{{ url_for('clients.create') }}">
+      <i class="bi bi-plus-lg"></i> موكل جديد
     </a>
-</div>
+  </div>
 
-<!-- Search & Filters -->
-<div class="card mb-3">
-    <div class="card-body py-2">
-        <form method="GET" class="row g-2 align-items-center">
-            <div class="col-md-5">
-                <label for="clientSearch" class="visually-hidden">بحث في الموكلين</label>
-                <input type="text" name="search" id="clientSearch" class="form-control" placeholder="بحث بالاسم، رقم الموكل، الرقم القومي، الهاتف..." value="{{ search }}">
-            </div>
-            <div class="col-md-2">
-                <select name="type" class="form-select">
-                    <option value="">كل الأنواع</option>
-                    <option value="individual" {% if client_type == 'individual' %}selected{% endif %}>فرد</option>
-                    <option value="company" {% if client_type == 'company' %}selected{% endif %}>شركة</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select name="status" class="form-select">
-                    <option value="">كل الحالات</option>
-                    <option value="active" {% if status == 'active' %}selected{% endif %}>نشط</option>
-                    <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>غير نشط</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-outline-primary w-100">
-                    <i class="bi bi-search me-1"></i> بحث
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+  <div class="pc">
 
-<!-- Clients Table -->
-<div class="card">
-    <div class="card-body p-0">
-        {% if clients.items %}
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>رقم الموكل</th>
-                        <th>الاسم</th>
-                        <th>النوع</th>
-                        <th>الهاتف</th>
-                        <th>المحافظة</th>
-                        <th>القضايا</th>
-                        <th>الرصيد</th>
-                        <th>الحالة</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for client in clients.items %}
-                    <tr>
-                        <td><a href="{{ url_for('clients.show', id=client.id) }}">{{ client.client_number or '-' }}</a></td>
-                        <td>
-                            <strong>{{ client.full_name }}</strong>
-                            {% if client.full_name_en %}<br><small class="text-muted">{{ client.full_name_en }}</small>{% endif %}
-                        </td>
-                        <td>
-                            {% if client.client_type == 'individual' %}
-                            <span class="badge bg-info bg-opacity-10 text-info">فرد</span>
-                            {% else %}
-                            <span class="badge bg-primary bg-opacity-10 text-primary">شركة</span>
-                            {% endif %}
-                        </td>
-                        <td dir="ltr">{{ client.phone_primary or '-' }}</td>
-                        <td>{{ client.governorate or '-' }}</td>
-                        <td>{{ client.cases.count() }}</td>
-                        <td>
-                            {% set bal = client.balance %}
-                            {% if bal > 0 %}
-                            <span class="text-danger">{{ bal|int }} ج.م</span>
-                            {% elif bal < 0 %}
-                            <span class="text-success">{{ bal|int }} ج.م</span>
-                            {% else %}
-                            <span class="text-muted">0</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if client.is_active %}
-                            <span class="badge bg-success">نشط</span>
-                            {% else %}
-                            <span class="badge bg-secondary">غير نشط</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{{ url_for('clients.show', id=client.id) }}" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    {# ── Filter row + search ───────────────────────────────────────── #}
+    <form method="GET" class="filter-row">
+      <label class="search-input">
+        <i class="bi bi-search"></i>
+        <input type="text" name="search" placeholder="بحث بالاسم أو الرقم القومي أو السجل…" value="{{ search }}">
+      </label>
 
-        <!-- Pagination -->
-        {% if clients.pages > 1 %}
-        <div class="d-flex justify-content-center py-3">
-            <nav>
-                <ul class="pagination pagination-sm mb-0">
-                    {% if clients.has_prev %}
-                    <li class="page-item"><a class="page-link" href="?page={{ clients.prev_num }}&search={{ search }}&type={{ client_type }}&status={{ status }}">السابق</a></li>
-                    {% endif %}
-                    {% for p in clients.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-                        {% if p %}
-                        <li class="page-item {% if p == clients.page %}active{% endif %}">
-                            <a class="page-link" href="?page={{ p }}&search={{ search }}&type={{ client_type }}&status={{ status }}">{{ p }}</a>
-                        </li>
-                        {% else %}
-                        <li class="page-item disabled"><span class="page-link">...</span></li>
-                        {% endif %}
-                    {% endfor %}
-                    {% if clients.has_next %}
-                    <li class="page-item"><a class="page-link" href="?page={{ clients.next_num }}&search={{ search }}&type={{ client_type }}&status={{ status }}">التالي</a></li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
+      {# Type chips #}
+      {% set _qs = {'search': search or None} %}
+      <a class="filter-chip {{ 'active' if not (client_type or status) }}"
+         href="{{ url_for('clients.index', **_qs) }}">
+        الكل <span class="filter-count">{{ total_count }}</span>
+      </a>
+      <a class="filter-chip {{ 'active' if client_type == 'company' }}"
+         href="{{ url_for('clients.index', type='company', **_qs) }}">
+        شركات <span class="filter-count">{{ type_counts.get('company', 0) }}</span>
+      </a>
+      <a class="filter-chip {{ 'active' if client_type == 'individual' }}"
+         href="{{ url_for('clients.index', type='individual', **_qs) }}">
+        أفراد <span class="filter-count">{{ type_counts.get('individual', 0) }}</span>
+      </a>
+      <a class="filter-chip {{ 'active' if status == 'active' }}"
+         href="{{ url_for('clients.index', status='active', **_qs) }}">
+        نشطون <span class="filter-count">{{ active_count }}</span>
+      </a>
+      {% if overdue_count > 0 %}
+      <a class="filter-chip" style="border-color:#F0BCBC;color:var(--rtx)"
+         href="{{ url_for('clients.index', overdue='1', **_qs) }}">
+        مستحقات متأخرة <span class="filter-count" style="background:var(--red);color:#fff;border:none">{{ overdue_count }}</span>
+      </a>
+      {% endif %}
+    </form>
+
+    {# ── Card grid ─────────────────────────────────────────────────── #}
+    {% if clients.items %}
+    <div class="cl-grid">
+      {% for c in clients.items %}
+        {% set _initials = (c.full_name or '?')[:2] %}
+        {% set _bg = _palette[c.id % _palette|length] %}
+        {% set _cases_n = cases_by_client.get(c.id, 0) %}
+        {% set _dues = dues_by_client.get(c.id, 0) %}
+
+        {# Status badge — derive from is_active + dues #}
+        {% if not c.is_active %}{% set _bclass, _blabel = 'b-arc', 'مؤرشف' %}
+        {% elif _dues > 0 %}{% set _bclass, _blabel = 'b-pen', 'مستحقات' %}
+        {% elif c.created_at and (today - c.created_at.date()).days < 30 %}{% set _bclass, _blabel = 'b-new', 'جديد' %}
+        {% else %}{% set _bclass, _blabel = 'b-act', 'نشط' %}
         {% endif %}
 
+        <a class="cl-card" href="{{ url_for('clients.show', id=c.id) }}">
+          <div class="cl-card-top">
+            <div style="display:flex;align-items:center;gap:9px;min-width:0;flex:1">
+              <div class="av" style="width:38px;height:38px;font-size:12px;background:{{ _bg }}">{{ _initials }}</div>
+              <div style="min-width:0">
+                <div class="cl-name" title="{{ c.full_name }}">{{ c.full_name }}</div>
+                <div class="cl-type">
+                  {{ type_map.get(c.client_type, c.client_type) }}
+                  {% if c.profession %} · {{ c.profession }}{% endif %}
+                </div>
+              </div>
+            </div>
+            <span class="badge {{ _bclass }}">{{ _blabel }}</span>
+          </div>
+
+          <div class="cl-stats">
+            <div class="cl-stat-item">
+              <div class="cl-stat-lbl">القضايا النشطة</div>
+              <div class="cl-stat-val">
+                {% if _cases_n > 0 %}{{ _cases_n }} قضية{% else %}—{% endif %}
+              </div>
+            </div>
+            <div class="cl-stat-item">
+              <div class="cl-stat-lbl">المستحقات</div>
+              {% if _dues > 0 %}
+              <div class="cl-stat-val amber">{{ '{:,.0f}'.format(_dues) }} {{ _curr }}</div>
+              {% else %}
+              <div class="cl-stat-val green">مسدد</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="cl-card-foot">
+            <span class="cl-since">
+              {% if c.created_at %}موكل منذ {{ c.created_at.strftime('%Y-%m-%d') }}{% else %}—{% endif %}
+            </span>
+            <div class="cl-acts">
+              {% if c.phone_primary %}
+              <a class="mini-btn" href="tel:{{ c.phone_primary }}" onclick="event.stopPropagation()">اتصال</a>
+              {% endif %}
+              <span class="mini-btn primary">ملف كامل</span>
+            </div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+
+    {# ── Pagination ────────────────────────────────────────────────── #}
+    {% if clients.pages > 1 %}
+    <div class="pagination-bar">
+      <span class="pg-info">
+        عرض {{ ((clients.page - 1) * clients.per_page + 1) }}–{{ ((clients.page - 1) * clients.per_page + clients.items|length) }}
+        من {{ clients.total }} موكل
+      </span>
+      {% set _pq = {'search':search or None,'type':client_type or None,'status':status or None} %}
+      <div class="pg-btns">
+        <a class="pg-btn" {% if not clients.has_prev %}aria-disabled="true"{% endif %}
+           href="{{ url_for('clients.index', page=clients.prev_num, **_pq) if clients.has_prev else '#' }}">
+          <i class="bi bi-chevron-right"></i>
+        </a>
+        {% for p in clients.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+          {% if p %}
+            <a class="pg-btn {{ 'active' if p == clients.page }}"
+               href="{{ url_for('clients.index', page=p, **_pq) }}">{{ p }}</a>
+          {% else %}
+            <span style="font-size:11px;color:var(--tm);padding:0 4px">…</span>
+          {% endif %}
+        {% endfor %}
+        <a class="pg-btn" {% if not clients.has_next %}aria-disabled="true"{% endif %}
+           href="{{ url_for('clients.index', page=clients.next_num, **_pq) if clients.has_next else '#' }}">
+          <i class="bi bi-chevron-left"></i>
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty">
+      <i class="bi bi-people"></i>
+      <div style="font-size:14px;color:var(--ts);margin-bottom:4px">
+        {% if search or client_type or status %}
+          لا يوجد موكلون يطابقون الفلاتر
         {% else %}
-        <div class="empty-state">
-            <i class="bi bi-people"></i>
-            <p>لا يوجد موكلون</p>
-            <a href="{{ url_for('clients.create') }}" class="btn btn-primary btn-sm">إضافة أول موكل</a>
-        </div>
+          لم تُسجَّل موكلون بعد
         {% endif %}
+      </div>
+      <a href="{{ url_for('clients.create') }}" class="btn btn-primary btn-sm mt-3">
+        <i class="bi bi-plus-circle me-1"></i> إضافة موكل جديد
+      </a>
     </div>
+    {% endif %}
+
+  </div>
+</div>
 </div>
 {% endblock %}
