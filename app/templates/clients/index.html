@@ -159,7 +159,10 @@
         {% else %}{% set _bclass, _blabel = 'b-act', 'نشط' %}
         {% endif %}
 
-        <a class="cl-card" href="{{ url_for('clients.show', id=c.id) }}">
+        {# Use a <div> wrapper with onclick — nested <a> tags (the phone link
+           inside this card) are invalid HTML and cause browsers to auto-close
+           the parent <a>, which makes the card-foot escape the card body. #}
+        <div class="cl-card" onclick="window.location='{{ url_for('clients.show', id=c.id) }}'">
           <div class="cl-card-top">
             <div style="display:flex;align-items:center;gap:9px;min-width:0;flex:1">
               <div class="av" style="width:38px;height:38px;font-size:12px;background:{{ _bg }}">{{ _initials }}</div>
@@ -199,10 +202,10 @@
               {% if c.phone_primary %}
               <a class="mini-btn" href="tel:{{ c.phone_primary }}" onclick="event.stopPropagation()">اتصال</a>
               {% endif %}
-              <span class="mini-btn primary">ملف كامل</span>
+              <a class="mini-btn primary" href="{{ url_for('clients.show', id=c.id) }}" onclick="event.stopPropagation()">ملف كامل</a>
             </div>
           </div>
-        </a>
+        </div>{# /cl-card #}
       {% endfor %}
     </div>
 
