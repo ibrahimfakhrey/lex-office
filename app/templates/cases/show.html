@@ -3,309 +3,513 @@
 
 {% set type_map = {'criminal':'جنائية','civil':'مدنية','commercial':'تجارية','administrative':'إدارية','labor':'عمالية','family':'أسرة','constitutional':'دستورية','enforcement':'تنفيذ'} %}
 {% set status_map = {'new':'جديدة','active':'نشطة','awaiting_judgment':'منتظرة حكم','suspended':'موقوفة','closed':'مغلقة'} %}
-{% set status_color = {'new':'info','active':'success','awaiting_judgment':'warning','suspended':'secondary','closed':'dark'} %}
+{% set status_class = {'new':'b-new','active':'b-open','awaiting_judgment':'b-watch','suspended':'b-hold','closed':'b-done'} %}
 {% set cap_map = {'plaintiff':'مدعي','defendant':'مدعى عليه','appellant':'مستأنف','respondent':'مطعون ضده','other':'أخرى'} %}
 {% set fee_map = {'fixed':'مبلغ ثابت','percentage':'نسبة','hourly':'بالساعة','mixed':'مختلط'} %}
+{% set _curr = market_config.currency_symbol_ar if market_config else 'ج.م' %}
+
+{% block extra_css %}
+<style>
+.lex-case{
+  --ink:#0C2461;--blue:#1849A9;--accent:#078FD2;
+  --bg:#F0F2F5;--surface:#FFFFFF;--surface2:#F7F8FA;
+  --border:#E3E7EE;--border2:#D0D7E3;
+  --tp:#0C2461;--ts:#4A5A7A;--tm:#8090B0;
+  --green:#0F7A55;--green-bg:#EAF5F0;
+  --amber:#7A5000;--amber-bg:#FFF4DC;
+  --red:#9B2020;--red-bg:#FEF0F0;
+  --blue-bg:#EBF2FE;--purple:#6B3FA0;--purple-bg:#F3EEF9;
+  font-size:13px;line-height:1.5;
+}
+.lex-case *{box-sizing:border-box}
+
+.lex-case .page-shell{background:var(--bg);border:1px solid var(--border2);border-radius:12px;overflow:hidden}
+.lex-case .page-topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.lex-case .breadcrumb{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--tm);margin:0;padding:0;background:none}
+.lex-case .breadcrumb a{color:var(--accent);text-decoration:none}
+.lex-case .breadcrumb a:hover{text-decoration:underline}
+.lex-case .breadcrumb .current{color:var(--tp);font-weight:500}
+.lex-case .breadcrumb i{font-size:11px;color:var(--tm)}
+.lex-case .sp{flex:1}
+.lex-case .tb-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:var(--surface);color:var(--ts);text-decoration:none}
+.lex-case .tb-btn:hover{background:var(--surface2);color:var(--tp)}
+.lex-case .tb-btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.lex-case .tb-btn-primary:hover{background:#143575;color:#fff}
+.lex-case .tb-btn-warn{color:#7A5000}
+.lex-case .tb-btn i{font-size:11px}
+
+.lex-case .page-content{padding:18px 20px}
+.lex-case .detail-grid{display:grid;grid-template-columns:1fr 280px;gap:16px}
+.lex-case .detail-main{display:flex;flex-direction:column;gap:12px;min-width:0}
+.lex-case .detail-side{display:flex;flex-direction:column;gap:12px}
+
+.lex-case .lcard{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.lex-case .lcard-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border)}
+.lex-case .lcard-title{font-size:12.5px;font-weight:600;color:var(--tp)}
+.lex-case .lcard-link{font-size:11px;color:var(--accent);text-decoration:none}
+.lex-case .lcard-link:hover{text-decoration:underline}
+
+.lex-case .lex-badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;padding:3px 9px;border-radius:4px;font-weight:500;white-space:nowrap}
+.lex-case .lex-badge::before{content:'';width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
+.lex-case .b-new{background:#E0F2FE;color:#075985}.lex-case .b-new::before{background:#075985}
+.lex-case .b-open{background:#EBF2FE;color:#0C447C}.lex-case .b-open::before{background:#1849A9}
+.lex-case .b-watch{background:var(--blue-bg);color:#0C447C}.lex-case .b-watch::before{background:var(--accent)}
+.lex-case .b-hold{background:var(--purple-bg);color:#4A2070}.lex-case .b-hold::before{background:var(--purple)}
+.lex-case .b-done{background:var(--green-bg);color:#0A5A3A}.lex-case .b-done::before{background:var(--green)}
+
+/* Hero */
+.lex-case .case-hero{padding:14px 16px}
+.lex-case .case-hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.lex-case .case-title{font-size:16px;font-weight:600;color:var(--tp);margin-bottom:6px}
+.lex-case .case-meta-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.lex-case .case-meta-item{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ts)}
+.lex-case .case-meta-item i{font-size:12px;color:var(--tm)}
+.lex-case .case-status-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lex-case .fees-tag{font-size:10.5px;background:var(--amber-bg);color:var(--amber);border-radius:4px;padding:3px 9px;font-weight:500;white-space:nowrap}
+.lex-case .summary-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:12px;color:var(--ts);line-height:1.7}
+
+/* Progress */
+.lex-case .progress-section{padding:14px 16px;border-top:1px solid var(--border)}
+.lex-case .progress-label{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.lex-case .progress-label span{font-size:11.5px;color:var(--ts)}
+.lex-case .progress-label strong{font-size:11.5px;font-weight:600;color:var(--tp)}
+.lex-case .prog-track{background:var(--border);border-radius:3px;height:5px;overflow:hidden}
+.lex-case .prog-fill{height:100%;border-radius:3px;background:var(--blue)}
+.lex-case .stage-row{display:flex;align-items:center;gap:14px;margin-top:10px;flex-wrap:wrap}
+.lex-case .stage{font-size:11px;color:var(--ts);display:inline-flex;align-items:center;gap:5px}
+.lex-case .stage .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.lex-case .stage.done .dot{background:var(--green)}
+.lex-case .stage.now{color:var(--blue);font-weight:500}
+.lex-case .stage.now .dot{background:var(--blue)}
+.lex-case .stage.next .dot{background:var(--border2)}
+
+/* Timeline */
+.lex-case .timeline{padding:14px 16px}
+.lex-case .tl-item{display:flex;gap:10px;margin-bottom:14px}
+.lex-case .tl-item:last-child{margin-bottom:0}
+.lex-case .tl-left{display:flex;flex-direction:column;align-items:center}
+.lex-case .tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.lex-case .tl-dot.blue{background:var(--blue)}
+.lex-case .tl-dot.green{background:var(--green)}
+.lex-case .tl-dot.amber{background:#EF9F27}
+.lex-case .tl-dot.red{background:#E24B4A}
+.lex-case .tl-dot.gray{background:var(--border2)}
+.lex-case .tl-line{width:1px;flex:1;background:var(--border);margin-top:3px}
+.lex-case .tl-body{flex:1;padding-bottom:14px;border-bottom:1px solid var(--border);min-width:0}
+.lex-case .tl-item:last-child .tl-body{border-bottom:none;padding-bottom:0}
+.lex-case .tl-what{font-size:12.5px;font-weight:500;color:var(--tp);margin-bottom:3px}
+.lex-case .tl-who{font-size:11px;color:var(--tm)}
+
+/* Info list */
+.lex-case .info-list{}
+.lex-case .info-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border)}
+.lex-case .info-row:last-child{border-bottom:none}
+.lex-case .info-label{font-size:11px;color:var(--tm)}
+.lex-case .info-value{font-size:12px;font-weight:500;color:var(--tp);text-align:left}
+.lex-case .av-sm{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff;flex-shrink:0;vertical-align:middle}
+
+/* Documents */
+.lex-case .doc-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);text-decoration:none;color:inherit}
+.lex-case .doc-item:last-child{border-bottom:none}
+.lex-case .doc-item:hover{background:var(--surface2)}
+.lex-case .doc-icon{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+.lex-case .doc-icon.pdf{background:var(--red-bg);color:var(--red)}
+.lex-case .doc-icon.doc{background:var(--blue-bg);color:var(--blue)}
+.lex-case .doc-icon.img{background:var(--purple-bg);color:var(--purple)}
+.lex-case .doc-icon.other{background:var(--surface2);color:var(--tm)}
+.lex-case .doc-name{font-size:12.5px;font-weight:500;color:var(--tp);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lex-case .doc-date{font-size:10.5px;color:var(--tm);flex-shrink:0}
+
+/* Financial rows */
+.lex-case .fin-row{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border)}
+.lex-case .fin-row:last-child{border-bottom:none}
+.lex-case .fin-label{font-size:11.5px;color:var(--ts)}
+.lex-case .fin-val{font-size:13px;font-weight:600;color:var(--tp)}
+.lex-case .fin-val.green{color:var(--green)}
+.lex-case .fin-val.red{color:var(--red)}
+.lex-case .fin-val.amber{color:var(--amber)}
+
+/* Next session highlight */
+.lex-case .next-session{border:1px solid #A8C4F4;background:#F5F8FF}
+.lex-case .next-session .lcard-head{background:#EBF2FE;border-bottom-color:#A8C4F4}
+.lex-case .next-session .lcard-title{color:#0C447C}
+.lex-case .next-pill{font-size:10px;background:var(--blue);color:#fff;border-radius:4px;padding:2px 8px;font-weight:600}
+.lex-case .next-time{font-size:14px;font-weight:600;color:#0C447C}
+.lex-case .next-meta{font-size:11.5px;color:#4A6090;margin-top:4px}
+.lex-case .next-note{font-size:11.5px;color:#4A6090;background:var(--surface);border:1px solid #C5D8F5;border-radius:6px;padding:8px 10px;margin-top:8px}
+
+/* Empty */
+.lex-case .empty-mini{padding:30px 16px;text-align:center;color:var(--tm);font-size:12px}
+.lex-case .empty-mini i{font-size:22px;display:block;margin-bottom:6px;opacity:0.5}
+
+@media(max-width:980px){
+  .lex-case .detail-grid{grid-template-columns:1fr}
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div>
-        <h3>
-            {{ case.case_number or 'قضية جديدة' }}
-            <span class="badge bg-{{ status_color.get(case.status, 'secondary') }} fs-6">{{ status_map.get(case.status, case.status) }}</span>
-            {% if case.priority == 'critical' %}<span class="badge bg-danger fs-6">حرجة</span>{% elif case.priority == 'important' %}<span class="badge bg-warning text-dark fs-6">مهمة</span>{% endif %}
-        </h3>
-        <small class="text-muted">{{ type_map.get(case.case_type, case.case_type) }} | {{ case.court.name if case.court else '-' }} {% if case.circuit %} - الدائرة {{ case.circuit }}{% endif %}</small>
-    </div>
-    <div class="d-flex gap-2">
-        <a href="{{ url_for('cases.edit', id=case.id) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i> تعديل</a>
-        {% if case.status != 'closed' %}
-        <form method="POST" action="{{ url_for('cases.close', id=case.id) }}" class="d-inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-outline-warning btn-sm" data-confirm="هل أنت متأكد من إغلاق القضية؟"><i class="bi bi-lock me-1"></i> إغلاق</button>
-        </form>
+{% set _palette = ['#1849A9','#0F7A55','#7A5000','#9B2020','#7B3F9E','#078FD2'] %}
+
+{# Build a unified timeline: sessions + judgments + case-created #}
+{% set _ns = namespace(events=[]) %}
+{% for s in sessions %}
+  {% set _label = 'جلسة' %}
+  {% if s.session_type == 'judgment' %}{% set _label = 'جلسة حكم' %}
+  {% elif s.session_type == 'pleading' %}{% set _label = 'جلسة مرافعة' %}
+  {% elif s.session_type == 'evidence' %}{% set _label = 'جلسة إثبات' %}
+  {% elif s.session_type == 'first' %}{% set _label = 'جلسة أولى' %}
+  {% elif s.session_type == 'postponement' %}{% set _label = 'تأجيل جلسة' %}
+  {% elif s.session_type == 'emergency' %}{% set _label = 'جلسة طارئة' %}
+  {% endif %}
+  {% set _what = _label %}
+  {% if s.notes %}{% set _what = _label + ' — ' + (s.notes|string)[:80] %}{% endif %}
+  {% set _ns.events = _ns.events + [{'kind':'session','date':s.session_date,'time':s.session_time,'what':_what,'who':(s.case.court.name if s.case and s.case.court else ''),'url':url_for('sessions.show', id=s.id),'past':(s.session_date and s.session_date < today)}] %}
+{% endfor %}
+{% for j in judgments %}
+  {% set _what = 'صدور حكم — ' + ({'full_win':'كسب كامل','partial_win':'كسب جزئي','loss':'خسارة','postponement':'تأجيل','procedural':'شكلي','absence':'غيابي'}.get(j.result, j.result or '')) %}
+  {% set _ns.events = _ns.events + [{'kind':'judgment','date':j.judgment_date,'time':None,'what':_what,'who':(j.judge_name or ''),'url':url_for('judgments.show', id=j.id),'past':True}] %}
+{% endfor %}
+{% set _ns.events = _ns.events + [{'kind':'created','date':case.created_at.date() if case.created_at else None,'time':None,'what':'فُتحت القضية','who':(case.responsible_lawyer.full_name if case.responsible_lawyer else '') ,'url':None,'past':True}] %}
+
+{% set _events_with_date = _ns.events | selectattr('date') | list %}
+{% set _sorted = _events_with_date | sort(attribute='date', reverse=true) %}
+
+<div class="lex-case">
+<div class="page-shell">
+
+  {# ── Topbar / Breadcrumb ───────────────────────────────────────────── #}
+  <div class="page-topbar">
+    <nav class="breadcrumb">
+      <a href="{{ url_for('cases.index') }}">القضايا</a>
+      <i class="bi bi-chevron-left"></i>
+      <span class="current">{{ case.case_number or ('#' ~ case.id) }}</span>
+    </nav>
+    <div class="sp"></div>
+    <a class="tb-btn" href="{{ url_for('cases.edit', id=case.id) }}">
+      <i class="bi bi-pencil"></i> تعديل
+    </a>
+    {% if case.status != 'closed' %}
+    <form method="POST" action="{{ url_for('cases.close', id=case.id) }}" style="display:inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="tb-btn tb-btn-warn" type="submit" onclick="return confirm('هل أنت متأكد من إغلاق القضية؟')">
+        <i class="bi bi-lock"></i> إغلاق
+      </button>
+    </form>
+    {% endif %}
+    <a class="tb-btn tb-btn-primary" href="{{ url_for('sessions.create', case_id=case.id) }}">
+      <i class="bi bi-plus-lg"></i> جلسة جديدة
+    </a>
+  </div>
+
+  <div class="page-content">
+    <div class="detail-grid">
+
+      {# ═══ MAIN COLUMN ═══ #}
+      <div class="detail-main">
+
+        {# ── Hero ────────────────────────────────────────────────────── #}
+        <div class="lcard">
+          <div class="case-hero">
+            <div class="case-hero-top">
+              <div style="min-width:0;flex:1">
+                <div class="case-title">
+                  {% if case.subject %}{{ case.subject }}
+                  {% else %}{{ type_map.get(case.case_type, case.case_type) }} — {{ case.client.full_name if case.client else '' }}
+                  {% endif %}
+                </div>
+                <div class="case-meta-row">
+                  <div class="case-meta-item">
+                    <i class="bi bi-calendar3"></i>
+                    {% if case.created_at %}مفتوحة منذ {{ case.created_at.strftime('%Y-%m-%d') }}{% else %}—{% endif %}
+                  </div>
+                  {% if case.court %}
+                  <div class="case-meta-item">
+                    <i class="bi bi-bank"></i>
+                    {{ case.court.name }}{% if case.circuit %} · الدائرة {{ case.circuit }}{% endif %}
+                  </div>
+                  {% endif %}
+                  <div class="case-meta-item">
+                    <i class="bi bi-folder2-open"></i>
+                    {{ type_map.get(case.case_type, case.case_type) }}
+                    {% if case.our_client_capacity %} · {{ cap_map.get(case.our_client_capacity, case.our_client_capacity) }}{% endif %}
+                  </div>
+                  {% if case.case_number %}
+                  <div class="case-meta-item">
+                    <i class="bi bi-hash"></i>
+                    {{ case.case_number }}{% if case.judicial_year %} / {{ case.judicial_year }}{% endif %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="case-status-row">
+                <span class="lex-badge {{ status_class.get(case.status, 'b-open') }}" style="font-size:11.5px;padding:4px 11px">
+                  {{ status_map.get(case.status, case.status) }}
+                </span>
+                {% if case.fee_amount %}
+                <span class="fees-tag">أتعاب: {{ '{:,.0f}'.format(case.fee_amount|float) }} {{ _curr }}</span>
+                {% endif %}
+                {% if case.priority == 'critical' %}
+                <span class="fees-tag" style="background:var(--red-bg);color:var(--red)">حرجة</span>
+                {% elif case.priority == 'important' %}
+                <span class="fees-tag" style="background:#FFF1D6;color:var(--amber)">مهمة</span>
+                {% endif %}
+              </div>
+            </div>
+            {% if case.subject and case.opponent_name %}
+            <div class="summary-box">
+              نزاع {{ type_map.get(case.case_type, case.case_type) }} بين الموكل
+              {% if case.client %}<strong>{{ case.client.full_name }}</strong>{% endif %}
+              ضد <strong>{{ case.opponent_name }}</strong>
+              {% if case.opponent_capacity %} ({{ case.opponent_capacity }}){% endif %}.
+              {% if case.opponent_lawyer %} المحامي المقابل: {{ case.opponent_lawyer }}.{% endif %}
+            </div>
+            {% endif %}
+          </div>
+
+          {# ── Progress (status-derived stages) ────────────────────────── #}
+          {% set _stage_order = ['new','active','awaiting_judgment','closed'] %}
+          {% set _stage_index = _stage_order.index(case.status) if case.status in _stage_order else 0 %}
+          {% set _pct = (((_stage_index + 1) * 100) // _stage_order|length) %}
+          <div class="progress-section">
+            <div class="progress-label">
+              <span>تقدم القضية</span>
+              <strong>{{ _pct }}%</strong>
+            </div>
+            <div class="prog-track"><div class="prog-fill" style="width:{{ _pct }}%"></div></div>
+            <div class="stage-row">
+              {% set _stage_labels = ['فُتحت','نشطة','منتظرة حكم','مغلقة'] %}
+              {% for label in _stage_labels %}
+                {% set _i = loop.index0 %}
+                <span class="stage {% if _i < _stage_index %}done{% elif _i == _stage_index %}now{% else %}next{% endif %}">
+                  <span class="dot"></span> {{ label }}{% if _i == _stage_index %} ← الآن{% endif %}
+                </span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        {# ── Timeline ─────────────────────────────────────────────────── #}
+        <div class="lcard">
+          <div class="lcard-head">
+            <div class="lcard-title">سجل النشاط والجلسات</div>
+            <a class="lcard-link" href="{{ url_for('sessions.create', case_id=case.id) }}">
+              <i class="bi bi-plus-circle"></i> إضافة جلسة
+            </a>
+          </div>
+          {% if _sorted %}
+          <div class="timeline">
+            {% for ev in _sorted %}
+              {% set _dot = 'gray' %}
+              {% if ev.kind == 'session' and not ev.past %}{% set _dot = 'blue' %}
+              {% elif ev.kind == 'session' %}{% set _dot = 'amber' %}
+              {% elif ev.kind == 'judgment' %}{% set _dot = 'green' %}
+              {% elif ev.kind == 'created' %}{% set _dot = 'gray' %}
+              {% endif %}
+              <div class="tl-item">
+                <div class="tl-left">
+                  <div class="tl-dot {{ _dot }}"></div>
+                  {% if not loop.last %}<div class="tl-line"></div>{% endif %}
+                </div>
+                <div class="tl-body">
+                  <div class="tl-what">
+                    {% if ev.url %}<a href="{{ ev.url }}" style="color:inherit;text-decoration:none">{{ ev.what }}</a>
+                    {% else %}{{ ev.what }}{% endif %}
+                  </div>
+                  <div class="tl-who">
+                    {% if ev.date %}{{ ev.date.strftime('%Y-%m-%d') }}{% if ev.time %} · {{ ev.time.strftime('%I:%M') }}{% endif %}{% endif %}
+                    {% if ev.who %} · {{ ev.who }}{% endif %}
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-mini"><i class="bi bi-calendar-x"></i> لا توجد جلسات أو أحكام بعد</div>
+          {% endif %}
+        </div>
+
+        {# ── Documents ────────────────────────────────────────────────── #}
+        <div class="lcard">
+          <div class="lcard-head">
+            <div class="lcard-title">المستندات والوثائق</div>
+            <a class="tb-btn" href="{{ url_for('documents.index') }}" style="font-size:11px;padding:4px 10px">
+              <i class="bi bi-plus-lg"></i> رفع ملف
+            </a>
+          </div>
+          {% if documents %}
+            {% for d in documents[:10] %}
+              {% set _ext = (d.file_type or '').lower() %}
+              {% set _icon_class = 'other' %}
+              {% set _icon_bs = 'bi-file-earmark' %}
+              {% if _ext == 'pdf' %}{% set _icon_class = 'pdf' %}{% set _icon_bs = 'bi-file-earmark-pdf-fill' %}
+              {% elif _ext in ['doc','docx'] %}{% set _icon_class = 'doc' %}{% set _icon_bs = 'bi-file-earmark-word-fill' %}
+              {% elif _ext in ['png','jpg','jpeg'] %}{% set _icon_class = 'img' %}{% set _icon_bs = 'bi-file-earmark-image-fill' %}
+              {% endif %}
+              <a class="doc-item" href="{{ url_for('documents.show', id=d.id) }}">
+                <div class="doc-icon {{ _icon_class }}"><i class="bi {{ _icon_bs }}"></i></div>
+                <div class="doc-name">{{ d.name }}</div>
+                <div class="doc-date">
+                  {% if d.doc_date %}{{ d.doc_date.strftime('%Y-%m-%d') }}
+                  {% elif d.created_at %}{{ d.created_at.strftime('%Y-%m-%d') }}
+                  {% else %}—{% endif %}
+                </div>
+              </a>
+            {% endfor %}
+          {% else %}
+            <div class="empty-mini"><i class="bi bi-file-earmark"></i> لا توجد مستندات مرفوعة</div>
+          {% endif %}
+        </div>
+
+      </div>
+
+      {# ═══ SIDE COLUMN ═══ #}
+      <div class="detail-side">
+
+        {# ── Next session highlight ─────────────────────────────────── #}
+        {% if next_session %}
+        <div class="lcard next-session">
+          <div class="lcard-head">
+            <div class="lcard-title">الجلسة القادمة</div>
+            {% set _delta = (next_session.session_date - today).days %}
+            <span class="next-pill">
+              {% if _delta == 0 %}اليوم
+              {% elif _delta == 1 %}غداً
+              {% else %}بعد {{ _delta }} يوم{% endif %}
+            </span>
+          </div>
+          <div style="padding:12px 14px">
+            <div class="next-time">
+              {{ next_session.session_date.strftime('%Y-%m-%d') }}
+              {% if next_session.session_time %} · {{ next_session.session_time.strftime('%I:%M') }} {% if next_session.session_time.hour < 12 %}ص{% else %}م{% endif %}{% endif %}
+            </div>
+            <div class="next-meta">
+              {% if case.court %}{{ case.court.name }}{% endif %}
+              {% if case.circuit %} · الدائرة {{ case.circuit }}{% endif %}
+            </div>
+            {% if next_session.notes %}
+            <div class="next-note">{{ next_session.notes[:120] }}{% if next_session.notes|length > 120 %}…{% endif %}</div>
+            {% endif %}
+            <a href="{{ url_for('sessions.show', id=next_session.id) }}" class="lcard-link" style="display:inline-block;margin-top:8px">عرض تفاصيل الجلسة ←</a>
+          </div>
+        </div>
         {% endif %}
-        <a href="{{ url_for('cases.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right me-1"></i> العودة</a>
+
+        {# ── Client info ─────────────────────────────────────────────── #}
+        {% if case.client %}
+        <div class="lcard">
+          <div class="lcard-head">
+            <div class="lcard-title">الموكل</div>
+            <a class="lcard-link" href="{{ url_for('clients.show', id=case.client_id) }}">ملف الموكل</a>
+          </div>
+          {% set _client_initials = (case.client.full_name or '?')[:2] %}
+          <div style="padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">
+            <div style="width:38px;height:38px;border-radius:50%;background:var(--blue-bg);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#0C447C;flex-shrink:0">{{ _client_initials }}</div>
+            <div style="min-width:0">
+              <div style="font-size:13px;font-weight:600;color:var(--tp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ case.client.full_name }}</div>
+              {% if case.client.client_type %}
+              <div style="font-size:11px;color:var(--tm)">
+                {% set _ctype = {'individual':'فرد','company':'شركة','government':'جهة حكومية'} %}
+                {{ _ctype.get(case.client.client_type, case.client.client_type) }}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="info-list">
+            {% if case.client.phone_primary %}
+            <div class="info-row"><span class="info-label">الجوال</span><span class="info-value" dir="ltr">{{ case.client.phone_primary }}</span></div>
+            {% endif %}
+            {% if case.client.email %}
+            <div class="info-row"><span class="info-label">البريد</span><span class="info-value" dir="ltr" style="font-size:11px">{{ case.client.email }}</span></div>
+            {% endif %}
+            {% if case.client.national_id %}
+            <div class="info-row"><span class="info-label">رقم الهوية</span><span class="info-value" dir="ltr">{{ case.client.national_id }}</span></div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        {# ── Financial ────────────────────────────────────────────────── #}
+        {% if case.fee_amount or payments %}
+        <div class="lcard">
+          <div class="lcard-head">
+            <div class="lcard-title">المالية</div>
+            <a class="lcard-link" href="{{ url_for('financial.index') }}">تفاصيل</a>
+          </div>
+          <div class="fin-row">
+            <span class="fin-label">{{ fee_map.get(case.fee_type, 'الأتعاب') }}</span>
+            <span class="fin-val">{{ '{:,.0f}'.format(case.fee_amount|float) if case.fee_amount else '—' }} {{ _curr if case.fee_amount }}</span>
+          </div>
+          <div class="fin-row">
+            <span class="fin-label">المحصّل</span>
+            <span class="fin-val green">{{ '{:,.0f}'.format(case.total_paid) }} {{ _curr }}</span>
+          </div>
+          {% set _bal = case.remaining_balance %}
+          <div class="fin-row">
+            <span class="fin-label">المستحق</span>
+            <span class="fin-val {{ 'amber' if _bal > 0 else 'green' }}">{{ '{:,.0f}'.format(_bal) }} {{ _curr }}</span>
+          </div>
+          {% if case.fee_amount and case.fee_amount|float > 0 %}
+            {% set _coll_pct = ((case.total_paid * 100) / (case.fee_amount|float)) | round(0, 'floor') | int %}
+            <div style="padding:11px 14px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+                <span style="font-size:11px;color:var(--tm)">نسبة التحصيل</span>
+                <span style="font-size:11px;font-weight:600;color:var(--tp)">{{ [_coll_pct, 100] | min }}%</span>
+              </div>
+              <div style="background:var(--border);border-radius:3px;height:5px;overflow:hidden">
+                <div style="width:{{ [_coll_pct, 100] | min }}%;height:100%;background:{% if _coll_pct >= 100 %}var(--green){% elif _coll_pct >= 50 %}var(--blue){% else %}var(--amber){% endif %};border-radius:3px"></div>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {# ── Team ───────────────────────────────────────────────────── #}
+        <div class="lcard">
+          <div class="lcard-head">
+            <div class="lcard-title">الفريق المسؤول</div>
+            <a class="lcard-link" href="{{ url_for('cases.edit', id=case.id) }}">تغيير</a>
+          </div>
+          <div class="info-list">
+            {% if case.responsible_lawyer %}
+              {% set _ri = (case.responsible_lawyer.full_name or '?')[:2] %}
+              {% set _rb = _palette[case.responsible_lawyer.id % _palette|length] %}
+              <div class="info-row">
+                <span class="info-label">المحامي الرئيسي</span>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <div class="av-sm" style="background:{{ _rb }}">{{ _ri }}</div>
+                  <span class="info-value">{{ case.responsible_lawyer.full_name }}</span>
+                </div>
+              </div>
+            {% endif %}
+            {% if case.assistant_lawyer %}
+              {% set _ai = (case.assistant_lawyer.full_name or '?')[:2] %}
+              {% set _ab = _palette[case.assistant_lawyer.id % _palette|length] %}
+              <div class="info-row">
+                <span class="info-label">المساعد</span>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <div class="av-sm" style="background:{{ _ab }}">{{ _ai }}</div>
+                  <span class="info-value">{{ case.assistant_lawyer.full_name }}</span>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        {# ── Counters ───────────────────────────────────────────────── #}
+        <div class="lcard">
+          <div class="lcard-head"><div class="lcard-title">إحصائيات</div></div>
+          <div class="info-list">
+            <div class="info-row"><span class="info-label">الجلسات</span><span class="info-value">{{ sessions|length }}</span></div>
+            <div class="info-row"><span class="info-label">الأحكام</span><span class="info-value">{{ judgments|length }}</span></div>
+            <div class="info-row"><span class="info-label">المهام</span><span class="info-value">{{ tasks|length }}</span></div>
+            <div class="info-row"><span class="info-label">المستندات</span><span class="info-value">{{ documents|length }}</span></div>
+          </div>
+        </div>
+
+      </div>
     </div>
+  </div>
 </div>
-
-<div class="row g-3">
-    <!-- Main Content -->
-    <div class="col-md-8">
-        <!-- Case Info -->
-        <div class="card mb-3">
-            <div class="card-header">بيانات القضية</div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <small class="text-muted">الموكل</small>
-                        <div><a href="{{ url_for('clients.show', id=case.client_id) }}"><strong>{{ case.client.full_name if case.client else '-' }}</strong></a></div>
-                    </div>
-                    <div class="col-md-3">
-                        <small class="text-muted">صفة الموكل</small>
-                        <div>{{ cap_map.get(case.our_client_capacity, case.our_client_capacity or '-') }}</div>
-                    </div>
-                    <div class="col-md-3">
-                        <small class="text-muted">السنة القضائية</small>
-                        <div>{{ case.judicial_year or '-' }}</div>
-                    </div>
-                    {% if case.subject %}
-                    <div class="col-12">
-                        <small class="text-muted">الموضوع</small>
-                        <div>{{ case.subject }}</div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Parties -->
-        {% if case.opponent_name %}
-        <div class="card mb-3">
-            <div class="card-header">الخصم</div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <small class="text-muted">اسم الخصم</small>
-                        <div>{{ case.opponent_name }}</div>
-                    </div>
-                    {% if case.opponent_capacity %}
-                    <div class="col-md-4">
-                        <small class="text-muted">صفة الخصم</small>
-                        <div>{{ case.opponent_capacity }}</div>
-                    </div>
-                    {% endif %}
-                    {% if case.opponent_lawyer %}
-                    <div class="col-md-4">
-                        <small class="text-muted">محامي الخصم</small>
-                        <div>{{ case.opponent_lawyer }}</div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Tabs: Sessions, Judgments, Tasks, Documents -->
-        <ul class="nav nav-tabs" role="tablist">
-            <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#sessions">الجلسات <span class="badge bg-secondary">{{ sessions|length }}</span></a></li>
-            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#judgments">الأحكام <span class="badge bg-secondary">{{ judgments|length }}</span></a></li>
-            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tasks">المهام <span class="badge bg-secondary">{{ tasks|length }}</span></a></li>
-            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#docs">المستندات <span class="badge bg-secondary">{{ documents|length }}</span></a></li>
-        </ul>
-        <div class="tab-content card card-body border-top-0 rounded-top-0">
-            <!-- Sessions Tab -->
-            <div class="tab-pane active" id="sessions">
-                {% if sessions %}
-                <div class="table-responsive">
-                    <table class="table table-sm mb-0">
-                        <thead><tr><th>التاريخ</th><th>الوقت</th><th>النوع</th><th>النتيجة</th></tr></thead>
-                        <tbody>
-                            {% for s in sessions %}
-                            <tr>
-                                <td>{{ s.session_date.strftime('%Y-%m-%d') if s.session_date else '-' }}</td>
-                                <td>{{ s.session_time.strftime('%H:%M') if s.session_time else '-' }}</td>
-                                <td>{{ s.session_type or '-' }}</td>
-                                <td>{{ s.result or 'لم تسجل' }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p class="text-muted text-center mb-0 py-3">لا توجد جلسات</p>
-                {% endif %}
-                <div class="mt-2">
-                    <a href="{{ url_for('sessions.create') }}?case_id={{ case.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus me-1"></i> إضافة جلسة</a>
-                </div>
-            </div>
-
-            <!-- Judgments Tab -->
-            <div class="tab-pane" id="judgments">
-                {% if judgments %}
-                <div class="table-responsive">
-                    <table class="table table-sm mb-0">
-                        <thead><tr><th>التاريخ</th><th>النوع</th><th>المنطوق</th><th>موعد الاستئناف</th></tr></thead>
-                        <tbody>
-                            {% for j in judgments %}
-                            <tr>
-                                <td>{{ j.judgment_date.strftime('%Y-%m-%d') if j.judgment_date else '-' }}</td>
-                                <td>{{ j.judgment_type or '-' }}</td>
-                                <td>{{ j.judgment_text[:50] if j.judgment_text else '-' }}</td>
-                                <td>{{ j.appeal_deadline.strftime('%Y-%m-%d') if j.appeal_deadline else '-' }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p class="text-muted text-center mb-0 py-3">لا توجد أحكام</p>
-                {% endif %}
-                <div class="mt-2">
-                    <a href="{{ url_for('judgments.create') }}?case_id={{ case.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus me-1"></i> إضافة حكم</a>
-                </div>
-            </div>
-
-            <!-- Tasks Tab -->
-            <div class="tab-pane" id="tasks">
-                {% if tasks %}
-                <div class="table-responsive">
-                    <table class="table table-sm mb-0">
-                        <thead><tr><th>المهمة</th><th>المسند إليه</th><th>الموعد</th><th>الحالة</th></tr></thead>
-                        <tbody>
-                            {% for t in tasks %}
-                            <tr>
-                                <td>{{ t.title }}</td>
-                                <td>{{ t.assignee.full_name if t.assignee else '-' }}</td>
-                                <td>{{ t.deadline.strftime('%Y-%m-%d') if t.deadline else '-' }}</td>
-                                <td><span class="badge bg-{{ 'success' if t.status == 'done' else 'warning' }}">{{ t.status }}</span></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p class="text-muted text-center mb-0 py-3">لا توجد مهام</p>
-                {% endif %}
-            </div>
-
-            <!-- Documents Tab -->
-            <div class="tab-pane" id="docs">
-                {% if documents %}
-                <ul class="list-unstyled mb-0">
-                    {% for d in documents %}
-                    <li class="py-2 border-bottom">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span><i class="bi bi-file-earmark-text me-1"></i>
-                                <span class="filename-cell" title="{{ d.name }}">{{ d.name }}</span>
-                            </span>
-                            <small class="text-muted">{{ d.created_at.strftime('%Y-%m-%d') }}</small>
-                        </div>
-                        {% if d.file_path and d.file_type in ['jpg','jpeg','png'] %}
-                            {% if d.file_path.startswith('uploads/') %}
-                            <img src="{{ url_for('static', filename=d.file_path) }}"
-                                 class="img-fluid rounded mb-1" style="max-height:150px;">
-                            {% endif %}
-                        {% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="text-muted text-center mb-0 py-3">لا توجد مستندات</p>
-                {% endif %}
-            </div>
-        </div>
-
-        {% if case.internal_notes %}
-        <div class="card mt-3">
-            <div class="card-header">ملاحظات داخلية</div>
-            <div class="card-body">{{ case.internal_notes }}</div>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Sidebar -->
-    <div class="col-md-4">
-        <!-- Team -->
-        <div class="card mb-3">
-            <div class="card-header">فريق العمل</div>
-            <div class="card-body">
-                <div class="mb-2">
-                    <small class="text-muted">المحامي المسؤول</small>
-                    <div><i class="bi bi-person-fill text-primary me-1"></i> {{ case.responsible_lawyer.full_name if case.responsible_lawyer else '-' }}</div>
-                </div>
-                {% if case.assistant_lawyer %}
-                <div>
-                    <small class="text-muted">محامي مساعد</small>
-                    <div><i class="bi bi-person me-1"></i> {{ case.assistant_lawyer.full_name }}</div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Financial -->
-        <div class="card mb-3">
-            <div class="card-header">الملخص المالي</div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between mb-2">
-                    <span>نوع الأتعاب</span>
-                    <span>{{ fee_map.get(case.fee_type, case.fee_type or '-') }}</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span>الأتعاب</span>
-                    <strong>{{ case.fee_amount|int if case.fee_amount else 0 }} ج.م</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span>المقدم</span>
-                    <span>{{ case.retainer_paid|int if case.retainer_paid else 0 }} ج.م</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span>المدفوع</span>
-                    <span class="text-success">{{ case.total_paid|int }} ج.م</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span>المصروفات</span>
-                    <span class="text-danger">{{ case.total_expenses|int }} ج.م</span>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between">
-                    <span>المتبقي</span>
-                    <strong class="{% if case.remaining_balance > 0 %}text-danger{% else %}text-success{% endif %}">
-                        {{ case.remaining_balance|int }} ج.م
-                    </strong>
-                </div>
-            </div>
-        </div>
-
-        <!-- Payments -->
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>المدفوعات <span class="badge bg-secondary">{{ payments|length }}</span></span>
-                {% if g.current_user.has_permission('financial', 'create')[0] %}
-                <a href="{{ url_for('financial.create_payment', case_id=case.id, client_id=case.client_id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-circle me-1"></i> إضافة دفعة</a>
-                {% else %}
-                <span class="btn btn-sm btn-outline-secondary disabled" title="غير مصرح لك بإضافة مدفوعات"><i class="bi bi-lock me-1"></i> إضافة دفعة</span>
-                {% endif %}
-            </div>
-            <div class="card-body p-0">
-                {% if payments %}
-                <div class="list-group list-group-flush">
-                    {% for p in payments %}
-                    <div class="list-group-item d-flex justify-content-between">
-                        <span>{{ p.amount|int }} ج.م</span>
-                        <small class="text-muted">{{ p.payment_date.strftime('%Y-%m-%d') if p.payment_date else '' }}</small>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="p-3 text-center text-muted small">لا توجد مدفوعات</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Metadata -->
-        <div class="card mb-3">
-            <div class="card-body small text-muted">
-                <div class="d-flex justify-content-between mb-1">
-                    <span>تاريخ التسجيل</span>
-                    <span>{{ case.created_at.strftime('%Y-%m-%d') }}</span>
-                </div>
-                {% if case.closed_at %}
-                <div class="d-flex justify-content-between mb-1">
-                    <span>تاريخ الإغلاق</span>
-                    <span>{{ case.closed_at.strftime('%Y-%m-%d') }}</span>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Delete -->
-        <form method="POST" action="{{ url_for('cases.delete', id=case.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-outline-danger btn-sm w-100" data-confirm="هل أنت متأكد من حذف هذه القضية؟ سيتم حذف جميع البيانات المرتبطة بها.">
-                <i class="bi bi-trash me-1"></i> حذف القضية
-            </button>
-        </form>
-    </div>
 </div>
 {% endblock %}

@@ -82,10 +82,22 @@ def index():
     cases = query.order_by(Case.created_at.desc()).paginate(page=page, per_page=20)
     lawyers = User.query.filter_by(tenant_id=g.tenant_id, is_active=True).all()
 
+    # Status counts for the filter chip strip — independent of current filters
+    # so the counts show what's available globally, not within the filtered set.
+    status_count_rows = (
+        db.session.query(Case.status, db.func.count(Case.id))
+        .filter(Case.tenant_id == g.tenant_id)
+        .group_by(Case.status)
+        .all()
+    )
+    status_counts = {row[0]: row[1] for row in status_count_rows}
+    total_count = sum(status_counts.values())
+
     return render_template('cases/index.html', cases=cases, search=search,
                            status=status, case_type=case_type, priority=priority,
                            lawyer_id=lawyer_id, lawyers=lawyers,
-                           case_types=CASE_TYPES, statuses=CASE_STATUSES, priorities=PRIORITIES)
+                           case_types=CASE_TYPES, statuses=CASE_STATUSES, priorities=PRIORITIES,
+                           status_counts=status_counts, total_count=total_count)
 
 
 @cases_bp.route('/create', methods=['GET', 'POST'])
@@ -194,6 +206,7 @@ def create():
 @permission_required('cases', 'view')
 def show(id):
     """Show case details with all related data."""
+    from app.utils.helpers import egypt_today
     case = Case.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
     sessions = case.sessions.all()
     judgments = case.judgments.all()
@@ -201,9 +214,22 @@ def show(id):
     expenses = case.expenses.all()
     documents = case.case_documents.all()
     tasks = case.tasks.all()
+
+    # Next upcoming session — drives the highlighted side card
+    today = egypt_today()
+    next_session = None
+    upcoming = [s for s in sessions if s.session_date and s.session_date >= today]
+    if upcoming:
+        from datetime import time as _t
+        next_session = sorted(
+            upcoming,
+            key=lambda s: (s.session_date, s.session_time or _t(0, 0)),
+        )[0]
+
     return render_template('cases/show.html', case=case, sessions=sessions,
                            judgments=judgments, payments=payments, expenses=expenses,
-                           documents=documents, tasks=tasks, statuses=CASE_STATUSES)
+                           documents=documents, tasks=tasks, statuses=CASE_STATUSES,
+                           next_session=next_session, today=today)
 
 
 @cases_bp.route('/<int:id>/edit', methods=['GET', 'POST'])

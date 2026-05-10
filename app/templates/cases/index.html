@@ -1,157 +1,270 @@
 {% extends "base.html" %}
 {% block title %}القضايا - LexOffice{% endblock %}
 
+{% block extra_css %}
+<style>
+.lex-cases{
+  --ink:#0C2461;--blue:#1849A9;--accent:#078FD2;
+  --bg:#F0F2F5;--surface:#FFFFFF;--surface2:#F7F8FA;
+  --border:#E3E7EE;--border2:#D0D7E3;
+  --tp:#0C2461;--ts:#4A5A7A;--tm:#8090B0;
+  --green:#0F7A55;--green-bg:#EAF5F0;
+  --amber:#7A5000;--amber-bg:#FFF4DC;
+  --red:#9B2020;--red-bg:#FEF0F0;
+  --blue-bg:#EBF2FE;--purple:#6B3FA0;--purple-bg:#F3EEF9;
+  font-size:13px;line-height:1.5;
+}
+.lex-cases *{box-sizing:border-box}
+.lex-cases .page-shell{background:var(--bg);border:1px solid var(--border2);border-radius:12px;overflow:hidden}
+.lex-cases .page-topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.lex-cases .page-topbar-title{font-size:14px;font-weight:600;color:var(--tp)}
+.lex-cases .topbar-meta{font-size:11.5px;color:var(--tm)}
+.lex-cases .sp{flex:1}
+.lex-cases .tb-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:var(--surface);color:var(--ts);text-decoration:none}
+.lex-cases .tb-btn:hover{background:var(--surface2);color:var(--tp)}
+.lex-cases .tb-btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.lex-cases .tb-btn-primary:hover{background:#143575;color:#fff}
+.lex-cases .tb-btn i{font-size:11px}
+
+.lex-cases .page-content{padding:18px 20px}
+
+.lex-cases .filter-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.lex-cases .filter-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:6px;font-size:11.5px;border:1px solid var(--border);background:var(--surface);color:var(--ts);cursor:pointer;text-decoration:none;white-space:nowrap}
+.lex-cases .filter-chip:hover{background:var(--surface2);color:var(--tp)}
+.lex-cases .filter-chip.active{background:var(--blue-bg);border-color:#A8C4F4;color:#0C447C;font-weight:500}
+.lex-cases .filter-count{background:var(--blue);color:#fff;font-size:9.5px;border-radius:8px;padding:1px 6px;font-weight:600;line-height:1.4}
+.lex-cases .filter-chip:not(.active) .filter-count{background:var(--surface2);color:var(--tm);border:1px solid var(--border)}
+
+.lex-cases .filter-form{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:6px 11px;flex:1;max-width:320px}
+.lex-cases .filter-form i{color:var(--tm)}
+.lex-cases .filter-form input{border:0;outline:0;background:transparent;font-size:12px;flex:1;font-family:inherit;color:var(--tp);padding:0}
+
+.lex-cases .filter-extras{display:flex;align-items:center;gap:6px;margin-right:auto}
+.lex-cases .filter-extras select{font-size:11.5px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--ts);font-family:inherit}
+
+.lex-cases .cases-tbl{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.lex-cases .cases-tbl th{text-align:right;font-size:10.5px;font-weight:600;color:var(--tm);padding:9px 14px;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap}
+.lex-cases .cases-tbl td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--tp);vertical-align:middle}
+.lex-cases .cases-tbl tr:last-child td{border-bottom:none}
+.lex-cases .cases-tbl tr:hover td{background:#F7FAFF;cursor:pointer}
+
+.lex-cases .case-id{font-size:11px;font-weight:700;color:var(--tm);font-variant-numeric:tabular-nums;white-space:nowrap}
+.lex-cases .cn{font-weight:500;color:var(--tp)}
+.lex-cases .ct{font-size:11.5px;color:var(--ts)}
+.lex-cases .lex-badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;padding:2px 8px;border-radius:4px;font-weight:500;white-space:nowrap}
+.lex-cases .lex-badge::before{content:'';width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
+.lex-cases .b-new{background:#E0F2FE;color:#075985}.lex-cases .b-new::before{background:#075985}
+.lex-cases .b-open{background:#EBF2FE;color:#0C447C}.lex-cases .b-open::before{background:#1849A9}
+.lex-cases .b-watch{background:var(--blue-bg);color:#0C447C}.lex-cases .b-watch::before{background:var(--accent)}
+.lex-cases .b-hold{background:var(--purple-bg);color:#4A2070}.lex-cases .b-hold::before{background:var(--purple)}
+.lex-cases .b-done{background:var(--green-bg);color:#0A5A3A}.lex-cases .b-done::before{background:var(--green)}
+.lex-cases .b-urgent{background:var(--red-bg);color:#7A1515}.lex-cases .b-urgent::before{background:#E24B4A}
+
+.lex-cases .pri-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:1px 6px;border-radius:3px;font-weight:500}
+.lex-cases .pri-critical{background:#FDE7E7;color:#7A1515}
+.lex-cases .pri-important{background:#FFF1D6;color:#7A5000}
+.lex-cases .pri-normal{color:var(--tm)}
+
+.lex-cases .av-sm{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:600;color:#fff;flex-shrink:0;margin-left:5px;vertical-align:middle}
+
+.lex-cases .pagination-bar{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-top:1px solid var(--border);background:var(--surface)}
+.lex-cases .pg-info{font-size:11.5px;color:var(--tm)}
+.lex-cases .pg-btns{display:flex;align-items:center;gap:4px}
+.lex-cases .pg-btn{min-width:28px;height:28px;border-radius:5px;border:1px solid var(--border);background:var(--surface);font-size:11.5px;color:var(--ts);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-family:inherit;text-decoration:none;padding:0 8px}
+.lex-cases .pg-btn:hover{background:var(--surface2);color:var(--tp)}
+.lex-cases .pg-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.lex-cases .pg-btn[aria-disabled="true"]{opacity:0.4;pointer-events:none}
+
+.lex-cases .empty{padding:60px 20px;text-align:center;color:var(--tm);background:var(--surface);border:1px solid var(--border);border-radius:10px}
+.lex-cases .empty i{font-size:32px;display:block;margin-bottom:8px;opacity:0.5}
+.lex-cases .empty .btn{margin-top:10px}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="page-header">
-    <h3>القضايا</h3>
-    <a href="{{ url_for('cases.create') }}" class="btn btn-primary">
-        <i class="bi bi-plus-circle me-1"></i> إضافة قضية
+{% set type_map = {'criminal':'جنائية','civil':'مدنية','commercial':'تجارية','administrative':'إدارية','labor':'عمالية','family':'أسرة','constitutional':'دستورية','enforcement':'تنفيذ'} %}
+{% set status_map = {'new':'جديدة','active':'نشطة','awaiting_judgment':'منتظرة حكم','suspended':'موقوفة','closed':'مغلقة'} %}
+{% set status_class = {'new':'b-new','active':'b-open','awaiting_judgment':'b-watch','suspended':'b-hold','closed':'b-done'} %}
+{% set _palette = ['#1849A9','#0F7A55','#7A5000','#9B2020','#7B3F9E','#078FD2'] %}
+
+<div class="lex-cases">
+<div class="page-shell">
+
+  {# ── Topbar ────────────────────────────────────────────────────────── #}
+  <div class="page-topbar">
+    <div class="page-topbar-title">القضايا</div>
+    <div class="topbar-meta">{{ cases.total }} قضية إجمالاً</div>
+    <div class="sp"></div>
+    <a class="tb-btn" href="{{ url_for('cases.index') }}">
+      <i class="bi bi-arrow-clockwise"></i> تحديث
     </a>
-</div>
+    <a class="tb-btn tb-btn-primary" href="{{ url_for('cases.create') }}">
+      <i class="bi bi-plus-lg"></i> قضية جديدة
+    </a>
+  </div>
 
-<!-- Filters -->
-<div class="card mb-3">
-    <div class="card-body py-2">
-        <form method="GET" class="row g-2 align-items-center">
-            <div class="col-md-3">
-                <label for="caseSearch" class="visually-hidden">بحث في القضايا</label>
-                <input type="text" name="search" id="caseSearch" class="form-control" placeholder="بحث برقم القضية، الموضوع، الخصم..." value="{{ search }}">
-            </div>
-            <div class="col-md-2">
-                <select name="status" class="form-select">
-                    <option value="">كل الحالات</option>
-                    {% for val, label in statuses %}
-                    <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select name="type" class="form-select">
-                    <option value="">كل الأنواع</option>
-                    {% for val, label in case_types %}
-                    <option value="{{ val }}" {% if case_type == val %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select name="priority" class="form-select">
-                    <option value="">كل الأولويات</option>
-                    {% for val, label in priorities %}
-                    <option value="{{ val }}" {% if priority == val %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select name="lawyer_id" class="form-select">
-                    <option value="">كل المحامين</option>
-                    {% for l in lawyers %}
-                    <option value="{{ l.id }}" {% if lawyer_id == l.id|string %}selected{% endif %}>{{ l.full_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-1">
-                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i></button>
-            </div>
-        </form>
+  {# ── Filter chips + search ─────────────────────────────────────────── #}
+  <div class="page-content">
+    <form method="GET" id="filtersForm" class="filter-row">
+      <label class="filter-form" for="caseSearch">
+        <i class="bi bi-search"></i>
+        <input type="text" id="caseSearch" name="search" placeholder="بحث برقم القضية، الموضوع، الخصم..." value="{{ search }}">
+      </label>
+
+      {# Status chips — clicking submits the form with that status param #}
+      {% set _all_active = (not status) %}
+      <a class="filter-chip {{ 'active' if _all_active }}"
+         href="{{ url_for('cases.index', search=search or None, type=case_type or None, priority=priority or None, lawyer_id=lawyer_id or None) }}">
+        الكل <span class="filter-count">{{ total_count }}</span>
+      </a>
+      {% for val, label in statuses %}
+      <a class="filter-chip {{ 'active' if status == val }}"
+         href="{{ url_for('cases.index', status=val, search=search or None, type=case_type or None, priority=priority or None, lawyer_id=lawyer_id or None) }}">
+        {{ label }} <span class="filter-count">{{ status_counts.get(val, 0) }}</span>
+      </a>
+      {% endfor %}
+
+      <div class="filter-extras">
+        <select name="type" onchange="this.form.submit()" aria-label="فلتر النوع">
+          <option value="">كل الأنواع</option>
+          {% for val, label in case_types %}
+          <option value="{{ val }}" {% if case_type == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select name="priority" onchange="this.form.submit()" aria-label="فلتر الأولوية">
+          <option value="">كل الأولويات</option>
+          {% for val, label in priorities %}
+          <option value="{{ val }}" {% if priority == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select name="lawyer_id" onchange="this.form.submit()" aria-label="فلتر المحامي">
+          <option value="">كل المحامين</option>
+          {% for l in lawyers %}
+          <option value="{{ l.id }}" {% if lawyer_id == l.id|string %}selected{% endif %}>{{ l.full_name }}</option>
+          {% endfor %}
+        </select>
+        {# Preserve current status as hidden so the dropdowns don't drop it on submit #}
+        {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+      </div>
+    </form>
+
+    {# ── Table ──────────────────────────────────────────────────────── #}
+    {% if cases.items %}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="overflow-x:auto">
+      <table class="cases-tbl">
+        <thead>
+          <tr>
+            <th>رقم القضية</th>
+            <th>الموكل</th>
+            <th>النوع</th>
+            <th>الموضوع</th>
+            <th>المحامي المسؤول</th>
+            <th>الأولوية</th>
+            <th>الحالة</th>
+            <th>المتبقي</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for case in cases.items %}
+          {% set lawyer_initials = (case.responsible_lawyer.full_name or 'م م')[:2] if case.responsible_lawyer else 'م م' %}
+          {% set _bg = _palette[(case.responsible_lawyer.id if case.responsible_lawyer else 0) % _palette|length] %}
+          <tr onclick="window.location='{{ url_for('cases.show', id=case.id) }}'">
+            <td><span class="case-id">#{{ case.case_number or case.id }}</span></td>
+            <td>
+              {% if case.client %}
+              <span class="cn">{{ case.client.full_name }}</span>
+              {% else %}—{% endif %}
+            </td>
+            <td><span class="ct">{{ type_map.get(case.case_type, case.case_type) }}</span></td>
+            <td>
+              <span class="ct">
+                {% if case.subject %}{{ case.subject[:40] }}{% if case.subject|length > 40 %}…{% endif %}
+                {% else %}—{% endif %}
+              </span>
+            </td>
+            <td>
+              {% if case.responsible_lawyer %}
+              <div style="display:flex;align-items:center">
+                <div class="av-sm" style="background:{{ _bg }}">{{ lawyer_initials }}</div>
+                <span class="ct">{{ case.responsible_lawyer.full_name }}</span>
+              </div>
+              {% else %}<span class="ct">—</span>{% endif %}
+            </td>
+            <td>
+              {% if case.priority == 'critical' %}
+              <span class="pri-badge pri-critical">حرجة</span>
+              {% elif case.priority == 'important' %}
+              <span class="pri-badge pri-important">مهمة</span>
+              {% else %}
+              <span class="pri-badge pri-normal">عادية</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="lex-badge {{ status_class.get(case.status, 'b-open') }}">
+                {{ status_map.get(case.status, case.status) }}
+              </span>
+            </td>
+            <td>
+              {% set bal = case.remaining_balance %}
+              {% if bal and bal > 0 %}
+              <span style="font-size:11.5px;color:var(--red);font-weight:500">{{ '{:,.0f}'.format(bal|float) }} {{ market_config.currency_symbol_ar if market_config else 'ج.م' }}</span>
+              {% else %}
+              <span class="ct" style="color:var(--tm)">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+
+      {# ── Pagination ─────────────────────────────────────────────── #}
+      {% if cases.pages > 1 %}
+      <div class="pagination-bar">
+        <span class="pg-info">
+          عرض {{ ((cases.page - 1) * cases.per_page + 1) }}–{{ ((cases.page - 1) * cases.per_page + cases.items|length) }}
+          من {{ cases.total }} قضية
+        </span>
+        <div class="pg-btns">
+          {% set _qs = {'search':search or None,'status':status or None,'type':case_type or None,'priority':priority or None,'lawyer_id':lawyer_id or None} %}
+          <a class="pg-btn" {% if not cases.has_prev %}aria-disabled="true"{% endif %}
+             href="{{ url_for('cases.index', page=cases.prev_num, **_qs) if cases.has_prev else '#' }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+          {% for p in cases.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+              <a class="pg-btn {{ 'active' if p == cases.page }}"
+                 href="{{ url_for('cases.index', page=p, **_qs) }}">{{ p }}</a>
+            {% else %}
+              <span style="font-size:11px;color:var(--tm);padding:0 4px">…</span>
+            {% endif %}
+          {% endfor %}
+          <a class="pg-btn" {% if not cases.has_next %}aria-disabled="true"{% endif %}
+             href="{{ url_for('cases.index', page=cases.next_num, **_qs) if cases.has_next else '#' }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </div>
+      </div>
+      {% endif %}
     </div>
-</div>
-
-<!-- Cases Table -->
-<div class="card">
-    <div class="card-body p-0">
-        {% if cases.items %}
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>رقم القضية</th>
-                        <th>الموكل</th>
-                        <th>النوع</th>
-                        <th>الموضوع</th>
-                        <th>المحامي</th>
-                        <th>الأولوية</th>
-                        <th>الحالة</th>
-                        <th>المتبقي</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for case in cases.items %}
-                    <tr>
-                        <td><a href="{{ url_for('cases.show', id=case.id) }}">{{ case.case_number or '-' }}</a></td>
-                        <td>
-                            {% if case.client_id %}
-                            <a href="{{ url_for('clients.show', id=case.client_id) }}">{{ case.client.full_name if case.client else '-' }}</a>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% set type_map = {'criminal':'جنائية','civil':'مدنية','commercial':'تجارية','administrative':'إدارية','labor':'عمالية','family':'أسرة','constitutional':'دستورية','enforcement':'تنفيذ'} %}
-                            {{ type_map.get(case.case_type, case.case_type) }}
-                        </td>
-                        <td>{{ case.subject[:40] if case.subject else '-' }}{% if case.subject and case.subject|length > 40 %}...{% endif %}</td>
-                        <td>{{ case.responsible_lawyer.full_name if case.responsible_lawyer else '-' }}</td>
-                        <td>
-                            {% if case.priority == 'critical' %}
-                            <span class="badge bg-danger">حرجة</span>
-                            {% elif case.priority == 'important' %}
-                            <span class="badge bg-warning text-dark">مهمة</span>
-                            {% else %}
-                            <span class="badge bg-light text-dark">عادية</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% set status_map = {'new':'جديدة','active':'نشطة','awaiting_judgment':'منتظرة حكم','suspended':'موقوفة','closed':'مغلقة'} %}
-                            {% set status_color = {'new':'info','active':'success','awaiting_judgment':'warning','suspended':'secondary','closed':'dark'} %}
-                            <span class="badge bg-{{ status_color.get(case.status, 'secondary') }}">{{ status_map.get(case.status, case.status) }}</span>
-                        </td>
-                        <td>
-                            {% set bal = case.remaining_balance %}
-                            {% if bal and bal > 0 %}
-                            <span class="text-danger">{{ bal|int }} ج.م</span>
-                            {% else %}
-                            <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{{ url_for('cases.show', id=case.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        {% if cases.pages > 1 %}
-        <div class="d-flex justify-content-center py-3">
-            <nav>
-                <ul class="pagination pagination-sm mb-0">
-                    {% if cases.has_prev %}
-                    <li class="page-item"><a class="page-link" href="?page={{ cases.prev_num }}&search={{ search }}&status={{ status }}&type={{ case_type }}&priority={{ priority }}&lawyer_id={{ lawyer_id }}">السابق</a></li>
-                    {% endif %}
-                    {% for p in cases.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-                        {% if p %}
-                        <li class="page-item {% if p == cases.page %}active{% endif %}">
-                            <a class="page-link" href="?page={{ p }}&search={{ search }}&status={{ status }}&type={{ case_type }}&priority={{ priority }}&lawyer_id={{ lawyer_id }}">{{ p }}</a>
-                        </li>
-                        {% else %}
-                        <li class="page-item disabled"><span class="page-link">...</span></li>
-                        {% endif %}
-                    {% endfor %}
-                    {% if cases.has_next %}
-                    <li class="page-item"><a class="page-link" href="?page={{ cases.next_num }}&search={{ search }}&status={{ status }}&type={{ case_type }}&priority={{ priority }}&lawyer_id={{ lawyer_id }}">التالي</a></li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
-        {% endif %}
-
+    {% else %}
+    <div class="empty">
+      <i class="bi bi-folder2-open"></i>
+      <div style="font-size:14px;color:var(--ts);margin-bottom:4px">
+        {% if search or status or case_type or priority or lawyer_id %}
+          لا توجد قضايا تطابق الفلاتر المحدّدة
         {% else %}
-        <div class="empty-state">
-            <i class="bi bi-briefcase"></i>
-            <p>لا توجد قضايا</p>
-            <a href="{{ url_for('cases.create') }}" class="btn btn-primary btn-sm">إضافة أول قضية</a>
-        </div>
+          لم تُسجَّل قضايا بعد
         {% endif %}
+      </div>
+      <div style="font-size:12px;color:var(--tm)">ابدأ بإضافة قضيتك الأولى</div>
+      <a href="{{ url_for('cases.create') }}" class="btn btn-primary btn-sm mt-3">
+        <i class="bi bi-plus-circle me-1"></i> إضافة قضية جديدة
+      </a>
     </div>
+    {% endif %}
+  </div>
+</div>
 </div>
 {% endblock %}
