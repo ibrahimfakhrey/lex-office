@@ -1,230 +1,555 @@
 {% extends "base.html" %}
 {% block title %}لوحة التحكم - LexOffice{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Premium dashboard styles — scoped under .lex-dash so we don't fight base.css */
+.lex-dash{
+  --ink:#0C2461;--blue:#1849A9;--accent:#078FD2;
+  --bg:#F0F2F5;--surface:#FFFFFF;--surface2:#F7F8FA;
+  --border:#E3E7EE;--border2:#D0D7E3;
+  --tp:#0C2461;--ts:#4A5A7A;--tm:#8090B0;
+  --green:#0F7A55;--green-bg:#EAF5F0;
+  --amber:#8A5A00;--amber-bg:#FFF4DC;
+  --red:#9B2020;--red-bg:#FEF0F0;
+  --blue-bg:#EBF2FE;
+  font-size:13px;line-height:1.5;color:var(--tp);
+}
+.lex-dash *{box-sizing:border-box}
+
+.lex-dash .greeting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.lex-dash .greeting h1{font-size:20px;font-weight:600;color:var(--tp);margin:0}
+.lex-dash .greeting p{font-size:12.5px;color:var(--tm);margin-top:4px;margin-bottom:0}
+.lex-dash .today-badge{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px}
+.lex-dash .today-badge i{color:var(--accent);font-size:13px}
+.lex-dash .today-badge span{font-size:12px;color:var(--ts)}
+
+/* KPI cards */
+.lex-dash .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.lex-dash .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.lex-dash .kpi-card:hover{border-color:var(--border2)}
+.lex-dash .kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.lex-dash .kpi-label{font-size:11.5px;color:var(--tm);font-weight:500}
+.lex-dash .kpi-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.lex-dash .kpi-icon.blue{background:var(--blue-bg);color:var(--blue)}
+.lex-dash .kpi-icon.green{background:var(--green-bg);color:var(--green)}
+.lex-dash .kpi-icon.amber{background:var(--amber-bg);color:var(--amber)}
+.lex-dash .kpi-icon.red{background:var(--red-bg);color:var(--red)}
+.lex-dash .kpi-value{font-size:22px;font-weight:600;color:var(--tp);letter-spacing:-0.3px}
+.lex-dash .kpi-value small{font-size:13px;font-weight:500;color:var(--tm)}
+.lex-dash .kpi-delta{font-size:11px;margin-top:4px;display:flex;align-items:center;gap:3px}
+.lex-dash .kpi-delta.up{color:var(--green)}
+.lex-dash .kpi-delta.down{color:var(--red)}
+.lex-dash .kpi-delta.neutral{color:var(--tm)}
+
+/* Card primitive */
+.lex-dash .lcard{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.lex-dash .lcard-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border)}
+.lex-dash .lcard-title{font-size:13px;font-weight:600;color:var(--tp)}
+.lex-dash .lcard-action{font-size:11.5px;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:3px}
+.lex-dash .lcard-action:hover{text-decoration:underline}
+
+/* Empty state */
+.lex-dash .empty{padding:30px 16px;text-align:center;color:var(--tm);font-size:12.5px}
+.lex-dash .empty i{font-size:24px;display:block;margin-bottom:6px;opacity:0.5}
+
+/* Sessions list */
+.lex-dash .session-item{display:flex;align-items:flex-start;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border);text-decoration:none;color:inherit}
+.lex-dash .session-item:last-child{border-bottom:none}
+.lex-dash .session-item:hover{background:var(--surface2)}
+.lex-dash .session-time{min-width:42px;text-align:center}
+.lex-dash .session-time .hour{font-size:13px;font-weight:600;color:var(--tp)}
+.lex-dash .session-time .ampm{font-size:9px;color:var(--tm)}
+.lex-dash .session-dot{width:1px;background:var(--border2);align-self:stretch;margin:0 4px;flex-shrink:0}
+.lex-dash .session-body{flex:1;min-width:0}
+.lex-dash .session-name{font-size:12.5px;font-weight:500;color:var(--tp);margin-bottom:2px}
+.lex-dash .session-meta{font-size:11px;color:var(--tm);display:flex;align-items:center;gap:6px}
+.lex-dash .session-type{display:inline-flex;align-items:center;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;margin-top:4px}
+.lex-dash .type-istiinaf{background:#EBF2FE;color:#1849A9}
+.lex-dash .type-madany{background:#EAF5F0;color:#0F7A55}
+.lex-dash .type-omaly{background:#FFF4DC;color:#8A5A00}
+.lex-dash .type-urgent{background:#FEF0F0;color:#9B2020}
+.lex-dash .type-default{background:var(--surface2);color:var(--ts)}
+.lex-dash .session-right{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.lex-dash .session-court{font-size:10.5px;color:var(--tm);text-align:left}
+
+/* Tasks */
+.lex-dash .task-item{display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);text-decoration:none;color:inherit}
+.lex-dash .task-item:last-child{border-bottom:none}
+.lex-dash .task-item:hover{background:var(--surface2)}
+.lex-dash .task-cb{width:16px;height:16px;border:1.5px solid var(--border2);border-radius:4px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center}
+.lex-dash .task-cb.checked{background:var(--green);border-color:var(--green);color:#fff;font-size:9px}
+.lex-dash .task-body{flex:1;min-width:0}
+.lex-dash .task-title{font-size:12.5px;color:var(--tp)}
+.lex-dash .task-title.done{text-decoration:line-through;color:var(--tm)}
+.lex-dash .task-meta{font-size:11px;color:var(--tm);margin-top:2px;display:flex;align-items:center;gap:6px}
+.lex-dash .task-priority{display:inline-block;width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.lex-dash .priority-urgent{background:#E24B4A}
+.lex-dash .priority-important{background:#EF9F27}
+.lex-dash .priority-normal{background:#97C459}
+
+/* Donut */
+.lex-dash .donut-wrap{padding:14px 16px}
+.lex-dash .donut-svg{display:block;margin:0 auto 12px}
+.lex-dash .donut-legend{display:flex;flex-direction:column;gap:6px}
+.lex-dash .legend-row{display:flex;align-items:center;justify-content:space-between}
+.lex-dash .legend-left{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ts)}
+.lex-dash .legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.lex-dash .legend-count{font-size:12px;font-weight:600;color:var(--tp)}
+
+/* Cases table */
+.lex-dash .cases-table{width:100%;border-collapse:collapse}
+.lex-dash .cases-table th{text-align:right;font-size:10.5px;font-weight:600;color:var(--tm);padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.lex-dash .cases-table td{padding:9px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--tp);vertical-align:middle}
+.lex-dash .cases-table tr:last-child td{border-bottom:none}
+.lex-dash .cases-table tr:hover td{background:var(--surface2)}
+.lex-dash .lex-badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;padding:2px 8px;border-radius:4px;font-weight:500}
+.lex-dash .lex-badge::before{content:'';width:5px;height:5px;border-radius:50%;display:inline-block;flex-shrink:0}
+.lex-dash .badge-open{background:#EBF2FE;color:#1849A9}.lex-dash .badge-open::before{background:#1849A9}
+.lex-dash .badge-pending{background:#FFF4DC;color:#8A5A00}.lex-dash .badge-pending::before{background:#EF9F27}
+.lex-dash .badge-suspended{background:#F5EEF8;color:#7B3F9E}.lex-dash .badge-suspended::before{background:#9B59B6}
+.lex-dash .badge-closed{background:#EAF5F0;color:#0F7A55}.lex-dash .badge-closed::before{background:#0F7A55}
+.lex-dash .badge-new{background:#E0F2FE;color:#075985}.lex-dash .badge-new::before{background:#075985}
+.lex-dash .case-num{font-size:11.5px;font-weight:600;color:var(--tm);font-variant-numeric:tabular-nums}
+.lex-dash .client-name{font-weight:500}
+.lex-dash .court-cell{font-size:11px;color:var(--tm)}
+
+/* Financial */
+.lex-dash .fin-card{padding:16px}
+.lex-dash .fin-numbers{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+.lex-dash .fin-num{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.lex-dash .fin-num-label{font-size:10.5px;color:var(--tm);margin-bottom:4px}
+.lex-dash .fin-num-val{font-size:16px;font-weight:600;color:var(--tp)}
+.lex-dash .fin-num-val small{font-size:10px;font-weight:400;color:var(--tm)}
+.lex-dash .fin-bar-label{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.lex-dash .fin-bar-label span{font-size:11px;color:var(--tm)}
+.lex-dash .fin-bar-track{background:var(--border);border-radius:3px;height:5px;overflow:hidden;margin-bottom:10px}
+.lex-dash .fin-bar-fill{height:100%;border-radius:3px}
+
+/* Alerts */
+.lex-dash .alert-item{display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border)}
+.lex-dash .alert-item:last-child{border-bottom:none}
+.lex-dash .alert-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-size:13px}
+.lex-dash .alert-icon.red{background:var(--red-bg);color:var(--red)}
+.lex-dash .alert-icon.amber{background:var(--amber-bg);color:var(--amber)}
+.lex-dash .alert-icon.blue{background:var(--blue-bg);color:var(--blue)}
+.lex-dash .alert-body{flex:1;min-width:0}
+.lex-dash .alert-title{font-size:12px;font-weight:500;color:var(--tp);margin-bottom:2px}
+.lex-dash .alert-sub{font-size:11px;color:var(--tm)}
+.lex-dash .alert-time{font-size:10px;color:var(--tm);flex-shrink:0;margin-top:3px}
+
+/* Team */
+.lex-dash .team-item{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--border)}
+.lex-dash .team-item:last-child{border-bottom:none}
+.lex-dash .team-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0}
+.lex-dash .team-name{font-size:12.5px;font-weight:500;color:var(--tp);flex:1}
+.lex-dash .team-cases{font-size:11px;color:var(--tm)}
+
+@media(max-width:1100px){
+  .lex-dash .kpi-row{grid-template-columns:repeat(2,1fr)}
+  .lex-dash .row-2{grid-template-columns:1fr !important}
+  .lex-dash .row-3{grid-template-columns:1fr !important}
+}
+</style>
+{% endblock %}
+
 {% block content %}
+{% set _user = current_user %}
+{% set _hour = now().hour %}
+{% if _hour < 12 %}{% set _hello = 'صباح الخير' %}
+{% elif _hour < 17 %}{% set _hello = 'مساء الخير' %}
+{% else %}{% set _hello = 'مساء الخير' %}{% endif %}
 
-<!-- ── Page Header ── -->
-<div class="page-header">
-    <div>
-        <h3>لوحة التحكم</h3>
-        <div class="small text-muted mt-1">
-            مرحباً <strong class="text-primary">{{ current_user.full_name or current_user.email }}</strong>
-            {% if now %}— {{ now().strftime('%A، %d %B %Y') }}{% endif %}
-        </div>
+{% set _first = (_user.full_name or _user.email).split(' ')[0] if _user else '' %}
+{% set _curr = market_config.currency_symbol_ar if market_config else 'ج.م' %}
+
+<div class="lex-dash">
+
+  {# ── Greeting ────────────────────────────────────────────────────── #}
+  <div class="greeting-row">
+    <div class="greeting">
+      <h1>{{ _hello }}، {{ _first }} 👋</h1>
+      <p>
+        لديك {{ today_sessions|length }} جلسة اليوم ·
+        {{ overdue_tasks|length }} مهمة متأخرة ·
+        {{ active_cases_count }} قضية نشطة
+      </p>
     </div>
-    <a href="{{ url_for('sessions.create') }}" class="btn btn-primary btn-sm">
-        <i class="bi bi-plus-lg me-1"></i> جلسة جديدة
-    </a>
-</div>
-
-<!-- ── Stat Cards ── -->
-<div class="dash-stat-grid">
-
-    <div class="dash-stat dash-stat-primary">
-        <div class="ds-icon"><i class="bi bi-briefcase-fill"></i></div>
-        <div class="ds-body">
-            <div class="ds-val">{{ active_cases_count }}</div>
-            <div class="ds-lbl">قضايا نشطة</div>
-        </div>
-        <a href="{{ url_for('cases.index') }}" class="ds-link" aria-label="عرض القضايا النشطة"></a>
+    <div class="today-badge">
+      <i class="bi bi-calendar3"></i>
+      <span>{{ now().strftime('%A، %d %b %Y') }}</span>
     </div>
+  </div>
 
-    <div class="dash-stat dash-stat-success">
-        <div class="ds-icon"><i class="bi bi-people-fill"></i></div>
-        <div class="ds-body">
-            <div class="ds-val">{{ total_clients }}</div>
-            <div class="ds-lbl">إجمالي الموكلين</div>
-        </div>
-        <a href="{{ url_for('clients.index') }}" class="ds-link" aria-label="عرض الموكلين"></a>
-    </div>
-
-    <div class="dash-stat dash-stat-warning">
-        <div class="ds-icon"><i class="bi bi-cash-stack"></i></div>
-        <div class="ds-body">
-            <div class="ds-val">{{ monthly_payments|int }}<small class="ds-lbl"> ج.م</small></div>
-            <div class="ds-lbl">إيرادات الشهر</div>
-        </div>
-        <a href="{{ url_for('financial.index') }}" class="ds-link" aria-label="عرض النظام المالي"></a>
-    </div>
-
-    <div class="dash-stat dash-stat-danger">
-        <div class="ds-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
-        <div class="ds-body">
-            <div class="ds-val">{{ pending_results }}</div>
-            <div class="ds-lbl">جلسات بدون نتيجة</div>
-        </div>
-        <a href="{{ url_for('sessions.index') }}" class="ds-link" aria-label="عرض الجلسات"></a>
+  {# ── KPI row ─────────────────────────────────────────────────────── #}
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-top">
+        <span class="kpi-label">إيرادات الشهر</span>
+        <div class="kpi-icon blue"><i class="bi bi-cash-stack"></i></div>
+      </div>
+      <div class="kpi-value">{{ '{:,.0f}'.format(monthly_payments|float) }} <small>{{ _curr }}</small></div>
+      {% if monthly_dues|float > 0 %}
+      <div class="kpi-delta neutral">
+        <i class="bi bi-clock-history"></i> مستحقات {{ '{:,.0f}'.format(monthly_dues|float) }} {{ _curr }}
+      </div>
+      {% else %}
+      <div class="kpi-delta up"><i class="bi bi-check-circle"></i> لا توجد مستحقات</div>
+      {% endif %}
     </div>
 
-</div>
-
-<!-- ── Cards Grid ── -->
-<div class="dash-grid">
-
-    <!-- Today's Sessions -->
-    <div class="dash-card">
-        <div class="dash-card-head">
-            <div class="head-label"><i class="bi bi-calendar-event-fill"></i> جلسات اليوم</div>
-            <span class="dash-badge badge-primary">{{ today_sessions|length }}</span>
-        </div>
-        {% if today_sessions %}
-        <ul class="dash-list">
-            {% for s in today_sessions %}
-            <li class="dash-list-item">
-                <div>
-                    <div class="item-main">{{ s.case.case_number or 'بدون رقم' }}</div>
-                    <div class="item-sub">{{ (s.case.subject or '')[:45] }}</div>
-                </div>
-                <span class="item-badge ib-time">{{ s.session_time.strftime('%H:%M') if s.session_time else '--:--' }}</span>
-            </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <div class="dash-empty">
-            <i class="bi bi-calendar-check"></i>
-            <p>لا توجد جلسات اليوم</p>
-        </div>
-        {% endif %}
+    <div class="kpi-card">
+      <div class="kpi-top">
+        <span class="kpi-label">القضايا النشطة</span>
+        <div class="kpi-icon green"><i class="bi bi-folder2-open"></i></div>
+      </div>
+      <div class="kpi-value">{{ active_cases_count }} <small>قضية</small></div>
+      <div class="kpi-delta neutral"><i class="bi bi-people"></i> {{ total_clients }} موكل في النظام</div>
     </div>
 
-    <!-- Urgent Tasks -->
-    <div class="dash-card">
-        <div class="dash-card-head">
-            <div class="head-label"><i class="bi bi-lightning-charge-fill"></i> المهام العاجلة</div>
-            <span class="dash-badge badge-danger">{{ overdue_tasks|length + urgent_tasks|length }}</span>
+    <div class="kpi-card">
+      <div class="kpi-top">
+        <span class="kpi-label">جلسات اليوم</span>
+        <div class="kpi-icon amber"><i class="bi bi-clock"></i></div>
+      </div>
+      <div class="kpi-value">{{ today_sessions|length }} <small>جلسة</small></div>
+      {% if today_sessions %}
+        {% set _first_s = today_sessions[0] %}
+        <div class="kpi-delta neutral">
+          الأولى الساعة
+          {{ _first_s.session_time.strftime('%I:%M') if _first_s.session_time else '—' }}
         </div>
-        {% if overdue_tasks or urgent_tasks %}
-        <ul class="dash-list">
-            {% for task in overdue_tasks[:4] %}
-            <li class="dash-list-item">
-                <div>
-                    <div class="item-main">{{ task.title }}</div>
-                    <div class="item-sub">{{ task.assigned_user.full_name if task.assigned_user else '' }}</div>
-                </div>
-                <span class="item-badge ib-late">متأخرة</span>
-            </li>
-            {% endfor %}
-            {% for task in urgent_tasks[:4] %}
-            <li class="dash-list-item">
-                <div>
-                    <div class="item-main">{{ task.title }}</div>
-                    <div class="item-sub">{{ task.assigned_user.full_name if task.assigned_user else '' }}</div>
-                </div>
-                <span class="item-badge ib-urgent">خلال 48س</span>
-            </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <div class="dash-empty">
-            <i class="bi bi-check-circle"></i>
-            <p>لا توجد مهام عاجلة 🎉</p>
-        </div>
-        {% endif %}
+      {% else %}
+        <div class="kpi-delta up"><i class="bi bi-check-circle"></i> لا جلسات اليوم</div>
+      {% endif %}
     </div>
 
-    <!-- Upcoming Sessions -->
-    <div class="dash-card">
-        <div class="dash-card-head">
-            <div class="head-label"><i class="bi bi-calendar-week-fill"></i> الجلسات القادمة</div>
-            <span class="dash-badge badge-success">{{ upcoming_sessions|length }}</span>
-        </div>
-        {% if upcoming_sessions %}
-        <ul class="dash-list">
-            {% for s in upcoming_sessions[:5] %}
-            <li class="dash-list-item">
-                <div>
-                    <div class="item-main">{{ s.case.case_number or 'بدون رقم' }}</div>
-                    <div class="item-sub">{{ (s.case.subject or '')[:40] }}</div>
-                </div>
-                <span class="item-badge ib-date">{{ s.session_date.strftime('%d/%m') }}</span>
-            </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <div class="dash-empty">
-            <i class="bi bi-calendar3"></i>
-            <p>لا توجد جلسات في الأيام السبعة القادمة</p>
-        </div>
-        {% endif %}
+    <div class="kpi-card">
+      <div class="kpi-top">
+        <span class="kpi-label">مهام تستحق الانتباه</span>
+        <div class="kpi-icon red"><i class="bi bi-exclamation-circle"></i></div>
+      </div>
+      <div class="kpi-value">{{ overdue_tasks|length }} <small>مهمة</small></div>
+      {% if overdue_tasks %}
+      <div class="kpi-delta down"><i class="bi bi-exclamation-triangle"></i> تحتاج متابعة فورية</div>
+      {% else %}
+      <div class="kpi-delta up"><i class="bi bi-check-circle"></i> كل المهام مُحدّثة</div>
+      {% endif %}
     </div>
+  </div>
 
-    <!-- Financial Summary -->
-    <div class="dash-card">
-        <div class="dash-card-head">
-            <div class="head-label"><i class="bi bi-graph-up-arrow"></i> الملخص المالي — الشهر الحالي</div>
-        </div>
-        <div class="fin-row">
-            <div class="fin-item">
-                <div class="fin-amount fin-amount-income">{{ monthly_payments|int }}<span class="fin-label"> ج.م</span></div>
-                <div class="fin-label">الإيرادات</div>
+  {# ── Row 2: sessions + tasks + (donut + team) ──────────────────────── #}
+  <div class="row-2" style="display:grid;grid-template-columns:1fr 1fr 280px;gap:14px;margin-bottom:14px">
+
+    {# Sessions #}
+    <div class="lcard">
+      <div class="lcard-head">
+        <div class="lcard-title">جلسات اليوم</div>
+        <a class="lcard-action" href="{{ url_for('sessions.index') }}">
+          عرض التقويم <i class="bi bi-arrow-left"></i>
+        </a>
+      </div>
+      {% if today_sessions %}
+        {% for s in today_sessions[:5] %}
+          {% set _t = s.session_type or 'default' %}
+          {% set _type_class = {
+            'appeal': 'type-istiinaf',
+            'civil':  'type-madany',
+            'labor':  'type-omaly',
+            'urgent': 'type-urgent',
+          }.get(_t, 'type-default') %}
+          {% set _type_ar = {
+            'appeal': 'استئناف',
+            'civil':  'مدني',
+            'labor':  'عمالي',
+            'urgent': 'عاجل',
+            'first':  'أولى',
+            'evidence':'إثبات',
+            'pleading':'مرافعة',
+            'judgment':'حكم',
+          }.get(_t, _t) %}
+          <a class="session-item" href="{{ url_for('sessions.show', id=s.id) }}">
+            <div class="session-time">
+              <div class="hour">{{ s.session_time.strftime('%I:%M') if s.session_time else '—' }}</div>
+              <div class="ampm">{{ 'ص' if s.session_time and s.session_time.hour < 12 else 'م' }}</div>
             </div>
-            <div class="fin-divider"></div>
-            <div class="fin-item">
-                <div class="fin-amount fin-amount-expense">{{ monthly_expenses|int }}<span class="fin-label"> ج.م</span></div>
-                <div class="fin-label">المصروفات</div>
+            <div class="session-dot"></div>
+            <div class="session-body">
+              <div class="session-name">{{ s.case.subject[:60] if s.case and s.case.subject else 'جلسة' }}</div>
+              <div class="session-meta">
+                <i class="bi bi-person"></i>
+                {{ s.case.client.full_name if s.case and s.case.client else '—' }}
+              </div>
+              <div><span class="session-type {{ _type_class }}">{{ _type_ar }}</span></div>
             </div>
-            <div class="fin-divider"></div>
-            <div class="fin-item">
-                {% set net = monthly_payments - monthly_expenses %}
-                <div class="fin-amount {{ 'fin-amount-profit' if net >= 0 else 'fin-amount-loss' }}">{{ net|int }}<span class="fin-label"> ج.م</span></div>
-                <div class="fin-label">صافي الربح</div>
+            <div class="session-right">
+              <span class="session-court">{{ s.case.court.name if s.case and s.case.court else '—' }}</span>
+              {% if s.case and s.case.case_number %}
+              <span class="session-court">#{{ s.case.case_number }}</span>
+              {% endif %}
             </div>
-        </div>
-        <!-- Notifications -->
-        <div class="dash-card-head fin-net">
-            <div class="head-label"><i class="bi bi-bell-fill"></i> آخر الإشعارات</div>
-            <a href="{{ url_for('notifications.index') }}" class="dash-view-all">عرض الكل</a>
-        </div>
-        {% if unread_notifications %}
-        <ul class="dash-list">
-            {% for n in unread_notifications[:3] %}
-            <li class="dash-list-item">
-                <div>
-                    <div class="item-main">{{ n.title }}</div>
-                    <div class="item-sub">{{ (n.message or '')[:55] }}</div>
-                </div>
-                <span class="dash-notif-time">{{ n.created_at.strftime('%H:%M') }}</span>
-            </li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <div class="dash-empty">
-            <i class="bi bi-bell-slash"></i>
-            <p>لا توجد إشعارات جديدة</p>
-        </div>
-        {% endif %}
-    </div>
-
-</div>
-
-<!-- ── POA Expiry Alert ── -->
-{% if expiring_poas %}
-<div class="dash-card mt-3">
-    <div class="dash-card-head">
-        <div class="head-label"><i class="bi bi-file-earmark-x-fill dash-icon-danger"></i> توكيلات تنتهي قريباً أو منتهية</div>
-        <a href="{{ url_for('poa.index') }}" class="dash-view-all">عرض الكل</a>
-    </div>
-    <ul class="dash-list">
-        {% for poa in expiring_poas %}
-        {% set days = poa.days_until_expiry %}
-        <li class="dash-list-item">
-            <div>
-                <div class="item-main">
-                    <a href="{{ url_for('poa.show', id=poa.id) }}" class="text-decoration-none text-reset">
-                        {{ poa.client.full_name if poa.client else '-' }} — {{ poa.notarization_number or 'توكيل' }}
-                    </a>
-                </div>
-                <div class="item-sub">انتهاء: {{ poa.expiry_date.strftime('%Y-%m-%d') }}</div>
-            </div>
-            {% if days is not none and days < 0 %}
-            <span class="item-badge ib-expired">منتهي منذ {{ (-days) }} يوم</span>
-            {% elif days is not none %}
-            <span class="item-badge ib-expiring">{{ days }} يوم متبقي</span>
-            {% endif %}
-        </li>
+          </a>
         {% endfor %}
-    </ul>
-</div>
-{% endif %}
+      {% else %}
+        <div class="empty">
+          <i class="bi bi-calendar-x"></i>
+          لا توجد جلسات مجدولة اليوم
+        </div>
+      {% endif %}
+    </div>
 
+    {# Tasks #}
+    <div class="lcard">
+      <div class="lcard-head">
+        <div class="lcard-title">المهام والتذكيرات</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          {% if overdue_tasks %}
+          <span style="font-size:10px;background:var(--red-bg);color:var(--red);border-radius:4px;padding:2px 6px;font-weight:600">
+            {{ overdue_tasks|length }} متأخرة
+          </span>
+          {% endif %}
+          <a class="lcard-action" href="{{ url_for('tasks.index') }}">الكل <i class="bi bi-arrow-left"></i></a>
+        </div>
+      </div>
+      {% set _all_tasks = (urgent_tasks + overdue_tasks)|list %}
+      {% if _all_tasks %}
+        {% for t in _all_tasks[:6] %}
+          {% set _pri = 'priority-' + (t.priority or 'normal') %}
+          <a class="task-item" href="{{ url_for('tasks.show', id=t.id) }}">
+            <div class="task-cb {% if t.status == 'done' %}checked{% endif %}">
+              {% if t.status == 'done' %}<i class="bi bi-check"></i>{% endif %}
+            </div>
+            <div class="task-body">
+              <div class="task-title {% if t.status == 'done' %}done{% endif %}">{{ t.title }}</div>
+              <div class="task-meta">
+                <span class="task-priority {{ _pri }}"></span>
+                {% if t.deadline %}
+                  {{ t.deadline.strftime('%Y-%m-%d %H:%M') }}
+                  {% if t.deadline < now() %} · <span style="color:var(--red)">متأخر</span>{% endif %}
+                {% else %}بدون موعد{% endif %}
+              </div>
+            </div>
+          </a>
+        {% endfor %}
+      {% else %}
+        <div class="empty">
+          <i class="bi bi-check2-circle"></i>
+          لا توجد مهام معلقة — أحسنت
+        </div>
+      {% endif %}
+      <div style="padding:10px 16px;border-top:1px solid var(--border)">
+        <a href="{{ url_for('tasks.create') }}" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--accent);text-decoration:none">
+          <i class="bi bi-plus-circle"></i> إضافة مهمة جديدة
+        </a>
+      </div>
+    </div>
+
+    {# Donut + Team #}
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="lcard">
+        <div class="lcard-head"><div class="lcard-title">القضايا حسب الحالة</div></div>
+        <div class="donut-wrap">
+          {# Compute donut segments #}
+          {% set _seg_colors = {
+              'new':         '#1849A9',
+              'active':      '#078FD2',
+              'in_progress': '#9B59B6',
+              'awaiting_judgment':'#EF9F27',
+              'suspended':   '#7B3F9E',
+              'closed':      '#1D9E75',
+          } %}
+          {% if total_cases > 0 %}
+          <svg width="110" height="110" class="donut-svg" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" stroke-width="3.5"/>
+            {% set _ns = namespace(off=25) %}
+            {% for status, count in cases_by_status.items() %}
+              {% set pct = (100 * count / total_cases) | round(0, 'floor') | int %}
+              {% if pct > 0 %}
+              <circle cx="18" cy="18" r="15.9" fill="none"
+                      stroke="{{ _seg_colors.get(status, '#1849A9') }}"
+                      stroke-width="3.5"
+                      stroke-dasharray="{{ pct }} {{ 100 - pct }}"
+                      stroke-dashoffset="{{ _ns.off }}"
+                      stroke-linecap="butt"/>
+              {% set _ns.off = _ns.off - pct %}
+              {% endif %}
+            {% endfor %}
+            <text x="18" y="19" text-anchor="middle" font-size="6" font-weight="600" fill="var(--tp)">{{ total_cases }}</text>
+            <text x="18" y="23.5" text-anchor="middle" font-size="3.5" fill="var(--tm)">قضية</text>
+          </svg>
+          {% set _status_ar = {
+              'new':'جديدة','active':'نشطة','in_progress':'قيد النظر',
+              'awaiting_judgment':'منتظرة حكم','suspended':'موقوفة','closed':'مغلقة'
+          } %}
+          <div class="donut-legend">
+            {% for status, count in cases_by_status.items() %}
+            <div class="legend-row">
+              <div class="legend-left">
+                <div class="legend-dot" style="background:{{ _seg_colors.get(status, '#1849A9') }}"></div>
+                {{ _status_ar.get(status, status) }}
+              </div>
+              <div class="legend-count">{{ count }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty"><i class="bi bi-pie-chart"></i> لا توجد قضايا بعد</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="lcard">
+        <div class="lcard-head"><div class="lcard-title">الفريق</div></div>
+        {% set _team_palette = ['#1849A9','#0F7A55','#8A5A00','#9B2020','#7B3F9E','#078FD2'] %}
+        {% if team_rows %}
+          {% for u, count in team_rows %}
+          <div class="team-item">
+            <div class="team-av" style="background:{{ _team_palette[loop.index0 % _team_palette|length] }}">
+              {{ (u.full_name or u.email)[:1] }}
+            </div>
+            <div class="team-name">{{ u.full_name or u.email }}</div>
+            <div class="team-cases">{{ count }} قضية</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty"><i class="bi bi-people"></i> لا أعضاء فريق بعد</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Row 3: cases table + financial + alerts ───────────────────────── #}
+  <div class="row-3" style="display:grid;grid-template-columns:1fr 320px;gap:14px;margin-bottom:14px">
+
+    <div class="lcard">
+      <div class="lcard-head">
+        <div class="lcard-title">آخر القضايا</div>
+        <a class="lcard-action" href="{{ url_for('cases.index') }}">عرض الكل <i class="bi bi-arrow-left"></i></a>
+      </div>
+      {% if recent_cases %}
+      <div style="overflow-x:auto">
+      <table class="cases-table">
+        <thead>
+          <tr>
+            <th>رقم القضية</th>
+            <th>الموكل</th>
+            <th>النوع</th>
+            <th>الحالة</th>
+            <th>المسؤول</th>
+            <th>آخر تحديث</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set _badge = {
+              'new':'badge-new','active':'badge-open','in_progress':'badge-pending',
+              'awaiting_judgment':'badge-pending','suspended':'badge-suspended','closed':'badge-closed'
+          } %}
+          {% set _type_ar = {
+              'criminal':'جنائي','civil':'مدني','commercial':'تجاري','administrative':'إداري',
+              'labor':'عمالي','family':'أسرة','constitutional':'دستوري','enforcement':'تنفيذ'
+          } %}
+          {% for c in recent_cases %}
+          <tr onclick="window.location='{{ url_for('cases.show', id=c.id) }}'" style="cursor:pointer">
+            <td><span class="case-num">#{{ c.case_number or c.id }}</span></td>
+            <td><span class="client-name">{{ c.client.full_name if c.client else '—' }}</span></td>
+            <td><span style="font-size:11px;color:var(--ts)">{{ _type_ar.get(c.case_type, c.case_type) }}</span></td>
+            <td><span class="lex-badge {{ _badge.get(c.status, 'badge-open') }}">{{ {
+                'new':'جديدة','active':'نشطة','in_progress':'قيد النظر',
+                'awaiting_judgment':'منتظرة حكم','suspended':'موقوفة','closed':'مغلقة'
+            }.get(c.status, c.status) }}</span></td>
+            <td><span style="font-size:11px">{{ c.responsible_lawyer.full_name if c.responsible_lawyer else '—' }}</span></td>
+            <td><span style="font-size:11px;color:var(--tm)">
+              {% if c.updated_at %}{{ c.updated_at.strftime('%Y-%m-%d') }}{% else %}—{% endif %}
+            </span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="empty">
+        <i class="bi bi-folder-x"></i> لم تُسجَّل قضايا بعد —
+        <a href="{{ url_for('cases.create') }}">أضف القضية الأولى</a>
+      </div>
+      {% endif %}
+    </div>
+
+    {# Financial + Alerts column #}
+    <div style="display:flex;flex-direction:column;gap:14px">
+
+      <div class="lcard">
+        <div class="lcard-head"><div class="lcard-title">الملخص المالي — هذا الشهر</div></div>
+        <div class="fin-card">
+          <div class="fin-numbers">
+            <div class="fin-num">
+              <div class="fin-num-label">الإيرادات</div>
+              <div class="fin-num-val">{{ '{:,.0f}'.format(monthly_payments|float) }}<small> {{ _curr }}</small></div>
+            </div>
+            <div class="fin-num">
+              <div class="fin-num-label">المستحقات</div>
+              <div class="fin-num-val">{{ '{:,.0f}'.format(monthly_dues|float) }}<small> {{ _curr }}</small></div>
+            </div>
+            <div class="fin-num">
+              <div class="fin-num-label">المصروفات</div>
+              <div class="fin-num-val">{{ '{:,.0f}'.format(monthly_expenses|float) }}<small> {{ _curr }}</small></div>
+            </div>
+          </div>
+          <div>
+            <div class="fin-bar-label">
+              <span>نسبة التحصيل</span>
+              <span style="font-weight:600;color:var(--tp)">{{ collection_pct|int }}%</span>
+            </div>
+            <div class="fin-bar-track"><div class="fin-bar-fill" style="width:{{ collection_pct|int }}%;background:var(--blue)"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lcard" style="flex:1">
+        <div class="lcard-head"><div class="lcard-title">تنبيهات وتحذيرات</div></div>
+        {% set _has_alerts = appeal_alerts or expiring_poas or pending_results %}
+        {% if _has_alerts %}
+          {% for j in appeal_alerts %}
+          <div class="alert-item">
+            <div class="alert-icon red"><i class="bi bi-exclamation-circle"></i></div>
+            <div class="alert-body">
+              <a href="{{ url_for('judgments.show', id=j.id) }}" style="text-decoration:none;color:inherit">
+                <div class="alert-title">موعد استئناف — {{ j.case.case_number if j.case else '' }}</div>
+                <div class="alert-sub">ينتهي {{ j.appeal_deadline.strftime('%Y-%m-%d') }}</div>
+              </a>
+            </div>
+            <div class="alert-time">{{ (j.appeal_deadline - today).days }} يوم</div>
+          </div>
+          {% endfor %}
+          {% for poa in expiring_poas %}
+          <div class="alert-item">
+            <div class="alert-icon amber"><i class="bi bi-file-earmark-text"></i></div>
+            <div class="alert-body">
+              <a href="{{ url_for('poa.show', id=poa.id) }}" style="text-decoration:none;color:inherit">
+                <div class="alert-title">توكيل ينتهي قريباً</div>
+                <div class="alert-sub">{{ poa.client.full_name if poa.client else '' }} — {{ poa.expiry_date.strftime('%Y-%m-%d') }}</div>
+              </a>
+            </div>
+            <div class="alert-time">{{ (poa.expiry_date - today).days }} يوم</div>
+          </div>
+          {% endfor %}
+          {% if pending_results %}
+          <div class="alert-item">
+            <div class="alert-icon blue"><i class="bi bi-journal-text"></i></div>
+            <div class="alert-body">
+              <a href="{{ url_for('sessions.index') }}" style="text-decoration:none;color:inherit">
+                <div class="alert-title">جلسات بدون نتيجة</div>
+                <div class="alert-sub">{{ pending_results }} جلسة سابقة لم تُسجَّل نتيجتها بعد</div>
+              </a>
+            </div>
+            <div class="alert-time">—</div>
+          </div>
+          {% endif %}
+        {% else %}
+          <div class="empty"><i class="bi bi-shield-check"></i> لا تنبيهات حالياً</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
 {% endblock %}

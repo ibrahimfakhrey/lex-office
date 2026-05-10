@@ -104,6 +104,75 @@ def index():
         Session.result.is_(None)
     ).count()
 
+    # ── Premium dashboard extras ───────────────────────────────────────────
+
+    # Cases by status — drives the donut chart
+    status_rows = (
+        db.session.query(Case.status, db.func.count(Case.id))
+        .filter(Case.tenant_id == g.tenant_id)
+        .group_by(Case.status)
+        .all()
+    )
+    cases_by_status = {row[0]: row[1] for row in status_rows}
+    total_cases = sum(cases_by_status.values())
+
+    # Recent cases (last 5 by updated_at)
+    recent_cases = (
+        Case.query.filter_by(tenant_id=g.tenant_id)
+        .order_by(Case.updated_at.desc())
+        .limit(5).all()
+    )
+
+    # Team — active users in this tenant with case-counts
+    from app.models.user import User
+    team_rows = (
+        db.session.query(
+            User,
+            db.func.count(Case.id).label('case_count'),
+        )
+        .outerjoin(Case, db.and_(
+            Case.responsible_lawyer_id == User.id,
+            Case.tenant_id == g.tenant_id,
+        ))
+        .filter(User.tenant_id == g.tenant_id, User.is_active.is_(True))
+        .group_by(User.id)
+        .order_by(db.desc('case_count'))
+        .limit(6).all()
+    )
+
+    # Monthly outstanding dues (invoices issued, unpaid)
+    monthly_dues = db.session.query(
+        db.func.coalesce(db.func.sum(Invoice.total), 0)
+    ).filter(
+        Invoice.tenant_id == g.tenant_id,
+        Invoice.issue_date >= month_start,
+        Invoice.status.in_(['sent', 'overdue']),
+    ).scalar()
+
+    # Collection percentage (paid vs all issued this month)
+    invoiced_total = db.session.query(
+        db.func.coalesce(db.func.sum(Invoice.total), 0)
+    ).filter(
+        Invoice.tenant_id == g.tenant_id,
+        Invoice.issue_date >= month_start,
+        Invoice.status != 'cancelled',
+    ).scalar() or 0
+    collection_pct = round(
+        100 * float(monthly_payments or 0) / float(invoiced_total),
+        0,
+    ) if invoiced_total else 0
+
+    # Upcoming appeal-deadline alerts (judgments tracking appeals)
+    from app.models.judgment import Judgment
+    appeal_alerts = Judgment.query.filter_by(
+        tenant_id=g.tenant_id,
+    ).filter(
+        Judgment.appeal_tracking_enabled.is_(True),
+        Judgment.appeal_deadline.isnot(None),
+        Judgment.appeal_deadline >= today,
+        Judgment.appeal_deadline <= today + timedelta(days=14),
+    ).order_by(Judgment.appeal_deadline).limit(5).all()
+
     return render_template('dashboard/index.html',
                            active_cases_count=active_cases_count,
                            today_sessions=today_sessions,
@@ -115,5 +184,13 @@ def index():
                            today_appointments=today_appointments,
                            monthly_payments=monthly_payments,
                            monthly_expenses=monthly_expenses,
+                           monthly_dues=monthly_dues,
+                           collection_pct=collection_pct,
                            pending_results=pending_results,
-                           expiring_poas=expiring_poas)
+                           expiring_poas=expiring_poas,
+                           cases_by_status=cases_by_status,
+                           total_cases=total_cases,
+                           recent_cases=recent_cases,
+                           team_rows=team_rows,
+                           appeal_alerts=appeal_alerts,
+                           today=today)
