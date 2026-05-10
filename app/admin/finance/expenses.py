@@ -206,6 +206,95 @@ def finance_monthly_expense_attachment(exp_id):
     )
 
 
+@admin_bp.route('/finance/expenses/monthly/<int:exp_id>/edit', methods=['POST'])
+@admin_permission_required('finance_expenses', 'edit')
+def finance_monthly_expenses_edit(exp_id):
+    """Edit an existing monthly expense — including attaching/replacing/removing
+    the receipt or invoice file. Driven by the inline modal on the list page.
+    """
+    exp = OpMonthlyExpense.query.get_or_404(exp_id)
+    # Scope-check via the parent category
+    if g.get('current_scope') == 'own' and exp.category and exp.category.created_by_admin_id != g.current_admin.id:
+        abort(404)
+
+    try:
+        old = {
+            'year': exp.year, 'month': exp.month,
+            'category_id': exp.category_id,
+            'amount': float(exp.amount) if exp.amount is not None else None,
+            'payment_date': exp.payment_date.isoformat() if exp.payment_date else None,
+            'notes': exp.notes,
+            'attachment': exp.attachment_filename,
+        }
+
+        # Category swap is allowed but stays within scope
+        new_cat_id = int(request.form.get('category_id') or exp.category_id)
+        if new_cat_id != exp.category_id:
+            cat = get_or_404_with_scope(OpExpenseCategory, new_cat_id)
+            exp.category_id = cat.id
+
+        if request.form.get('year'):
+            exp.year = int(request.form['year'])
+        if request.form.get('month'):
+            month = int(request.form['month'])
+            if not (1 <= month <= 12):
+                raise ValueError('الشهر يجب أن يكون بين 1 و 12')
+            exp.month = month
+        if request.form.get('amount'):
+            exp.amount = request.form['amount']
+        exp.payment_date = _parse_date(request.form.get('payment_date'))
+        notes = (request.form.get('notes') or '').strip()
+        exp.notes = notes or None
+
+        # Attachment handling — three paths:
+        #   1. "remove_attachment" checkbox → delete current file
+        #   2. New file uploaded → replace (delete old, save new)
+        #   3. Nothing → leave as-is
+        new_file = request.files.get('attachment')
+        wants_remove = request.form.get('remove_attachment') == '1'
+
+        def _delete_old_file():
+            if exp.attachment_path:
+                try:
+                    full = os.path.join(current_app.config['UPLOAD_FOLDER'], exp.attachment_path)
+                    if os.path.exists(full):
+                        os.remove(full)
+                except Exception:
+                    pass
+
+        if new_file and new_file.filename:
+            if not allowed_file(new_file.filename):
+                raise ValueError('نوع الملف غير مسموح به')
+            _delete_old_file()
+            saved_path = save_uploaded_file(new_file, subfolder='op_finance')
+            exp.attachment_path = saved_path
+            exp.attachment_filename = new_file.filename
+        elif wants_remove:
+            _delete_old_file()
+            exp.attachment_path = None
+            exp.attachment_filename = None
+
+        log_finance_action(
+            action_type='UPDATE', entity_type='OpMonthlyExpense', entity_id=exp.id,
+            old_value=old,
+            new_value={
+                'year': exp.year, 'month': exp.month,
+                'category_id': exp.category_id,
+                'amount': float(exp.amount) if exp.amount is not None else None,
+                'payment_date': exp.payment_date.isoformat() if exp.payment_date else None,
+                'notes': exp.notes,
+                'attachment': exp.attachment_filename,
+            },
+            description=f'تعديل مصروف {ARABIC_MONTHS[exp.month]} {exp.year}',
+        )
+        db.session.commit()
+        flash('تم حفظ التعديلات', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'تعذر التعديل: {e}', 'danger')
+    return redirect(url_for('admin.finance_monthly_expenses'))
+
+
 @admin_bp.route('/finance/expenses/monthly/<int:exp_id>/delete', methods=['POST'])
 @admin_permission_required('finance_expenses', 'delete')
 def finance_monthly_expenses_delete(exp_id):

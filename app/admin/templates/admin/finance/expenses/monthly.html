@@ -102,7 +102,7 @@
                     <th>تاريخ الدفعة</th>
                     <th>ملاحظات</th>
                     <th class="text-center" style="width:90px">المرفق</th>
-                    <th class="text-center" style="width:80px">حذف</th>
+                    <th class="text-center" style="width:130px">إجراءات</th>
                 </tr>
             </thead>
             <tbody>
@@ -127,15 +127,35 @@
                         {% endif %}
                     </td>
                     <td class="text-center">
-                        {% if g.current_admin.has_admin_permission('finance_expenses', 'delete') %}
-                        <form method="POST" action="{{ url_for('admin.finance_monthly_expenses_delete', exp_id=e.id) }}"
-                              class="d-inline" onsubmit="return confirm('حذف المصروف؟');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                        </form>
-                        {% else %}
-                        <span class="text-muted small">—</span>
-                        {% endif %}
+                        <div class="d-inline-flex gap-1">
+                            {% if g.current_admin.has_admin_permission('finance_expenses', 'edit') %}
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                    title="تعديل المصروف"
+                                    data-bs-toggle="modal" data-bs-target="#editExpenseModal"
+                                    data-id="{{ e.id }}"
+                                    data-year="{{ e.year }}"
+                                    data-month="{{ e.month }}"
+                                    data-category-id="{{ e.category_id }}"
+                                    data-amount="{{ e.amount }}"
+                                    data-payment-date="{{ e.payment_date.strftime('%Y-%m-%d') if e.payment_date else '' }}"
+                                    data-notes="{{ e.notes or '' }}"
+                                    data-attachment-filename="{{ e.attachment_filename or '' }}"
+                                    data-attachment-url="{{ url_for('admin.finance_monthly_expense_attachment', exp_id=e.id) if e.attachment_path else '' }}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            {% endif %}
+                            {% if g.current_admin.has_admin_permission('finance_expenses', 'delete') %}
+                            <form method="POST" action="{{ url_for('admin.finance_monthly_expenses_delete', exp_id=e.id) }}"
+                                  class="d-inline" onsubmit="return confirm('حذف المصروف؟');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button>
+                            </form>
+                            {% endif %}
+                            {% if not g.current_admin.has_admin_permission('finance_expenses', 'edit')
+                                  and not g.current_admin.has_admin_permission('finance_expenses', 'delete') %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% else %}
@@ -148,4 +168,131 @@
         </table>
     </div>
 </div>
+
+{# ── Edit Expense Modal ─────────────────────────────────────────────── #}
+{% if g.current_admin.has_admin_permission('finance_expenses', 'edit') %}
+<div class="modal fade" id="editExpenseModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form id="editExpenseForm" method="POST" enctype="multipart/form-data" class="modal-content"
+          style="background: var(--dark-surface); color: var(--dark-text);">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i> تعديل المصروف</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label small">السنة <span class="text-danger">*</span></label>
+            <input type="number" name="year" id="editYear" class="form-control" min="2000" max="2099" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">الشهر <span class="text-danger">*</span></label>
+            <select name="month" id="editMonth" class="form-select" required>
+              {% for m, label in arabic_months.items() %}
+              <option value="{{ m }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small">الفئة / البند <span class="text-danger">*</span></label>
+            <select name="category_id" id="editCategory" class="form-select" required>
+              {% for cat in categories %}
+              <option value="{{ cat.id }}">
+                {{ cat.category_name }} — {{ cat.item_name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small">المبلغ (ج.م) <span class="text-danger">*</span></label>
+            <input type="number" step="0.01" name="amount" id="editAmount" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small">تاريخ الدفعة (اختياري)</label>
+            <input type="date" name="payment_date" id="editPaymentDate" class="form-control">
+          </div>
+          <div class="col-12">
+            <label class="form-label small">ملاحظات</label>
+            <textarea name="notes" id="editNotes" class="form-control" rows="2"></textarea>
+          </div>
+
+          {# ── Attachment section: shows current file (if any) + upload to replace ── #}
+          <div class="col-12">
+            <label class="form-label small">إيصال / مرفق (PDF / صورة)</label>
+            <div id="editCurrentAttachment" class="mb-2 d-none">
+              <div class="d-flex align-items-center gap-2 p-2 rounded"
+                   style="background: rgba(7,143,210,0.08); border: 1px solid rgba(7,143,210,0.25);">
+                <i class="bi bi-paperclip" style="color: var(--accent)"></i>
+                <a id="editCurrentAttachmentLink" href="#" target="_blank"
+                   class="text-decoration-none flex-grow-1" style="color: var(--accent)"></a>
+                <div class="form-check form-switch m-0">
+                  <input class="form-check-input" type="checkbox" name="remove_attachment" value="1" id="editRemoveAttachment">
+                  <label class="form-check-label small text-danger" for="editRemoveAttachment">حذف المرفق</label>
+                </div>
+              </div>
+            </div>
+            <input type="file" name="attachment" id="editAttachment" class="form-control"
+                   accept=".pdf,.png,.jpg,.jpeg">
+            <div class="form-text small">
+              <span id="editAttachmentHint">سيستبدل المرفق الحالي إن وُجد. اتركه فارغاً للإبقاء كما هو.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إلغاء</button>
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="bi bi-check-lg me-1"></i> حفظ التعديلات
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  const modal = document.getElementById('editExpenseModal');
+  if (!modal) return;
+  const form = document.getElementById('editExpenseForm');
+  const fields = {
+    year:        document.getElementById('editYear'),
+    month:       document.getElementById('editMonth'),
+    category:    document.getElementById('editCategory'),
+    amount:      document.getElementById('editAmount'),
+    paymentDate: document.getElementById('editPaymentDate'),
+    notes:       document.getElementById('editNotes'),
+    attachment:  document.getElementById('editAttachment'),
+    removeBox:   document.getElementById('editRemoveAttachment'),
+    currentRow:  document.getElementById('editCurrentAttachment'),
+    currentLink: document.getElementById('editCurrentAttachmentLink'),
+  };
+
+  modal.addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    if (!btn) return;
+    const expId = btn.dataset.id;
+    form.action = "{{ url_for('admin.finance_monthly_expenses') }}" + '/' + expId + '/edit';
+    fields.year.value        = btn.dataset.year || '';
+    fields.month.value       = btn.dataset.month || '';
+    fields.category.value    = btn.dataset.categoryId || '';
+    fields.amount.value      = btn.dataset.amount || '';
+    fields.paymentDate.value = btn.dataset.paymentDate || '';
+    fields.notes.value       = btn.dataset.notes || '';
+    fields.attachment.value  = '';
+    fields.removeBox.checked = false;
+
+    const fname = btn.dataset.attachmentFilename || '';
+    const furl  = btn.dataset.attachmentUrl || '';
+    if (fname && furl) {
+      fields.currentLink.textContent = fname;
+      fields.currentLink.href = furl;
+      fields.currentRow.classList.remove('d-none');
+    } else {
+      fields.currentRow.classList.add('d-none');
+    }
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}
