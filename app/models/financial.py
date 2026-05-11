@@ -1,8 +1,9 @@
 from datetime import datetime
 from app.extensions import db
+from app.models._encryption import EncryptedFieldsMixin, register_encrypt_on_flush
 
 
-class Payment(db.Model):
+class Payment(db.Model, EncryptedFieldsMixin):
     __tablename__ = 'payments'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -14,12 +15,20 @@ class Payment(db.Model):
     payment_method = db.Column(db.String(30), nullable=False)
     reference_number = db.Column(db.String(200), nullable=True)
     receipt_file_path = db.Column(db.String(500), nullable=True)
-    notes = db.Column(db.Text, nullable=True)
+    _notes = db.Column('notes', db.Text, nullable=True)
     recorded_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     recorder = db.relationship('User')
+
+    @property
+    def notes(self):
+        return self._enc_get(self._notes)
+
+    @notes.setter
+    def notes(self, value):
+        self._notes = self._enc_set(value)
 
     def to_dict(self):
         return {
@@ -44,7 +53,10 @@ class Payment(db.Model):
         return f'<Payment {self.amount} - Client {self.client_id}>'
 
 
-class Invoice(db.Model):
+register_encrypt_on_flush(Payment, ['_notes'])
+
+
+class Invoice(db.Model, EncryptedFieldsMixin):
     __tablename__ = 'invoices'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -60,7 +72,7 @@ class Invoice(db.Model):
     tax_rate = db.Column(db.Numeric(5, 2), default=14.00)
     tax_amount = db.Column(db.Numeric(12, 2), default=0)
     total = db.Column(db.Numeric(12, 2), default=0)
-    notes = db.Column(db.Text, nullable=True)
+    _notes = db.Column('notes', db.Text, nullable=True)
     sent_via = db.Column(db.String(20), nullable=True)
     sent_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -89,6 +101,14 @@ class Invoice(db.Model):
         after_discount = float(self.subtotal) - discount
         self.tax_amount = after_discount * float(self.tax_rate or 0) / 100
         self.total = after_discount + float(self.tax_amount)
+
+    @property
+    def notes(self):
+        return self._enc_get(self._notes)
+
+    @notes.setter
+    def notes(self, value):
+        self._notes = self._enc_set(value)
 
     def to_dict(self, include_items=False):
         data = {
@@ -121,6 +141,9 @@ class Invoice(db.Model):
         return f'<Invoice {self.invoice_number}>'
 
 
+register_encrypt_on_flush(Invoice, ['_notes'])
+
+
 class InvoiceItem(db.Model):
     __tablename__ = 'invoice_items'
 
@@ -142,7 +165,7 @@ class InvoiceItem(db.Model):
         }
 
 
-class Expense(db.Model):
+class Expense(db.Model, EncryptedFieldsMixin):
     __tablename__ = 'expenses'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -152,7 +175,7 @@ class Expense(db.Model):
     expense_type = db.Column(db.String(20), nullable=False)
     amount = db.Column(db.Numeric(12, 2), nullable=False)
     expense_date = db.Column(db.Date, nullable=False)
-    description = db.Column(db.Text, nullable=True)
+    _description = db.Column('description', db.Text, nullable=True)
     receipt_file_path = db.Column(db.String(500), nullable=True)
     recorded_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -160,6 +183,14 @@ class Expense(db.Model):
 
     client = db.relationship('Client')
     recorder = db.relationship('User')
+
+    @property
+    def description(self):
+        return self._enc_get(self._description)
+
+    @description.setter
+    def description(self, value):
+        self._description = self._enc_set(value)
 
     def to_dict(self):
         return {
@@ -178,3 +209,6 @@ class Expense(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+register_encrypt_on_flush(Expense, ['_description'])

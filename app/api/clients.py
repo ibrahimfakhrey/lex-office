@@ -22,14 +22,18 @@ def api_clients_list():
     query = Client.query.filter_by(tenant_id=g.tenant_id)
 
     if search:
-        query = query.filter(
-            db.or_(
-                Client.full_name.ilike(f'%{search}%'),
-                Client.client_number.ilike(f'%{search}%'),
-                Client.national_id.ilike(f'%{search}%'),
-                Client.phone_primary.ilike(f'%{search}%'),
-            )
-        )
+        # national_id is encrypted — exact-match via blind index when the
+        # query looks like an ID (digits only).
+        clauses = [
+            Client.full_name.ilike(f'%{search}%'),
+            Client.client_number.ilike(f'%{search}%'),
+            Client.phone_primary.ilike(f'%{search}%'),
+        ]
+        digits = ''.join(c for c in search if c.isdigit())
+        if digits:
+            from app.services.encryption import blind_index
+            clauses.append(Client._national_id_idx == blind_index(digits, g.tenant_id))
+        query = query.filter(db.or_(*clauses))
     if client_type:
         query = query.filter_by(client_type=client_type)
     if status == 'active':

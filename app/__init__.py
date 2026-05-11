@@ -120,6 +120,8 @@ def _register_blueprints(app):
     # Admin CLI commands (flask create-admin, flask list-admins)
     from app.admin.cli import register_admin_cli
     register_admin_cli(app)
+    from app.cli_encryption import register_encryption_cli
+    register_encryption_cli(app)
 
     # Landing page
     @app.route('/')

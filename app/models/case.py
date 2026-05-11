@@ -1,5 +1,6 @@
 from datetime import datetime
 from app.extensions import db
+from app.models._encryption import EncryptedFieldsMixin, register_encrypt_on_flush
 
 
 class Court(db.Model):
@@ -29,7 +30,7 @@ class Court(db.Model):
         return f'<Court {self.name}>'
 
 
-class Case(db.Model):
+class Case(db.Model, EncryptedFieldsMixin):
     __tablename__ = 'cases'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -40,7 +41,8 @@ class Case(db.Model):
     court_id = db.Column(db.Integer, db.ForeignKey('courts.id'), nullable=True)
     circuit = db.Column(db.String(100), nullable=True)
     case_type = db.Column(db.String(30), nullable=False)
-    subject = db.Column(db.Text, nullable=True)
+    # Encrypted at rest. Access via the `subject` hybrid_property below.
+    _subject = db.Column('subject', db.Text, nullable=True)
     opponent_name = db.Column(db.String(300), nullable=True)
     opponent_capacity = db.Column(db.String(200), nullable=True)
     opponent_lawyer = db.Column(db.String(300), nullable=True)
@@ -53,7 +55,8 @@ class Case(db.Model):
     payment_schedule = db.Column(db.String(20), nullable=True)
     status = db.Column(db.String(30), default='new')
     priority = db.Column(db.String(20), default='normal')
-    internal_notes = db.Column(db.Text, nullable=True)
+    # Encrypted at rest. Access via the `internal_notes` hybrid_property below.
+    _internal_notes = db.Column('internal_notes', db.Text, nullable=True)
     closed_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -70,6 +73,22 @@ class Case(db.Model):
     case_invoices = db.relationship('Invoice', backref='case', lazy='dynamic')
     expenses = db.relationship('Expense', backref='case', lazy='dynamic')
     case_documents = db.relationship('Document', backref='case', lazy='dynamic')
+
+    @property
+    def internal_notes(self):
+        return self._enc_get(self._internal_notes)
+
+    @internal_notes.setter
+    def internal_notes(self, value):
+        self._internal_notes = self._enc_set(value)
+
+    @property
+    def subject(self):
+        return self._enc_get(self._subject)
+
+    @subject.setter
+    def subject(self, value):
+        self._subject = self._enc_set(value)
 
     @property
     def total_paid(self):
@@ -126,3 +145,6 @@ class Case(db.Model):
 
     def __repr__(self):
         return f'<Case {self.case_number} - {self.subject}>'
+
+
+register_encrypt_on_flush(Case, ['_internal_notes', '_subject'])

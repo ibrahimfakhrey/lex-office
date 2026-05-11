@@ -1,8 +1,9 @@
 from datetime import datetime
 from app.extensions import db
+from app.models._encryption import EncryptedFieldsMixin, register_encrypt_on_flush
 
 
-class Session(db.Model):
+class Session(db.Model, EncryptedFieldsMixin):
     __tablename__ = 'sessions'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -13,9 +14,9 @@ class Session(db.Model):
     court_id = db.Column(db.Integer, db.ForeignKey('courts.id'), nullable=True)
     circuit = db.Column(db.String(100), nullable=True)
     session_type = db.Column(db.String(30), nullable=True)
-    preparation_notes = db.Column(db.Text, nullable=True)
+    _preparation_notes = db.Column('preparation_notes', db.Text, nullable=True)
     result = db.Column(db.String(30), nullable=True)
-    result_summary = db.Column(db.Text, nullable=True)
+    _result_summary = db.Column('result_summary', db.Text, nullable=True)
     next_session_date = db.Column(db.Date, nullable=True)
     minutes_file_path = db.Column(db.String(500), nullable=True)
     responsible_lawyer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -29,6 +30,22 @@ class Session(db.Model):
     court = db.relationship('Court')
     responsible_lawyer = db.relationship('User', backref='assigned_sessions')
     session_documents = db.relationship('Document', backref='session', lazy='dynamic')
+
+    @property
+    def preparation_notes(self):
+        return self._enc_get(self._preparation_notes)
+
+    @preparation_notes.setter
+    def preparation_notes(self, value):
+        self._preparation_notes = self._enc_set(value)
+
+    @property
+    def result_summary(self):
+        return self._enc_get(self._result_summary)
+
+    @result_summary.setter
+    def result_summary(self, value):
+        self._result_summary = self._enc_set(value)
 
     def to_dict(self):
         return {
@@ -59,3 +76,6 @@ class Session(db.Model):
 
     def __repr__(self):
         return f'<Session {self.session_date} - Case {self.case_id}>'
+
+
+register_encrypt_on_flush(Session, ['_preparation_notes', '_result_summary'])

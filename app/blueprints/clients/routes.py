@@ -34,14 +34,19 @@ def index():
 
     query = base_query
     if search:
-        query = query.filter(
-            db.or_(
-                Client.full_name.ilike(f'%{search}%'),
-                Client.client_number.ilike(f'%{search}%'),
-                Client.national_id.ilike(f'%{search}%'),
-                Client.phone_primary.ilike(f'%{search}%'),
-            )
-        )
+        # full_name / client_number / phone are still partial-match.
+        # national_id is encrypted at rest — match exactly via blind index
+        # when the search term looks like a national ID (digits only).
+        clauses = [
+            Client.full_name.ilike(f'%{search}%'),
+            Client.client_number.ilike(f'%{search}%'),
+            Client.phone_primary.ilike(f'%{search}%'),
+        ]
+        digits = ''.join(c for c in search if c.isdigit())
+        if digits:
+            from app.services.encryption import blind_index
+            clauses.append(Client._national_id_idx == blind_index(digits, g.tenant_id))
+        query = query.filter(db.or_(*clauses))
     if client_type:
         query = query.filter_by(client_type=client_type)
     if status == 'active':

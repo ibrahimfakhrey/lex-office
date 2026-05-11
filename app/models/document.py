@@ -1,8 +1,9 @@
 from datetime import datetime
 from app.extensions import db
+from app.models._encryption import EncryptedFieldsMixin, register_encrypt_on_flush
 
 
-class Document(db.Model):
+class Document(db.Model, EncryptedFieldsMixin):
     __tablename__ = 'documents'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -16,8 +17,9 @@ class Document(db.Model):
     file_type = db.Column(db.String(10), nullable=False)
     file_size = db.Column(db.Integer, nullable=True)
     doc_date = db.Column(db.Date, nullable=True)
-    notes = db.Column(db.Text, nullable=True)
-    ai_summary = db.Column(db.Text, nullable=True)
+    # Encrypted at rest. Access via the `notes` hybrid_property.
+    _notes = db.Column('notes', db.Text, nullable=True)
+    _ai_summary = db.Column('ai_summary', db.Text, nullable=True)
     share_token = db.Column(db.String(100), nullable=True)
     share_expires_at = db.Column(db.DateTime, nullable=True)
     uploaded_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
@@ -70,8 +72,27 @@ class Document(db.Model):
             'file_size_display': self.file_size_display,
         }
 
+    @property
+    def notes(self):
+        return self._enc_get(self._notes)
+
+    @notes.setter
+    def notes(self, value):
+        self._notes = self._enc_set(value)
+
+    @property
+    def ai_summary(self):
+        return self._enc_get(self._ai_summary)
+
+    @ai_summary.setter
+    def ai_summary(self, value):
+        self._ai_summary = self._enc_set(value)
+
     def __repr__(self):
         return f'<Document {self.name}>'
+
+
+register_encrypt_on_flush(Document, ['_notes', '_ai_summary'])
 
 
 class LegalTemplate(db.Model):

@@ -1,14 +1,15 @@
 from datetime import datetime, date
 from app.extensions import db
+from app.models._encryption import EncryptedFieldsMixin, register_encrypt_on_flush
 
 
-class Task(db.Model):
+class Task(db.Model, EncryptedFieldsMixin):
     __tablename__ = 'tasks'
 
     id = db.Column(db.Integer, primary_key=True)
     tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=False)
     title = db.Column(db.String(300), nullable=False)
-    description = db.Column(db.Text, nullable=True)
+    _description = db.Column('description', db.Text, nullable=True)
     assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     assigned_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     case_id = db.Column(db.Integer, db.ForeignKey('cases.id'), nullable=True)
@@ -22,6 +23,14 @@ class Task(db.Model):
 
     assignee = db.relationship('User', foreign_keys=[assigned_to], backref='assigned_tasks')
     assigner = db.relationship('User', foreign_keys=[assigned_by])
+
+    @property
+    def description(self):
+        return self._enc_get(self._description)
+
+    @description.setter
+    def description(self, value):
+        self._description = self._enc_set(value)
 
     @property
     def is_overdue(self):
@@ -61,7 +70,10 @@ class Task(db.Model):
         return f'<Task {self.title}>'
 
 
-class Appointment(db.Model):
+register_encrypt_on_flush(Task, ['_description'])
+
+
+class Appointment(db.Model, EncryptedFieldsMixin):
     __tablename__ = 'appointments'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -70,7 +82,7 @@ class Appointment(db.Model):
     lawyer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     appointment_date = db.Column(db.Date, nullable=False)
     appointment_time = db.Column(db.Time, nullable=False)
-    notes = db.Column(db.Text, nullable=True)
+    _notes = db.Column('notes', db.Text, nullable=True)
     confirmation_sent = db.Column(db.Boolean, default=False)
     reminder_sent = db.Column(db.Boolean, default=False)
     attendance_status = db.Column(db.String(20), default='pending')
@@ -78,6 +90,14 @@ class Appointment(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     lawyer = db.relationship('User', backref='lawyer_appointments')
+
+    @property
+    def notes(self):
+        return self._enc_get(self._notes)
+
+    @notes.setter
+    def notes(self, value):
+        self._notes = self._enc_set(value)
 
     def to_dict(self):
         return {
@@ -99,3 +119,6 @@ class Appointment(db.Model):
 
     def __repr__(self):
         return f'<Appointment {self.appointment_date} - Client {self.client_id}>'
+
+
+register_encrypt_on_flush(Appointment, ['_notes'])

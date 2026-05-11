@@ -32,6 +32,9 @@ class Tenant(db.Model):
     # the 80% AI-quota warning email. Reset implicitly on month rollover by
     # comparing against current month before sending again.
     ai_warning_sent_month = db.Column(db.String(7), nullable=True)
+    # Per-tenant Data Encryption Key (DEK), itself encrypted by the master
+    # Fernet key in ENCRYPTION_MASTER_KEY. Lazy-generated on first encrypt call.
+    encryption_key = db.Column(db.Text, nullable=True)
     # organic / referral / paid_ad / direct
     acquisition_source = db.Column(db.String(40), nullable=True)
     # Which admin onboarded this tenant (NULL for public-signup tenants).

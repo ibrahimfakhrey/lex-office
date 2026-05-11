@@ -1,8 +1,9 @@
 from datetime import datetime
 from app.extensions import db
+from app.models._encryption import EncryptedFieldsMixin, register_encrypt_on_flush
 
 
-class Enforcement(db.Model):
+class Enforcement(db.Model, EncryptedFieldsMixin):
     __tablename__ = 'enforcements'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -19,7 +20,7 @@ class Enforcement(db.Model):
     debtor_name = db.Column(db.String(300), nullable=True)
     start_date = db.Column(db.Date, nullable=True)
     status = db.Column(db.String(20), default='active')
-    notes = db.Column(db.Text, nullable=True)
+    _notes = db.Column('notes', db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -31,6 +32,14 @@ class Enforcement(db.Model):
     actions = db.relationship('EnforcementAction', backref='enforcement', lazy='dynamic',
                               order_by='EnforcementAction.action_date.desc()',
                               cascade='all, delete-orphan')
+
+    @property
+    def notes(self):
+        return self._enc_get(self._notes)
+
+    @notes.setter
+    def notes(self, value):
+        self._notes = self._enc_set(value)
 
     @property
     def remaining_amount(self):
@@ -76,6 +85,9 @@ class Enforcement(db.Model):
 
     def __repr__(self):
         return f'<Enforcement {self.enforcement_number}>'
+
+
+register_encrypt_on_flush(Enforcement, ['_notes'])
 
 
 class EnforcementCollection(db.Model):
