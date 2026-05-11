@@ -174,16 +174,18 @@
     <div class="card-header"><i class="bi bi-clock-history"></i> آخر 10 عمليات تسجيل دخول</div>
     <div class="table-responsive">
         <table class="table table-sm mb-0">
-            <thead><tr><th>المستخدم</th><th>البريد</th><th>الدور</th><th>آخر دخول</th></tr></thead>
+            <thead><tr><th>المستخدم</th><th>البريد</th><th>الدور</th><th>IP</th><th>وقت الدخول</th></tr></thead>
             <tbody>
-                {% for u in recent_logins %}
+                {% for ev in recent_logins %}
                 <tr>
-                    <td>{{ u.full_name }}</td><td class="small">{{ u.email }}</td>
-                    <td><span class="badge badge-soft-info">{{ u.role.name_ar if u.role else '—' }}</span></td>
-                    <td class="small">{{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at }}</td>
+                    <td>{{ ev.user.full_name if ev.user else '—' }}</td>
+                    <td class="small">{{ ev.user.email if ev.user else '—' }}</td>
+                    <td><span class="badge badge-soft-info">{{ ev.user.role.name_ar if ev.user and ev.user.role else '—' }}</span></td>
+                    <td class="small" dir="ltr">{{ ev.ip_address or '—' }}</td>
+                    <td class="small">{{ ev.created_at.strftime('%Y-%m-%d %H:%M') if ev.created_at }}</td>
                 </tr>
                 {% else %}
-                <tr><td colspan="4" class="text-center text-muted py-3">لا توجد عمليات دخول</td></tr>
+                <tr><td colspan="5" class="text-center text-muted py-3">لا توجد عمليات دخول مسجلة بعد</td></tr>
                 {% endfor %}
             </tbody>
         </table>

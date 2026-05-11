@@ -22,6 +22,7 @@ from app.models.session import Session as CaseSession
 from app.models.admin import (
     AdminAuditLog, TenantFeatureOverride, TenantSupportNote,
 )
+from app.models.audit import AuditLog
 
 
 # ───────────────────────────── helpers ─────────────────────────────
@@ -228,10 +229,14 @@ def tenant_usage(tenant_id):
     users_count = User.query.filter_by(tenant_id=tenant_id).count()
     active_users_count = User.query.filter_by(tenant_id=tenant_id, is_active=True).count()
 
-    # Last 10 user logins (across all tenant users)
+    # Last 10 LOGIN EVENTS for this tenant (one row per login, not per user).
+    # AuditLog rows are appended on every successful login via auth.py.
     recent_logins = (
-        User.query.filter(User.tenant_id == tenant_id, User.last_login_at.isnot(None))
-        .order_by(User.last_login_at.desc())
+        AuditLog.query.filter(
+            AuditLog.tenant_id == tenant_id,
+            AuditLog.action == 'login_success',
+        )
+        .order_by(AuditLog.created_at.desc())
         .limit(10).all()
     )
 

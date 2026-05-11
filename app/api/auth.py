@@ -11,6 +11,22 @@ from flask_jwt_extended import (
 )
 from app.models.user import User, Role, Invitation
 from app.models.tenant import Tenant
+from app.models.audit import AuditLog
+
+
+def _record_api_login_event(user, source='api'):
+    """Append a row to audit_logs for an API login."""
+    from flask import request
+    db.session.add(AuditLog(
+        tenant_id=user.tenant_id,
+        user_id=user.id,
+        action='login_success',
+        resource_type='User',
+        resource_id=user.id,
+        details={'source': source},
+        ip_address=(request.headers.get('X-Forwarded-For') or request.remote_addr or '')[:45],
+        user_agent=(request.headers.get('User-Agent') or '')[:500],
+    ))
 from app.utils.helpers import generate_otp, generate_token
 from app.utils.validators import validate_email, validate_password, validate_phone, normalize_phone
 from app.services.email_service import send_otp_email
@@ -239,6 +255,7 @@ def api_login():
     user.login_attempts = 0
     user.locked_until = None
     user.last_login_at = datetime.utcnow()
+    _record_api_login_event(user, source='api')
     db.session.commit()
 
     token_expires = timedelta(days=30) if remember else timedelta(days=7)
@@ -278,6 +295,7 @@ def api_verify_mfa():
 
     user.last_login_at = datetime.utcnow()
     user.login_attempts = 0
+    _record_api_login_event(user, source='api_mfa')
     db.session.commit()
 
     access_token = create_access_token(identity=str(user.id))

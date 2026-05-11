@@ -10,11 +10,30 @@ from app.extensions import db, limiter, csrf
 from app.models.user import User, Role, Invitation
 from app.models.tenant import Tenant
 from app.models.subscription import SubscriptionPlan
+from app.models.audit import AuditLog
 from app.utils.helpers import generate_otp, generate_token
 from app.utils.validators import validate_email, validate_password, validate_phone, normalize_phone
 from app.services.email_service import send_otp_email, send_password_reset_email
 
 auth_bp = Blueprint('auth', __name__, template_folder='../../templates/auth')
+
+
+def _record_login_event(user, source='web'):
+    """Append a row to audit_logs for this successful login.
+
+    Called from every login-success path so the admin "last 10 logins" widget
+    shows real event history, not just one row per user.
+    """
+    db.session.add(AuditLog(
+        tenant_id=user.tenant_id,
+        user_id=user.id,
+        action='login_success',
+        resource_type='User',
+        resource_id=user.id,
+        details={'source': source},
+        ip_address=(request.headers.get('X-Forwarded-For') or request.remote_addr or '')[:45],
+        user_agent=(request.headers.get('User-Agent') or '')[:500],
+    ))
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
@@ -239,6 +258,7 @@ def login():
         user.login_attempts = 0
         user.locked_until = None
         user.last_login_at = datetime.utcnow()
+        _record_login_event(user, source='web')
         db.session.commit()
 
         token_expires = timedelta(days=30) if remember else timedelta(minutes=15)
@@ -267,6 +287,7 @@ def verify_mfa(user_id):
             if totp.verify(otp_code):
                 user.last_login_at = datetime.utcnow()
                 user.login_attempts = 0
+                _record_login_event(user, source='web_mfa')
                 db.session.commit()
 
                 access_token = create_access_token(identity=str(user.id))
