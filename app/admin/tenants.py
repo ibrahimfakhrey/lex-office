@@ -2,12 +2,14 @@
 from datetime import datetime, timedelta
 import csv
 import io
+import os
 
 from flask import (
     render_template, request, redirect, url_for, flash, g,
-    abort, Response, jsonify,
+    abort, Response, jsonify, current_app,
 )
 from sqlalchemy import or_, func
+from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.admin import admin_bp
 from app.admin.decorators import super_admin_required, log_action, admin_permission_required
@@ -15,7 +17,7 @@ from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.subscription import SubscriptionPlan, SubscriptionPayment
 from app.models.client import Client
-from app.models.case import Case
+from app.models.case import Case, Court
 from app.models.session import Session as CaseSession
 from app.models.admin import (
     AdminAuditLog, TenantFeatureOverride, TenantSupportNote,
@@ -363,7 +365,7 @@ def tenant_notes(tenant_id):
 @admin_bp.route('/tenants/<int:tenant_id>/edit', methods=['POST'])
 @admin_permission_required('tenants', 'edit')
 def tenant_edit(tenant_id):
-    """Edit basic tenant info."""
+    """Edit basic tenant info — name/contact + primary_court + logo."""
     tenant = _tenant_or_404(tenant_id)
     old = tenant.to_dict()
 
@@ -374,6 +376,20 @@ def tenant_edit(tenant_id):
     tenant.city = (request.form.get('city') or '').strip() or None
     tenant.bar_registration_no = (request.form.get('bar_registration_no') or '').strip() or None
     tenant.address = (request.form.get('address') or '').strip() or None
+    tenant.fax = (request.form.get('fax') or '').strip() or None
+    # primary_court is stored as the Court.id (as string) — matches onboarding.
+    primary_court = (request.form.get('primary_court') or '').strip()
+    tenant.primary_court = primary_court or None
+
+    # Optional logo replacement — preserves prior logo if no file uploaded.
+    logo = request.files.get('logo') if request.files else None
+    if logo and logo.filename:
+        filename = secure_filename(logo.filename) or 'logo.png'
+        upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'logos')
+        os.makedirs(upload_dir, exist_ok=True)
+        stored = f'tenant_{tenant_id}_{int(datetime.utcnow().timestamp())}_{filename}'
+        logo.save(os.path.join(upload_dir, stored))
+        tenant.logo_path = f'uploads/logos/{stored}'
 
     log_action(
         'TENANT_EDITED', entity_type='Tenant', entity_id=tenant_id,
@@ -381,8 +397,95 @@ def tenant_edit(tenant_id):
         description=f'Edited basic info for {tenant.name}',
     )
     db.session.commit()
+    # If the request came from the dedicated edit-office page, stay there.
+    next_url = request.form.get('next') or url_for('admin.tenant_detail', tenant_id=tenant_id)
     flash('تم تحديث بيانات المكتب بنجاح', 'success')
-    return redirect(url_for('admin.tenant_detail', tenant_id=tenant_id))
+    return redirect(next_url)
+
+
+def _tenant_owner(tenant_id):
+    """The 'office owner' for admin purposes — oldest user on the tenant.
+
+    Created at registration with the 'manager' role; remains the canonical
+    contact even if more users are added later.
+    """
+    return (
+        User.query.filter_by(tenant_id=tenant_id)
+        .order_by(User.created_at.asc(), User.id.asc())
+        .first()
+    )
+
+
+@admin_bp.route('/tenants/<int:tenant_id>/edit-office', methods=['GET'])
+@admin_permission_required('tenants', 'edit')
+def tenant_edit_office(tenant_id):
+    """Focused edit page — office data, primary court, logo, plan, reset password.
+
+    Courts and plans are grouped by market (EG/KSA) so admin sees both markets
+    in a single dropdown.
+    """
+    tenant = _tenant_or_404(tenant_id)
+    owner = _tenant_owner(tenant_id)
+
+    # All active courts grouped by market — admin picks from any market.
+    all_courts = Court.query.filter_by(is_active=True).order_by(
+        Court.market.asc(), Court.name.asc()
+    ).all()
+    courts_eg = [c for c in all_courts if c.market == 'eg']
+    courts_sa = [c for c in all_courts if c.market == 'sa']
+
+    # All active plans grouped by market — same idea.
+    all_plans = SubscriptionPlan.query.filter_by(is_active=True).order_by(
+        SubscriptionPlan.market.asc(), SubscriptionPlan.price_monthly.asc()
+    ).all()
+    plans_eg = [p for p in all_plans if p.market == 'eg']
+    plans_sa = [p for p in all_plans if p.market == 'sa']
+
+    return render_template(
+        'admin/tenants/edit_office.html',
+        tenant=tenant,
+        owner=owner,
+        now=datetime.utcnow(),
+        courts_eg=courts_eg,
+        courts_sa=courts_sa,
+        plans_eg=plans_eg,
+        plans_sa=plans_sa,
+    )
+
+
+@admin_bp.route('/tenants/<int:tenant_id>/reset-owner-password', methods=['POST'])
+@admin_permission_required('tenants', 'edit')
+def tenant_reset_owner_password(tenant_id):
+    """Set a new password for the office owner (oldest user on the tenant)."""
+    tenant = _tenant_or_404(tenant_id)
+    owner = _tenant_owner(tenant_id)
+    if not owner:
+        flash('لا يوجد مستخدم لهذا المكتب', 'danger')
+        return redirect(url_for('admin.tenant_edit_office', tenant_id=tenant_id))
+
+    new_password = (request.form.get('new_password') or '').strip()
+    confirm = (request.form.get('confirm_password') or '').strip()
+
+    if len(new_password) < 8:
+        flash('كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'danger')
+        return redirect(url_for('admin.tenant_edit_office', tenant_id=tenant_id))
+    if new_password != confirm:
+        flash('تأكيد كلمة المرور غير مطابق', 'danger')
+        return redirect(url_for('admin.tenant_edit_office', tenant_id=tenant_id))
+
+    owner.set_password(new_password)
+    # Clear any lock-out from prior failed attempts.
+    owner.login_attempts = 0
+    owner.locked_until = None
+
+    log_action(
+        'TENANT_OWNER_PASSWORD_RESET', entity_type='Tenant', entity_id=tenant_id,
+        new_value={'owner_user_id': owner.id, 'owner_email': owner.email},
+        description=f'Reset password for owner {owner.email} of {tenant.name}',
+    )
+    db.session.commit()
+    flash(f'تم إعادة تعيين كلمة المرور لـ {owner.email}', 'success')
+    return redirect(url_for('admin.tenant_edit_office', tenant_id=tenant_id))
 
 
 @admin_bp.route('/tenants/<int:tenant_id>/suspend', methods=['POST'])

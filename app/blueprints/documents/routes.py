@@ -163,6 +163,22 @@ def download(id):
     return redirect(url_for('documents.show', id=document.id))
 
 
+@documents_bp.route('/<int:id>/preview')
+@permission_required('documents', 'view')
+def preview(id):
+    """Serve the file inline so the browser displays it (PDF/image/etc.)."""
+    document = Document.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
+    if os.path.isabs(document.file_path):
+        abs_path = document.file_path
+    else:
+        abs_path = os.path.join(current_app.root_path, 'static', document.file_path)
+    if not os.path.exists(abs_path):
+        flash('الملف غير موجود', 'danger')
+        return redirect(url_for('documents.show', id=document.id))
+    return send_file(abs_path, as_attachment=False,
+                     download_name=f'{document.name}.{document.file_type}')
+
+
 @documents_bp.route('/<int:id>/share', methods=['POST'])
 @permission_required('documents', 'share')
 def share(id):

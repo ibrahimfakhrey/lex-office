@@ -96,9 +96,14 @@
                         {% if end %}{{ end.strftime('%Y-%m-%d') }}{% else %}—{% endif %}
                     </td>
                     <td>
-                        <a href="{{ url_for('admin.tenant_detail', tenant_id=t.id) }}" class="btn btn-sm btn-outline-light" title="تفاصيل">
-                            <i class="bi bi-eye"></i>
-                        </a>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a href="{{ url_for('admin.tenant_detail', tenant_id=t.id) }}" class="btn btn-outline-light" title="تفاصيل">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ url_for('admin.tenant_edit_office', tenant_id=t.id) }}" class="btn btn-outline-light" title="تعديل بيانات المكتب">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                        </div>
                     </td>
                 </tr>
                 {% else %}

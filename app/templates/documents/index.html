@@ -58,7 +58,10 @@
                         <td><small>{{ doc.file_size_display }}</small></td>
                         <td><small>{{ doc.created_at.strftime('%Y-%m-%d') }}</small></td>
                         <td>
-                            <a href="{{ url_for('documents.download', id=doc.id) }}" class="btn btn-sm btn-outline-success" title="تحميل"><i class="bi bi-download"></i></a>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ url_for('documents.preview', id=doc.id) }}" target="_blank" rel="noopener" class="btn btn-outline-primary" title="عرض المستند"><i class="bi bi-eye"></i></a>
+                                <a href="{{ url_for('documents.download', id=doc.id) }}" class="btn btn-outline-success" title="تحميل"><i class="bi bi-download"></i></a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
