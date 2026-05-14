@@ -7,7 +7,7 @@ from app.extensions import db
 from flask import g, request
 
 from app.models.case import Court
-from app.models.user import Role
+from app.models.user import Role, User
 
 EGYPTIAN_GOVERNORATES = [
     'القاهرة', 'الجيزة', 'الإسكندرية', 'الدقهلية', 'البحر الأحمر',
@@ -33,6 +33,28 @@ def api_lookups_roles():
     """Return all roles."""
     roles = Role.query.order_by(Role.id).all()
     return success_response(data=[r.to_dict() for r in roles])
+
+
+@api_bp.route('/lookups/users', methods=['GET'])
+@api_login_required
+def api_lookups_users():
+    """Return active users in the tenant (for assigning cases/tasks).
+
+    Any authenticated user can call this — needed by case/task forms to
+    pick a responsible lawyer or assignee.
+    """
+    users = (
+        User.query
+        .filter_by(tenant_id=g.tenant_id, is_active=True)
+        .order_by(User.full_name)
+        .all()
+    )
+    return success_response(data=[{
+        'id': u.id,
+        'full_name': u.full_name,
+        'email': u.email,
+        'role_name': u.role.name_ar if u.role else None,
+    } for u in users])
 
 
 @api_bp.route('/lookups/governorates', methods=['GET'])
