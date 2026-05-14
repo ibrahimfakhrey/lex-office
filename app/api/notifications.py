@@ -198,36 +198,21 @@ def api_unregister_device():
 # ===================== FCM DEBUG (diagnostics) =====================
 
 @api_bp.route('/notifications/fcm-debug', methods=['GET'])
-@api_login_required
 def api_fcm_debug():
-    """Diagnostic route: reports FCM setup state + device tokens.
+    """PUBLIC diagnostic route — no auth. Returns FCM setup state + token counts.
 
-    Returns JSON like:
-    {
-      "firebase_admin_installed": true,
-      "service_account_env_set": true,
-      "service_account_file_exists": true,
-      "service_account_path": "/etc/lexoffice/firebase-service-account.json",
-      "firebase_initialized": true,
-      "device_tokens_in_tenant": 3,
-      "device_tokens_for_current_user": 1,
-      "my_tokens": [{"id":1,"platform":"ios","device_name":"iOS device","last_seen_at":"..."}],
-      "tenant_id": 12,
-      "current_user_id": 6
-    }
+    Hit https://lexoffice.manasety.ai/api/v1/notifications/fcm-debug in browser.
     """
     import os
     from app.models.device_token import DeviceToken
     from flask import current_app
 
-    # Try import firebase-admin
     try:
-        import firebase_admin
+        import firebase_admin  # noqa: F401
         from firebase_admin import credentials  # noqa: F401
         installed = True
-    except Exception as e:
+    except Exception:
         installed = False
-        firebase_admin = None
 
     cred_path = (
         current_app.config.get('FIREBASE_SERVICE_ACCOUNT_PATH')
@@ -235,7 +220,6 @@ def api_fcm_debug():
     )
     file_exists = bool(cred_path) and os.path.exists(cred_path) if cred_path else False
 
-    # Try lazy-init
     fb_inited = False
     init_error = None
     if installed:
@@ -245,10 +229,15 @@ def api_fcm_debug():
         except Exception as e:
             init_error = str(e)
 
-    tokens_tenant = DeviceToken.query.filter_by(tenant_id=g.tenant_id).all()
-    tokens_user = DeviceToken.query.filter_by(
-        tenant_id=g.tenant_id, user_id=g.current_user.id
-    ).all()
+    all_tokens = DeviceToken.query.all()
+    by_tenant = {}
+    for t in all_tokens:
+        by_tenant.setdefault(t.tenant_id, []).append({
+            'user_id': t.user_id,
+            'platform': t.platform,
+            'device_name': t.device_name,
+            'last_seen_at': t.last_seen_at.isoformat() if t.last_seen_at else None,
+        })
 
     return success_response(data={
         'firebase_admin_installed': installed,
@@ -257,38 +246,40 @@ def api_fcm_debug():
         'service_account_file_exists': file_exists,
         'firebase_initialized': fb_inited,
         'init_error': init_error,
-        'device_tokens_in_tenant': len(tokens_tenant),
-        'device_tokens_for_current_user': len(tokens_user),
-        'tokens_by_user': {
-            t.user_id: (t.platform, t.device_name) for t in tokens_tenant
-        },
-        'my_tokens': [t.to_dict() for t in tokens_user],
-        'tenant_id': g.tenant_id,
-        'current_user_id': g.current_user.id,
+        'total_device_tokens': len(all_tokens),
+        'tokens_by_tenant': by_tenant,
     })
 
 
 @api_bp.route('/notifications/fcm-test', methods=['GET'])
-@api_login_required
 def api_fcm_test():
-    """Send a test push to all FCM-registered users in the tenant.
+    """PUBLIC test route — no auth. Sends a test push.
 
-    Optional query param `?user_id=<int>` targets a single user.
-    Default = everyone in tenant. Actor NOT excluded — single-user tests work.
+    Usage:
+      /api/v1/notifications/fcm-test                     → all registered devices
+      /api/v1/notifications/fcm-test?user_id=6           → push to user 6 only
+      /api/v1/notifications/fcm-test?tenant_id=12        → all users in tenant 12
     """
     from app.services.fcm_service import send_push
     from app.models.device_token import DeviceToken
 
     target_user_id = request.args.get('user_id', '').strip()
+    target_tenant_id = request.args.get('tenant_id', '').strip()
+
+    q = DeviceToken.query
     if target_user_id:
         try:
-            user_ids = [int(target_user_id)]
+            q = q.filter_by(user_id=int(target_user_id))
         except (ValueError, TypeError):
             return validation_error({'user_id': 'user_id يجب أن يكون رقماً'})
-    else:
-        # All distinct user_ids that have device tokens in this tenant
-        rows = DeviceToken.query.filter_by(tenant_id=g.tenant_id).all()
-        user_ids = sorted({r.user_id for r in rows})
+    if target_tenant_id:
+        try:
+            q = q.filter_by(tenant_id=int(target_tenant_id))
+        except (ValueError, TypeError):
+            return validation_error({'tenant_id': 'tenant_id يجب أن يكون رقماً'})
+
+    rows = q.all()
+    user_ids = sorted({r.user_id for r in rows})
 
     sent_per_user = {}
     for uid in user_ids:
@@ -307,5 +298,4 @@ def api_fcm_test():
         'targeted_users': user_ids,
         'sent_per_user': sent_per_user,
         'total_sent': total,
-        'tenant_id': g.tenant_id,
     }, message=f'تم إرسال {total} إشعار')
