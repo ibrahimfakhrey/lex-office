@@ -138,26 +138,42 @@ def api_notifications_settings_update():
 @api_bp.route('/notifications/register-device', methods=['POST'])
 @api_login_required
 def api_register_device():
-    """Register/refresh an FCM device token for the current user."""
+    """Register/refresh a device token for the current user.
+
+    Accepts either fcm_token, apns_token, or both. At least one is required.
+    iOS devices behind VPN that blocks Firebase can register apns_token only
+    and still receive pushes via direct APNs fallback.
+    """
     from app.models.device_token import DeviceToken
 
     data = get_json_or_form()
-    fcm_token = (data.get('fcm_token') or '').strip()
+    fcm_token = (data.get('fcm_token') or '').strip() or None
+    apns_token = (data.get('apns_token') or '').strip() or None
     platform = (data.get('platform') or '').strip().lower()
     device_name = (data.get('device_name') or None)
     app_version = (data.get('app_version') or None)
 
-    if not fcm_token:
-        return validation_error({'fcm_token': 'fcm_token مطلوب'})
+    if not fcm_token and not apns_token:
+        return validation_error({'fcm_token': 'fcm_token أو apns_token مطلوب'})
     if platform not in ('ios', 'android', 'web'):
         return validation_error({'platform': 'platform يجب أن يكون ios/android/web'})
 
-    existing = DeviceToken.query.filter_by(fcm_token=fcm_token).first()
+    # Find existing by fcm_token OR apns_token (same device may re-register
+    # with one and later get the other).
+    existing = None
+    if fcm_token:
+        existing = DeviceToken.query.filter_by(fcm_token=fcm_token).first()
+    if not existing and apns_token:
+        existing = DeviceToken.query.filter_by(apns_token=apns_token).first()
+
     if existing:
-        # Reassign if it moved to a different user
         existing.user_id = g.current_user.id
         existing.tenant_id = g.tenant_id
         existing.platform = platform
+        if fcm_token:
+            existing.fcm_token = fcm_token
+        if apns_token:
+            existing.apns_token = apns_token
         existing.device_name = device_name or existing.device_name
         existing.app_version = app_version or existing.app_version
         existing.last_seen_at = datetime.utcnow()
@@ -168,6 +184,7 @@ def api_register_device():
         tenant_id=g.tenant_id,
         user_id=g.current_user.id,
         fcm_token=fcm_token,
+        apns_token=apns_token,
         platform=platform,
         device_name=device_name,
         app_version=app_version,
@@ -236,8 +253,22 @@ def api_fcm_debug():
             'user_id': t.user_id,
             'platform': t.platform,
             'device_name': t.device_name,
+            'has_fcm': bool(t.fcm_token),
+            'has_apns': bool(t.apns_token),
             'last_seen_at': t.last_seen_at.isoformat() if t.last_seen_at else None,
         })
+
+    # APNs direct fallback config check
+    apns_key_path = (
+        current_app.config.get('APNS_AUTH_KEY_PATH')
+        or os.environ.get('APNS_AUTH_KEY_PATH')
+    )
+    apns_configured = False
+    try:
+        from app.services.apns_service import is_configured as apns_is_configured
+        apns_configured = apns_is_configured()
+    except Exception:
+        pass
 
     return success_response(data={
         'firebase_admin_installed': installed,
@@ -246,6 +277,9 @@ def api_fcm_debug():
         'service_account_file_exists': file_exists,
         'firebase_initialized': fb_inited,
         'init_error': init_error,
+        'apns_direct_configured': apns_configured,
+        'apns_auth_key_path': apns_key_path,
+        'apns_auth_key_file_exists': bool(apns_key_path) and os.path.exists(apns_key_path) if apns_key_path else False,
         'total_device_tokens': len(all_tokens),
         'tokens_by_tenant': by_tenant,
     })

@@ -36,6 +36,9 @@ openai>=1.59.2
 
 # Firebase Cloud Messaging (push notifications)
 firebase-admin==6.5.0
+# APNs direct fallback for iOS devices where FCM is blocked (VPNs, etc.)
+httpx[http2]==0.27.2
+PyJWT[crypto]==2.9.0
 
 # Utilities
 python-dotenv==1.0.1
