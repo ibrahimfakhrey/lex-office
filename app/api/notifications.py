@@ -131,3 +131,65 @@ def api_notifications_settings_update():
 
     db.session.commit()
     return success_response(message='تم حفظ إعدادات الإشعارات')
+
+
+# ===================== DEVICE TOKEN REGISTRATION (FCM) =====================
+
+@api_bp.route('/notifications/register-device', methods=['POST'])
+@api_login_required
+def api_register_device():
+    """Register/refresh an FCM device token for the current user."""
+    from app.models.device_token import DeviceToken
+
+    data = get_json_or_form()
+    fcm_token = (data.get('fcm_token') or '').strip()
+    platform = (data.get('platform') or '').strip().lower()
+    device_name = (data.get('device_name') or None)
+    app_version = (data.get('app_version') or None)
+
+    if not fcm_token:
+        return validation_error({'fcm_token': 'fcm_token مطلوب'})
+    if platform not in ('ios', 'android', 'web'):
+        return validation_error({'platform': 'platform يجب أن يكون ios/android/web'})
+
+    existing = DeviceToken.query.filter_by(fcm_token=fcm_token).first()
+    if existing:
+        # Reassign if it moved to a different user
+        existing.user_id = g.current_user.id
+        existing.tenant_id = g.tenant_id
+        existing.platform = platform
+        existing.device_name = device_name or existing.device_name
+        existing.app_version = app_version or existing.app_version
+        existing.last_seen_at = datetime.utcnow()
+        db.session.commit()
+        return success_response(data=existing.to_dict(), message='تم تحديث جهازك')
+
+    dt = DeviceToken(
+        tenant_id=g.tenant_id,
+        user_id=g.current_user.id,
+        fcm_token=fcm_token,
+        platform=platform,
+        device_name=device_name,
+        app_version=app_version,
+    )
+    db.session.add(dt)
+    db.session.commit()
+    return success_response(data=dt.to_dict(), message='تم تسجيل الجهاز', status_code=201)
+
+
+@api_bp.route('/notifications/unregister-device', methods=['DELETE'])
+@api_login_required
+def api_unregister_device():
+    """Remove an FCM device token (call on logout)."""
+    from app.models.device_token import DeviceToken
+
+    data = get_json_or_form()
+    fcm_token = (data.get('fcm_token') or '').strip()
+    if not fcm_token:
+        return validation_error({'fcm_token': 'fcm_token مطلوب'})
+
+    DeviceToken.query.filter_by(
+        fcm_token=fcm_token, user_id=g.current_user.id
+    ).delete()
+    db.session.commit()
+    return success_response(message='تم إلغاء تسجيل الجهاز')

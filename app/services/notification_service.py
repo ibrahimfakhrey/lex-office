@@ -1,9 +1,39 @@
-"""Notification service: in-app + email notifications."""
+"""Notification service: in-app + email + FCM push notifications."""
 from flask import current_app
 from app.extensions import db
 from app.models.notification import Notification, NotificationSetting
 from app.models.user import User
 from app.services.email_service import send_email
+from app.services.fcm_service import send_push
+
+
+# Maps related_type → mobile deep-link route. The mobile FcmService reads
+# data.route and calls GoRouter.go() when the user taps the notification.
+def _route_for(related_type, related_id, notification_type=None):
+    if related_type == 'case' and related_id:
+        return f'/cases/{related_id}'
+    if related_type == 'session' and related_id:
+        return f'/sessions/{related_id}'
+    if related_type == 'judgment' and related_id:
+        return f'/judgments/{related_id}'
+    if related_type == 'enforcement' and related_id:
+        return f'/enforcement/{related_id}'
+    if related_type == 'poa' and related_id:
+        return f'/poa/{related_id}'
+    if related_type == 'task' and related_id:
+        return f'/tasks/{related_id}'
+    if related_type == 'document' and related_id:
+        return f'/documents/{related_id}'
+    if related_type == 'invoice' and related_id:
+        return f'/financial/invoices/{related_id}'
+    if related_type == 'payment':
+        return '/financial/payments'
+    if related_type == 'client' and related_id:
+        return f'/clients/{related_id}'
+    # Fallback for non-entity notifications
+    if notification_type == 'payment_received':
+        return '/financial/payments'
+    return '/notifications'
 
 
 def create_notification(
@@ -71,6 +101,20 @@ def create_notification(
         except Exception as e:
             current_app.logger.error(f'Notification email failed: {e}')
 
+    # Step 3: Push to FCM-registered devices (failure is non-fatal)
+    try:
+        send_push(
+            user_id=user_id,
+            title=title,
+            body=body,
+            related_type=related_type,
+            related_id=related_id,
+            route=_route_for(related_type, related_id, notification_type),
+            extra_data={'notification_type': notification_type, 'priority': priority},
+        )
+    except Exception as e:
+        current_app.logger.error(f'FCM push failed: {e}')
+
     return notification
 
 
@@ -86,7 +130,7 @@ def notify_tenant_users(tenant_id, notification_type, title, body=None,
     for user in users:
         is_actor = exclude_user_id and user.id == exclude_user_id
         if is_actor:
-            # Actor: in-app only, no email to self
+            # Actor: in-app only, no email/push to self
             n = _create_in_app_only(
                 tenant_id=tenant_id,
                 user_id=user.id,
@@ -97,6 +141,7 @@ def notify_tenant_users(tenant_id, notification_type, title, body=None,
                 related_type=related_type,
                 related_id=related_id,
             )
+            # Skip push to actor
         else:
             n = create_notification(
                 tenant_id=tenant_id,
