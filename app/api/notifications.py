@@ -268,23 +268,23 @@ def api_fcm_debug():
     })
 
 
-@api_bp.route('/notifications/fcm-test', methods=['POST'])
+@api_bp.route('/notifications/fcm-test', methods=['GET'])
 @api_login_required
 def api_fcm_test():
     """Send a test push to all FCM-registered users in the tenant.
 
-    Optionally include `user_id` in body to target a single user; default
-    is everyone (including the caller — actor is NOT excluded so single-user
-    tests work).
+    Optional query param `?user_id=<int>` targets a single user.
+    Default = everyone in tenant. Actor NOT excluded — single-user tests work.
     """
     from app.services.fcm_service import send_push
     from app.models.device_token import DeviceToken
 
-    data = get_json_or_form() if request.is_json or request.form else {}
-    target_user_id = data.get('user_id') if isinstance(data, dict) else None
-
+    target_user_id = request.args.get('user_id', '').strip()
     if target_user_id:
-        user_ids = [int(target_user_id)]
+        try:
+            user_ids = [int(target_user_id)]
+        except (ValueError, TypeError):
+            return validation_error({'user_id': 'user_id يجب أن يكون رقماً'})
     else:
         # All distinct user_ids that have device tokens in this tenant
         rows = DeviceToken.query.filter_by(tenant_id=g.tenant_id).all()
