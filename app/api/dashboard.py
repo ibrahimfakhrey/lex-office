@@ -29,6 +29,20 @@ def api_dashboard():
         tenant_id=g.tenant_id
     ).filter(Case.status.in_(['new', 'active', 'in_progress'])).count()
 
+    # Cases by status (for donut chart)
+    status_rows = db.session.query(
+        Case.status, db.func.count(Case.id)
+    ).filter(Case.tenant_id == g.tenant_id).group_by(Case.status).all()
+    _status_labels = {
+        'new': 'جديدة', 'active': 'نشطة', 'in_progress': 'قيد النظر',
+        'awaiting_judgment': 'منتظرة حكم', 'suspended': 'موقوفة',
+        'closed': 'مغلقة',
+    }
+    cases_by_status = [
+        {'status': r[0], 'label': _status_labels.get(r[0], r[0]), 'count': int(r[1])}
+        for r in status_rows
+    ]
+
     # Today's sessions
     today_sessions = Session.query.filter_by(
         tenant_id=g.tenant_id
@@ -107,6 +121,7 @@ def api_dashboard():
 
     return success_response(data={
         'active_cases_count': active_cases_count,
+        'cases_by_status': cases_by_status,
         'today_sessions': [s.to_dict() for s in today_sessions],
         'upcoming_sessions': [s.to_dict() for s in upcoming_sessions],
         'overdue_tasks': [t.to_dict() for t in overdue_tasks],

@@ -21,6 +21,7 @@ def api_cases_list():
     case_type = request.args.get('type', '').strip()
     priority = request.args.get('priority', '').strip()
     lawyer_id = request.args.get('lawyer_id', '').strip()
+    client_id = request.args.get('client_id', '').strip()
 
     query = Case.query.filter_by(tenant_id=g.tenant_id)
 
@@ -40,6 +41,11 @@ def api_cases_list():
         query = query.filter_by(priority=priority)
     if lawyer_id:
         query = query.filter_by(responsible_lawyer_id=int(lawyer_id))
+    if client_id:
+        try:
+            query = query.filter_by(client_id=int(client_id))
+        except (ValueError, TypeError):
+            pass
 
     query = query.order_by(Case.created_at.desc())
     return paginated_response(query)

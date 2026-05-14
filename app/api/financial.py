@@ -1,5 +1,5 @@
 """API routes for Financial management: Payments, Invoices, Expenses."""
-from datetime import datetime
+from datetime import datetime, date
 from sqlalchemy import func, extract
 from app.api import api_bp
 from app.api.decorators import api_login_required, api_permission_required
@@ -11,6 +11,26 @@ from app.utils.helpers import egypt_today
 from app.models.financial import Payment, Invoice, InvoiceItem, Expense
 from app.models.case import Case
 from app.models.client import Client
+
+_AR_MONTH_LABELS = [
+    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+]
+
+
+def _shift_month(d: date, delta: int) -> date:
+    """Return the first day of (d's month + delta)."""
+    m = d.month - 1 + delta
+    year = d.year + m // 12
+    month = m % 12 + 1
+    return date(year, month, 1)
+
+
+_CASE_TYPE_LABELS = {
+    'criminal': 'جنائية', 'civil': 'مدنية', 'commercial': 'تجارية',
+    'administrative': 'إدارية', 'labor': 'عمالية', 'family': 'أسرة',
+    'constitutional': 'دستورية', 'enforcement': 'تنفيذ',
+}
 
 PAYMENT_METHODS = ['cash', 'bank_transfer', 'check', 'credit_card', 'online']
 EXPENSE_TYPES = ['court_fees', 'registration', 'transportation', 'copies',
@@ -61,11 +81,88 @@ def api_financial_overview():
     recent_expenses = Expense.query.filter_by(tenant_id=g.tenant_id).order_by(
         Expense.expense_date.desc()).limit(10).all()
 
+    # Previous month payments → MoM delta
+    prev_month_date = _shift_month(today.replace(day=1), -1)
+    prev_payments = db.session.query(func.coalesce(func.sum(Payment.amount), 0)).filter(
+        Payment.tenant_id == g.tenant_id,
+        extract('month', Payment.payment_date) == prev_month_date.month,
+        extract('year', Payment.payment_date) == prev_month_date.year,
+    ).scalar()
+    monthly_net = float(monthly_payments) - float(monthly_expenses)
+    delta_payments = None
+    if float(prev_payments) > 0:
+        delta_payments = round(
+            ((float(monthly_payments) - float(prev_payments)) / float(prev_payments)) * 100
+        )
+
+    # Overdue count (invoices with overdue status)
+    overdue_count = Invoice.query.filter(
+        Invoice.tenant_id == g.tenant_id,
+        Invoice.status == 'overdue',
+    ).count()
+
+    # 6-month series of invoiced vs collected
+    monthly_series = []
+    for i in range(5, -1, -1):
+        m_date = _shift_month(today.replace(day=1), -i)
+        invoiced = db.session.query(func.coalesce(func.sum(Invoice.total), 0)).filter(
+            Invoice.tenant_id == g.tenant_id,
+            extract('month', Invoice.issue_date) == m_date.month,
+            extract('year', Invoice.issue_date) == m_date.year,
+        ).scalar()
+        collected = db.session.query(func.coalesce(func.sum(Payment.amount), 0)).filter(
+            Payment.tenant_id == g.tenant_id,
+            extract('month', Payment.payment_date) == m_date.month,
+            extract('year', Payment.payment_date) == m_date.year,
+        ).scalar()
+        monthly_series.append({
+            'month': m_date.month,
+            'year': m_date.year,
+            'label': _AR_MONTH_LABELS[m_date.month - 1],
+            'invoiced': float(invoiced),
+            'collected': float(collected),
+            'is_current': m_date.month == current_month and m_date.year == current_year,
+        })
+
+    # Revenue by case type (current year, top 4)
+    rev_by_type_rows = db.session.query(
+        Case.case_type, func.coalesce(func.sum(Payment.amount), 0)
+    ).join(Payment, Payment.case_id == Case.id).filter(
+        Payment.tenant_id == g.tenant_id,
+        extract('year', Payment.payment_date) == current_year,
+    ).group_by(Case.case_type).order_by(func.sum(Payment.amount).desc()).limit(4).all()
+    revenue_by_case_type = [
+        {'case_type': r[0], 'label': _CASE_TYPE_LABELS.get(r[0], r[0]), 'amount': float(r[1])}
+        for r in rev_by_type_rows
+    ]
+
+    # Collection rate (YTD): collected / invoiced
+    ytd_invoiced = db.session.query(func.coalesce(func.sum(Invoice.total), 0)).filter(
+        Invoice.tenant_id == g.tenant_id,
+        extract('year', Invoice.issue_date) == current_year,
+    ).scalar()
+    ytd_collected = db.session.query(func.coalesce(func.sum(Payment.amount), 0)).filter(
+        Payment.tenant_id == g.tenant_id,
+        extract('year', Payment.payment_date) == current_year,
+    ).scalar()
+    collection_rate = (
+        round((float(ytd_collected) / float(ytd_invoiced)) * 100)
+        if float(ytd_invoiced) > 0 else 0
+    )
+
     return success_response(data={
+        'current_month_label': _AR_MONTH_LABELS[current_month - 1],
+        'current_year': current_year,
         'monthly_payments': float(monthly_payments),
         'monthly_expenses': float(monthly_expenses),
+        'monthly_net': monthly_net,
+        'delta_payments': delta_payments,
         'pending_invoices': pending_invoices,
         'pending_invoice_total': float(pending_invoice_total),
+        'overdue_count': overdue_count,
+        'collection_rate': collection_rate,
+        'monthly_series': monthly_series,
+        'revenue_by_case_type': revenue_by_case_type,
         'recent_payments': [p.to_dict() for p in recent_payments],
         'recent_invoices': [i.to_dict() for i in recent_invoices],
         'recent_expenses': [e.to_dict() for e in recent_expenses],
