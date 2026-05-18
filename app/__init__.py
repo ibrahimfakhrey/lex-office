@@ -91,7 +91,9 @@ def _register_blueprints(app):
     from app.blueprints.notifications.routes import notifications_bp
     from app.blueprints.reports.routes import reports_bp
     from app.blueprints.settings.routes import settings_bp
+    from app.blueprints.public.routes import public_bp
 
+    app.register_blueprint(public_bp)  # /terms, /privacy, /account/delete
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(onboarding_bp, url_prefix='/onboarding')
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')

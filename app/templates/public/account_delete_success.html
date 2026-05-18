@@ -1,0 +1,30 @@
+{% extends "public/_base.html" %}
+{% block title %}تم استلام طلب الحذف — LexOffice{% endblock %}
+{% block content %}
+<h1>{% if already %}طلبك مُسجَّل بالفعل{% else %}تم استلام طلب الحذف{% endif %}</h1>
+<p class="updated">{% if already %}كان لديك بالفعل طلب حذف سابق نشط.{% else %}شكراً لاستخدامك LexOffice. نأسف لمغادرتك.{% endif %}</p>
+
+<div class="alert alert-success">
+  <strong>تم بنجاح.</strong> سنحذف حسابك بشكل دائم في:
+  <br><br>
+  <span style="font-size:18px;font-weight:800;color:var(--success)">
+    {{ final_at.strftime('%Y-%m-%d') }}
+  </span>
+</div>
+
+<h2>ماذا الآن؟</h2>
+<ul>
+  <li>حسابك ما زال نشطاً تقنياً، لكنه مُجدوَل للحذف.</li>
+  <li>إذا غيّرت رأيك، فقط <strong>سجّل الدخول إلى التطبيق</strong> خلال 90 يوماً وسيتم إلغاء طلب الحذف تلقائياً.</li>
+  <li>بعد 90 يوماً، يتم حذف كل بياناتك بشكل دائم ولا يمكن استرجاعها.</li>
+  <li>قد نحتفظ بسجلات قانونية محدودة (مثل الفواتير الضريبية) للمدة التي يستلزمها القانون.</li>
+</ul>
+
+<p style="text-align:center;margin-top:30px">
+  <a href="/" class="btn">العودة للصفحة الرئيسية</a>
+</p>
+
+<p style="margin-top:30px;color:var(--text-muted);font-size:13px">
+  لأي استفسار: <a class="link" href="mailto:privacy@manasety.ai">privacy@manasety.ai</a>
+</p>
+{% endblock %}

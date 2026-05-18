@@ -84,6 +84,12 @@ class User(db.Model):
     login_attempts = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
 
+    # Account deletion: scheduled deletion timestamp (90-day grace period).
+    # When set, the account is "pending deletion". Logging in within the grace
+    # period cancels the request. After 90 days, a cron job hard-deletes.
+    deletion_scheduled_at = db.Column(db.DateTime, nullable=True)
+    deletion_reason = db.Column(db.String(500), nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -141,6 +147,8 @@ class User(db.Model):
             'last_login_at': self.last_login_at.isoformat() if self.last_login_at else None,
             'avatar_path': self.avatar_path,
             'created_at': self.created_at.isoformat() if self.created_at else None,
+            'deletion_scheduled_at': self.deletion_scheduled_at.isoformat()
+                if self.deletion_scheduled_at else None,
         }
 
     def __repr__(self):

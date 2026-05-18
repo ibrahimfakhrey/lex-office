@@ -470,3 +470,58 @@ def api_me():
     user_data['role'] = user.role.to_dict() if user.role else None
 
     return success_response(data=user_data)
+
+
+# ---------- POST /auth/delete-account ----------
+@api_bp.route('/auth/delete-account', methods=['POST'])
+@api_login_required
+def api_delete_account():
+    """Schedule the current user's account for deletion in 90 days.
+
+    The account stays in the DB during the grace period. Logging in again
+    within 90 days cancels the request. After 90 days, a cron job hard-deletes
+    the user + cascaded tenant data.
+    """
+    data = get_json_or_form()
+    password = (data.get('password') or '').strip()
+    reason = (data.get('reason') or '').strip() or None
+
+    user = g.current_user
+    if not password:
+        return validation_error({'password': 'كلمة المرور مطلوبة لتأكيد الحذف'})
+    if not user.check_password(password):
+        return error_response('كلمة المرور غير صحيحة', error_code='invalid_password',
+                              status_code=401)
+
+    if user.deletion_scheduled_at:
+        # Already scheduled — idempotent return.
+        return success_response(data={
+            'scheduled_at': user.deletion_scheduled_at.isoformat(),
+            'final_at': (user.deletion_scheduled_at + timedelta(days=90)).isoformat(),
+        }, message='تم تحديد الحساب للحذف مسبقاً')
+
+    user.deletion_scheduled_at = datetime.utcnow()
+    user.deletion_reason = reason
+    db.session.commit()
+
+    final_at = user.deletion_scheduled_at + timedelta(days=90)
+    return success_response(data={
+        'scheduled_at': user.deletion_scheduled_at.isoformat(),
+        'final_at': final_at.isoformat(),
+        'grace_days': 90,
+    }, message='تم جدولة حذف حسابك. سيتم حذفه نهائياً بعد 90 يوماً.')
+
+
+# ---------- POST /auth/cancel-deletion ----------
+@api_bp.route('/auth/cancel-deletion', methods=['POST'])
+@api_login_required
+def api_cancel_deletion():
+    """Cancel a previously requested account deletion (if still in grace)."""
+    user = g.current_user
+    if not user.deletion_scheduled_at:
+        return error_response('لا يوجد طلب حذف نشط', error_code='no_request',
+                              status_code=400)
+    user.deletion_scheduled_at = None
+    user.deletion_reason = None
+    db.session.commit()
+    return success_response(message='تم إلغاء طلب الحذف')

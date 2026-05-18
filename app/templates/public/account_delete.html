@@ -1,0 +1,49 @@
+{% extends "public/_base.html" %}
+{% block title %}حذف الحساب — LexOffice{% endblock %}
+{% block content %}
+<h1>حذف الحساب</h1>
+<p class="updated">نأسف لمغادرتك. يمكنك حذف حسابك بالكامل من هذه الصفحة.</p>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="alert alert-{% if category == 'error' %}error{% else %}info{% endif %}">{{ message }}</div>
+  {% endfor %}
+{% endwith %}
+
+<div class="alert alert-warn">
+  <strong>ملاحظة مهمة:</strong> بعد طلب الحذف، يبقى الحساب معطّلاً لمدة <strong>90 يوماً</strong> كفترة سماح يمكنك خلالها التراجع عن طريق تسجيل الدخول مرة أخرى. بعد انتهاء هذه المدة، يتم حذف جميع بياناتك (الموكلين، القضايا، المستندات، الفواتير) بشكل دائم ولا يمكن استعادتها.
+</div>
+
+<h2>ماذا سيتم حذفه؟</h2>
+<ul>
+  <li>بيانات حسابك الشخصي (الاسم، البريد، الهاتف).</li>
+  <li>جميع بيانات الموكلين والقضايا والجلسات التي أدخلتها.</li>
+  <li>المستندات والمرفقات المرفوعة.</li>
+  <li>الفواتير والمدفوعات والمصروفات.</li>
+  <li>المهام والتنبيهات.</li>
+  <li>سجلات الإشعارات.</li>
+</ul>
+
+<h2>تأكيد الحذف</h2>
+<form method="POST" action="/account/delete">
+  <div class="form-group">
+    <label for="email">البريد الإلكتروني</label>
+    <input type="email" id="email" name="email" required dir="ltr" autocomplete="email">
+  </div>
+  <div class="form-group">
+    <label for="password">كلمة المرور</label>
+    <input type="password" id="password" name="password" required autocomplete="current-password">
+  </div>
+  <div class="form-group">
+    <label for="reason">سبب الحذف <small style="font-weight:500;color:var(--text-muted)">(اختياري)</small></label>
+    <textarea id="reason" name="reason" placeholder="نُقدّر ملاحظاتك لنُحسّن الخدمة"></textarea>
+  </div>
+  <button type="submit" class="btn btn-danger" onclick="return confirm('هل أنت متأكد من طلب حذف حسابك؟ هذا الإجراء سيؤدي إلى حذف جميع بياناتك بعد 90 يوماً.')">
+    تأكيد طلب حذف الحساب
+  </button>
+</form>
+
+<p style="margin-top:24px;color:var(--text-muted);font-size:13px">
+  بعد إرسال الطلب، سترسل لك رسالة تأكيد بالبريد الإلكتروني. يمكنك إلغاء الطلب في أي وقت خلال فترة السماح 90 يوماً.
+</p>
+{% endblock %}
