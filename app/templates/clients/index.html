@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}الموكلون - LexOffice{% endblock %}
+{% block title %}الموكلون - {{ product_name }}{% endblock %}
 
 {% set type_map = {'individual':'فرد','company':'شركة','government':'جهة حكومية'} %}
 {% set _curr = market_config.currency_symbol_ar if market_config else 'ج.م' %}
@@ -150,6 +150,7 @@
         {% set _initials = (c.full_name or '?')[:2] %}
         {% set _bg = _palette[c.id % _palette|length] %}
         {% set _cases_n = cases_by_client.get(c.id, 0) %}
+        {% set _fees = fees_by_client.get(c.id, 0) %}
         {% set _dues = dues_by_client.get(c.id, 0) %}
 
         {# Status badge — derive from is_active + dues #}
@@ -188,8 +189,10 @@
               <div class="cl-stat-lbl">المستحقات</div>
               {% if _dues > 0 %}
               <div class="cl-stat-val amber">{{ '{:,.0f}'.format(_dues) }} {{ _curr }}</div>
-              {% else %}
+              {% elif _fees > 0 %}
               <div class="cl-stat-val green">مسدد</div>
+              {% else %}
+              <div class="cl-stat-val" style="color:var(--tm);font-weight:500">لا توجد اتعاب</div>
               {% endif %}
             </div>
           </div>

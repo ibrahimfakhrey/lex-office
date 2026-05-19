@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}LexOffice{% endblock %}</title>
+<title>{% block title %}{{ product_name }}{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
@@ -201,13 +201,13 @@
 <body>
 <header class="top">
   <div class="top-inner">
-    <div class="brand">LexOffice<small>إدارة المكاتب القانونية</small></div>
+    <div class="brand">{% if product_logo %}<img src="{{ product_logo }}" alt="{{ product_name }}" style="height:28px;vertical-align:middle;margin-inline-end:0.4rem;">{% endif %}{{ product_name }}<small>إدارة المكاتب القانونية</small></div>
     <a href="/">العودة للموقع</a>
   </div>
 </header>
 <main>{% block content %}{% endblock %}</main>
 <div class="footer">
-  © 2026 LexOffice
+  © 2026 {{ product_name }}
   · <a href="/terms">الشروط والأحكام</a>
   · <a href="/privacy">سياسة الخصوصية</a>
   · <a href="/account/delete">حذف الحساب</a>

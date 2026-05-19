@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}ملف تنفيذ {{ enforcement.enforcement_number or '' }} - LexOffice{% endblock %}
+{% block title %}ملف تنفيذ {{ enforcement.enforcement_number or '' }} - {{ product_name }}{% endblock %}
 
 {% set status_map = {'active':'نشط','completed':'مكتمل','suspended':'معلق','cancelled':'ملغي'} %}
 {% set status_color = {'active':'success','completed':'primary','suspended':'warning','cancelled':'danger'} %}

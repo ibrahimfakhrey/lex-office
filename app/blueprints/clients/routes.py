@@ -23,7 +23,7 @@ EGYPTIAN_GOVERNORATES = [
 def index():
     """List all clients with search and filters — card-grid layout."""
     from app.models.case import Case
-    from app.models.financial import Invoice
+    from app.models.financial import Invoice, Payment
 
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '').strip()
@@ -70,6 +70,7 @@ def index():
     # Per-client stats for the card grid (only the visible page)
     page_ids = [c.id for c in clients.items]
     cases_by_client = {}
+    fees_by_client = {}
     dues_by_client = {}
     if page_ids:
         # Active case counts
@@ -83,19 +84,32 @@ def index():
         )
         cases_by_client = {row[0]: row[1] for row in case_rows}
 
-        # Outstanding dues per client
-        dues_rows = (
+        # Total fees per client (across all their cases)
+        fee_rows = (
             db.session.query(
-                Invoice.client_id,
-                db.func.coalesce(db.func.sum(Invoice.total), 0),
+                Case.client_id,
+                db.func.coalesce(db.func.sum(Case.fee_amount), 0),
             )
-            .filter(
-                Invoice.client_id.in_(page_ids),
-                Invoice.status.in_(['sent', 'overdue']),
-            )
-            .group_by(Invoice.client_id).all()
+            .filter(Case.client_id.in_(page_ids))
+            .group_by(Case.client_id).all()
         )
-        dues_by_client = {row[0]: float(row[1]) for row in dues_rows}
+        fees_by_client = {row[0]: float(row[1]) for row in fee_rows}
+
+        # Total payments per client
+        paid_rows = (
+            db.session.query(
+                Payment.client_id,
+                db.func.coalesce(db.func.sum(Payment.amount), 0),
+            )
+            .filter(Payment.client_id.in_(page_ids))
+            .group_by(Payment.client_id).all()
+        )
+        paid_by_client = {row[0]: float(row[1]) for row in paid_rows}
+
+        # Outstanding dues = fees - paid (floored at 0)
+        for cid in page_ids:
+            owed = fees_by_client.get(cid, 0) - paid_by_client.get(cid, 0)
+            dues_by_client[cid] = owed if owed > 0 else 0
 
     overdue_count = (
         db.session.query(db.func.count(db.distinct(Invoice.client_id)))
@@ -113,6 +127,7 @@ def index():
         type_counts=type_counts, total_count=total_count,
         active_count=active_count, overdue_count=overdue_count,
         cases_by_client=cases_by_client,
+        fees_by_client=fees_by_client,
         dues_by_client=dues_by_client,
         today=egypt_today(),
     )

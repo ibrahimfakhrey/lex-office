@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}قضية {{ case.case_number or '' }} - LexOffice{% endblock %}
+{% block title %}قضية {{ case.case_number or '' }} - {{ product_name }}{% endblock %}
 
 {% set type_map = {'criminal':'جنائية','civil':'مدنية','commercial':'تجارية','administrative':'إدارية','labor':'عمالية','family':'أسرة','constitutional':'دستورية','enforcement':'تنفيذ'} %}
 {% set status_map = {'new':'جديدة','active':'نشطة','awaiting_judgment':'منتظرة حكم','suspended':'موقوفة','closed':'مغلقة'} %}

@@ -1,8 +1,8 @@
 {% extends "public/_base.html" %}
-{% block title %}تم استلام طلب الحذف — LexOffice{% endblock %}
+{% block title %}تم استلام طلب الحذف — {{ product_name }}{% endblock %}
 {% block content %}
 <h1>{% if already %}طلبك مُسجَّل بالفعل{% else %}تم استلام طلب الحذف{% endif %}</h1>
-<p class="updated">{% if already %}كان لديك بالفعل طلب حذف سابق نشط.{% else %}شكراً لاستخدامك LexOffice. نأسف لمغادرتك.{% endif %}</p>
+<p class="updated">{% if already %}كان لديك بالفعل طلب حذف سابق نشط.{% else %}شكراً لاستخدامك {{ product_name }}. نأسف لمغادرتك.{% endif %}</p>
 
 <div class="alert alert-success">
   <strong>تم بنجاح.</strong> سنحذف حسابك بشكل دائم في:

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LexOffice — نظام إدارة مكاتب المحاماة</title>
+    <title>{{ product_name }} — نظام إدارة مكاتب المحاماة</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="96x96" href="{{ url_for('static', filename='img/favicon-96x96.png') }}">
@@ -818,8 +818,12 @@
 <!-- ── NAVBAR ── -->
 <nav>
     <a href="/" class="nav-logo">
-        <div class="nav-logo-icon"><i class="bi bi-briefcase-fill"></i></div>
-        <span class="nav-logo-text">LexOffice</span>
+        {% if product_logo %}
+            <img src="{{ product_logo }}" alt="{{ product_name }}" style="height:34px;">
+        {% else %}
+            <div class="nav-logo-icon"><i class="bi bi-briefcase-fill"></i></div>
+        {% endif %}
+        <span class="nav-logo-text">{{ product_name }}</span>
     </a>
 
     <ul class="nav-links">
@@ -852,7 +856,7 @@
         </h1>
 
         <p class="hero-subtitle">
-            نظام LexOffice يجمع القضايا والموكلين والجلسات والمالية والمستندات في منصة واحدة
+            نظام {{ product_name }} يجمع القضايا والموكلين والجلسات والمالية والمستندات في منصة واحدة
             مصممة خصيصاً لمكاتب المحاماة العربية.
         </p>
 
@@ -1027,7 +1031,7 @@
             المحامي الناجح لا يحتاج فقط إلى علم قانوني راسخ، بل إلى نظام إداري يُحرره من عبء التفاصيل ليتفرغ لما يُجيده — الدفاع عن موكليه.
         </p>
         <div class="quote-author">
-            <strong>LexOffice</strong> — شريكك الإداري الموثوق
+            <strong>{{ product_name }}</strong> — شريكك الإداري الموثوق
         </div>
     </div>
 </section>
@@ -1040,7 +1044,7 @@
             <span>مكتبك القانوني؟</span>
         </h2>
         <p class="cta-desc reveal">
-            انضم إلى مكاتب المحاماة التي تثق في LexOffice لإدارة قضاياها ومواردها بكفاءة عالية واحترافية تليق بمهنة القانون.
+            انضم إلى مكاتب المحاماة التي تثق في {{ product_name }} لإدارة قضاياها ومواردها بكفاءة عالية واحترافية تليق بمهنة القانون.
         </p>
         <div class="cta-actions reveal">
             <a href="/auth/register" class="btn-cta-primary">
@@ -1057,8 +1061,8 @@
 
 <!-- ── FOOTER ── -->
 <footer>
-    <div class="footer-brand">LexOffice ⚖️</div>
-    <span class="footer-copy">© ٢٠٢٦ LexOffice — جميع الحقوق محفوظة</span>
+    <div class="footer-brand">{{ product_name }} ⚖️</div>
+    <span class="footer-copy">© ٢٠٢٦ {{ product_name }} — جميع الحقوق محفوظة</span>
     <ul class="footer-links">
         <li><a href="#">سياسة الخصوصية</a></li>
         <li><a href="#">الشروط والأحكام</a></li>

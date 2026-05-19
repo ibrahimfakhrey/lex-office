@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}التنفيذ - LexOffice{% endblock %}
+{% block title %}التنفيذ - {{ product_name }}{% endblock %}
 
 {% set type_map = {'real_estate_seizure':'حجز عقاري','funds_seizure':'حجز على أموال','movables_seizure':'حجز منقولات','eviction':'إخلاء','delivery':'تسليم'} %}
 {% set status_map = dict(enforcement_statuses) %}

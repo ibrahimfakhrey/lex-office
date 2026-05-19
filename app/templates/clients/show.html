@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ client.full_name }} - LexOffice{% endblock %}
+{% block title %}{{ client.full_name }} - {{ product_name }}{% endblock %}
 
 {% set type_map = {'individual':'فرد','company':'شركة','government':'جهة حكومية'} %}
 {% set case_type_map = {'criminal':'جنائية','civil':'مدنية','commercial':'تجارية','administrative':'إدارية','labor':'عمالية','family':'أسرة','constitutional':'دستورية','enforcement':'تنفيذ'} %}

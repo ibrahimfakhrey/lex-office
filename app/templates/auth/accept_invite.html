@@ -2,7 +2,7 @@
 {% block title %}قبول الدعوة{% endblock %}
 
 {% block content %}
-<h4 class="text-center mb-4">مرحباً بك في LexOffice</h4>
+<h4 class="text-center mb-4">مرحباً بك في {{ product_name }}</h4>
 <p class="text-center text-muted small mb-4">تمت دعوتك للانضمام إلى <strong>{{ invitation.tenant.name }}</strong> بصفة <strong>{{ invitation.role.name_ar }}</strong></p>
 
 <form method="POST" action="{{ url_for('auth.accept_invite', token=invitation.token) }}">

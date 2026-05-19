@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ task.title }} - LexOffice{% endblock %}
+{% block title %}{{ task.title }} - {{ product_name }}{% endblock %}
 
 {% set priority_color = {'urgent':'danger','important':'warning','normal':'secondary'} %}
 {% set status_color = {'new':'info','in_progress':'primary','done':'success','cancelled':'dark'} %}

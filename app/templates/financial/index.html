@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}المالية - LexOffice{% endblock %}
+{% block title %}المالية - {{ product_name }}{% endblock %}
 
 {% set _curr = market_config.currency_symbol_ar if market_config else 'ج.م' %}
 {% set status_class = {'draft':'b-draft','sent':'b-due','partially_paid':'b-pen','paid':'b-paid','overdue':'b-over','cancelled':'b-arc'} %}

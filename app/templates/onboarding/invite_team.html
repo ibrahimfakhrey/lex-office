@@ -1,5 +1,5 @@
 {% extends "base_onboarding.html" %}
-{% block title %}دعوة الفريق - LexOffice{% endblock %}
+{% block title %}دعوة الفريق - {{ product_name }}{% endblock %}
 {% block step_label %}الخطوة ٣ من ٣ — دعوة الفريق{% endblock %}
 
 {% block extra_head %}
@@ -10,11 +10,11 @@
     margin-bottom: 0.8rem;
 }
 .invite-row input, .invite-row select {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(24,73,169,0.22);
+    background: var(--white);
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 0.65rem 0.9rem;
-    color: #e8f0ff;
+    color: var(--text);
     font-size: 0.88rem;
     font-family: 'Cairo','Tajawal',sans-serif;
     outline: none;
@@ -22,11 +22,11 @@
     width: 100%;
 }
 .invite-row input:focus, .invite-row select:focus {
-    border-color: #1849A9;
-    box-shadow: 0 0 0 3px rgba(24,73,169,0.15);
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(7,143,210,0.12);
 }
-.invite-row input::placeholder { color: #4a4272; }
-.invite-row select option { background: #0C2461; }
+.invite-row input::placeholder { color: #94a3b8; }
+.invite-row select option { background: var(--white); color: var(--text); }
 .btn-remove {
     width: 36px; height: 36px;
     background: rgba(239,68,68,0.1);

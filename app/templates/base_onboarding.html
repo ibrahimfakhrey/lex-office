@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{% block title %}LexOffice{% endblock %}</title>
+    <title>{% block title %}{{ product_name }}{% endblock %}</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="96x96" href="{{ url_for('static', filename='img/favicon-96x96.png') }}">
@@ -201,8 +201,12 @@
 <body>
 <div class="ob-topbar">
     <a href="/" class="ob-logo">
-        <div class="ob-logo-icon"><i class="bi bi-briefcase-fill"></i></div>
-        <span class="ob-logo-text">LexOffice</span>
+        {% if product_logo %}
+            <img src="{{ product_logo }}" alt="{{ product_name }}" style="height:36px;">
+        {% else %}
+            <div class="ob-logo-icon"><i class="bi bi-briefcase-fill"></i></div>
+        {% endif %}
+        <span class="ob-logo-text">{{ product_name }}</span>
     </a>
     <span class="ob-step-label">{% block step_label %}إعداد المكتب{% endblock %}</span>
 </div>

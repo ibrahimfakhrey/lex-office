@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{% block title %}LexOffice{% endblock %}</title>
+    <title>{% block title %}{{ product_name }}{% endblock %}</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="96x96" href="{{ url_for('static', filename='img/favicon-96x96.png') }}">
@@ -28,7 +28,11 @@
                 <div class="col-md-6 col-lg-5">
                     <div class="text-center mb-4">
                         <h2 class="fw-bold text-primary">
-                            <i class="bi bi-briefcase-fill me-2"></i>LexOffice
+                            {% if product_logo %}
+                                <img src="{{ product_logo }}" alt="{{ product_name }}" style="height:38px;vertical-align:middle;margin-inline-end:0.5rem;">
+                            {% else %}
+                                <i class="bi bi-briefcase-fill me-2"></i>
+                            {% endif %}{{ product_name }}
                         </h2>
                         <p class="text-muted">نظام إدارة مكتب المحاماة المتكامل</p>
                     </div>

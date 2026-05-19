@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}فاتورة {{ invoice.invoice_number or '' }} - LexOffice{% endblock %}
+{% block title %}فاتورة {{ invoice.invoice_number or '' }} - {{ product_name }}{% endblock %}
 
 {% set status_color = {'draft':'secondary','sent':'info','paid':'success','partially_paid':'warning','overdue':'danger','cancelled':'dark'} %}
 
