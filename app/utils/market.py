@@ -90,31 +90,36 @@ def _client_ip():
 # ── detection ────────────────────────────────────────────────────────────────
 
 def detect_market():
-    """Resolve the market for the current request. Returns one of SUPPORTED_MARKETS."""
-    # 1. cookie
-    cookie_val = request.cookies.get(COOKIE_NAME)
-    if cookie_val and cookie_val.lower() in SUPPORTED_MARKETS:
-        return cookie_val.lower()
+    """Resolve the market for the current request.
 
-    # 2. Cloudflare header (free if CF is ever proxied in front)
-    cf_country = (request.headers.get('CF-IPCountry') or '').upper()
-    if cf_country in _COUNTRY_TO_MARKET:
-        return _COUNTRY_TO_MARKET[cf_country]
-
-    # 3. GeoIP DB lookup
-    geo_country = _country_from_ip(_client_ip())
-    if geo_country in _COUNTRY_TO_MARKET:
-        return _COUNTRY_TO_MARKET[geo_country]
-
-    # 4. Accept-Language sniff
-    accept = (request.headers.get('Accept-Language') or '').lower()
-    if 'ar-sa' in accept:
-        return 'sa'
-    if 'ar-eg' in accept:
-        return 'eg'
-
-    # 5. default
+    Egypt-only mode: the product is currently scoped to Egypt, so every
+    visitor — regardless of IP, cookie, Accept-Language, or CF header —
+    resolves to 'eg'. The detection chain below is preserved (commented
+    out) so SA can be re-enabled by deleting the early return.
+    """
     return DEFAULT_MARKET
+
+    # --- multi-market detection (re-enable by removing the return above) ---
+    # # 1. cookie
+    # cookie_val = request.cookies.get(COOKIE_NAME)
+    # if cookie_val and cookie_val.lower() in SUPPORTED_MARKETS:
+    #     return cookie_val.lower()
+    # # 2. Cloudflare header
+    # cf_country = (request.headers.get('CF-IPCountry') or '').upper()
+    # if cf_country in _COUNTRY_TO_MARKET:
+    #     return _COUNTRY_TO_MARKET[cf_country]
+    # # 3. GeoIP DB lookup
+    # geo_country = _country_from_ip(_client_ip())
+    # if geo_country in _COUNTRY_TO_MARKET:
+    #     return _COUNTRY_TO_MARKET[geo_country]
+    # # 4. Accept-Language sniff
+    # accept = (request.headers.get('Accept-Language') or '').lower()
+    # if 'ar-sa' in accept:
+    #     return 'sa'
+    # if 'ar-eg' in accept:
+    #     return 'eg'
+    # # 5. default
+    # return DEFAULT_MARKET
 
 
 def install_market_hook(app):

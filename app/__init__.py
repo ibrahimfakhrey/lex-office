@@ -172,15 +172,11 @@ def _register_context_processors(app):
             terms_url = ''
             support_email = ''
 
-        # Resolve effective market: post-signup tenants are frozen at
-        # tenant.market; pre-signup visitors use the request-scoped g.market.
-        from app.utils.market_config import get_config, normalize_market
-        from app.utils.market import current_market
-        effective_market = current_market()
-        if current_user is not None and getattr(current_user, 'tenant', None) is not None:
-            tm = getattr(current_user.tenant, 'market', None)
-            if tm:
-                effective_market = normalize_market(tm)
+        # Egypt-only mode: ignore any tenant.market value (could be 'sa' from
+        # earlier signups) and force everyone to the EG market. To re-enable
+        # multi-market, restore the original logic that prefers tenant.market.
+        from app.utils.market_config import get_config, DEFAULT_MARKET
+        effective_market = DEFAULT_MARKET
         market_cfg = get_config(effective_market)
 
         return dict(
