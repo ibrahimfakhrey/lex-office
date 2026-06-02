@@ -121,47 +121,34 @@ def create_notification(
 def notify_tenant_users(tenant_id, notification_type, title, body=None,
                         priority='info', related_type=None, related_id=None,
                         actor_name=None, exclude_user_id=None):
-    """Send notification to all active users in a tenant.
+    """Send in-app + email + push to every active user in the tenant.
 
-    The actor gets in-app only (no self-email). Others get in-app + email.
+    `exclude_user_id` is accepted for back-compat but no longer suppresses
+    the actor — single-user tenants and multi-device owners want to be
+    notified of their own actions too.
     """
     users = User.query.filter_by(tenant_id=tenant_id, is_active=True).all()
     notifications = []
     for user in users:
-        is_actor = exclude_user_id and user.id == exclude_user_id
-        if is_actor:
-            # Actor: in-app only, no email/push to self
-            n = _create_in_app_only(
-                tenant_id=tenant_id,
-                user_id=user.id,
-                notification_type=notification_type,
-                title=title,
-                body=body,
-                priority=priority,
-                related_type=related_type,
-                related_id=related_id,
-            )
-            # Skip push to actor
-        else:
-            n = create_notification(
-                tenant_id=tenant_id,
-                user_id=user.id,
-                notification_type=notification_type,
-                title=title,
-                body=body,
-                priority=priority,
-                related_type=related_type,
-                related_id=related_id,
-                actor_name=actor_name,
-            )
+        n = create_notification(
+            tenant_id=tenant_id,
+            user_id=user.id,
+            notification_type=notification_type,
+            title=title,
+            body=body,
+            priority=priority,
+            related_type=related_type,
+            related_id=related_id,
+            actor_name=actor_name,
+        )
         if n:
             notifications.append(n)
     return notifications
 
 
-def _create_in_app_only(tenant_id, user_id, notification_type, title,
-                        body=None, priority='info', related_type=None, related_id=None):
-    """Create in-app notification only (no email). Used for the actor's own record."""
+def _create_in_app_and_push(tenant_id, user_id, notification_type, title,
+                            body=None, priority='info', related_type=None, related_id=None):
+    """In-app DB record + push only (no email). Kept for any direct callers."""
     try:
         notification = Notification(
             tenant_id=tenant_id,
@@ -177,10 +164,28 @@ def _create_in_app_only(tenant_id, user_id, notification_type, title,
         )
         db.session.add(notification)
         db.session.flush()
-        return notification
     except Exception as e:
         current_app.logger.error(f'In-app notification failed: {e}')
-        return None
+        notification = None
+
+    try:
+        send_push(
+            user_id=user_id,
+            title=title,
+            body=body,
+            related_type=related_type,
+            related_id=related_id,
+            route=_route_for(related_type, related_id, notification_type),
+            extra_data={'notification_type': notification_type, 'priority': priority},
+        )
+    except Exception as e:
+        current_app.logger.error(f'FCM push failed: {e}')
+
+    return notification
+
+
+# Back-compat alias for any older imports.
+_create_in_app_only = _create_in_app_and_push
 
 
 def _build_notification_email(title, body, actor_name=None):
