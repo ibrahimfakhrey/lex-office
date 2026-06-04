@@ -21,7 +21,9 @@ class Config:
 
     # JWT
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key')
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES', 604800)))  # 7 days
+    # 12-hour default covers a full work day. Until a refresh-token flow is
+    # added, a short-lived access token just kicks active users to login.
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES', 43200)))
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(seconds=int(os.getenv('JWT_REFRESH_TOKEN_EXPIRES', 2592000)))
     JWT_TOKEN_LOCATION = ['cookies', 'headers']
     JWT_COOKIE_SECURE = False  # True in production

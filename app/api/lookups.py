@@ -22,8 +22,14 @@ EGYPTIAN_GOVERNORATES = [
 @api_bp.route('/lookups/courts', methods=['GET'])
 @api_login_required
 def api_lookups_courts():
-    """Return all active courts."""
-    courts = Court.query.filter_by(is_active=True).order_by(Court.name).all()
+    """Return active courts scoped to the caller's market (Egypt-only today)."""
+    from app.utils.market import current_market
+    courts = (
+        Court.query
+        .filter_by(is_active=True, market=current_market())
+        .order_by(Court.name)
+        .all()
+    )
     return success_response(data=[c.to_dict() for c in courts])
 
 
@@ -62,6 +68,22 @@ def api_lookups_users():
 def api_lookups_governorates():
     """Return the list of Egyptian governorates."""
     return success_response(data=EGYPTIAN_GOVERNORATES)
+
+
+@api_bp.route('/lookups/national-id/<nid>', methods=['GET'])
+@api_login_required
+def api_lookups_national_id(nid):
+    """Decode a 14-digit Egyptian national ID into its embedded fields.
+
+    Free Layer-1 extraction — no OCR, no AI. Returns date_of_birth (ISO),
+    governorate (Arabic name matching EGYPTIAN_GOVERNORATES), and gender.
+    Used by the add/edit client form to autofill on input.
+    """
+    from app.utils.national_id import parse_national_id
+    result = parse_national_id(nid)
+    if not result.get('valid'):
+        return validation_error({'national_id': result.get('error') or 'الرقم القومي غير صالح'})
+    return success_response(data=result)
 
 
 @api_bp.route('/lookups/enums', methods=['GET'])

@@ -2,6 +2,7 @@
 from flask import current_app, render_template_string
 from flask_mail import Message
 from app.extensions import mail
+from app.utils.helpers import product_name
 
 
 def send_email(to, subject, html_body, text_body=None):
@@ -22,10 +23,11 @@ def send_email(to, subject, html_body, text_body=None):
 
 def send_otp_email(email, otp_code, name=''):
     """Send OTP verification email."""
-    subject = 'رمز التحقق - LexOffice'
+    brand = product_name()
+    subject = f'رمز التحقق - {brand}'
     html = f"""
     <div dir="rtl" style="font-family: Tajawal, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #2563eb;">LexOffice</h2>
+        <h2 style="color: #2563eb;">{brand}</h2>
         <p>مرحباً {name}،</p>
         <p>رمز التحقق الخاص بك هو:</p>
         <div style="background: #f1f5f9; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
@@ -42,10 +44,11 @@ def send_invitation_email(email, invite_token, office_name, role_name):
     """Send team invitation email."""
     from flask import url_for
     invite_url = url_for('auth.accept_invite', token=invite_token, _external=True)
-    subject = f'دعوة للانضمام إلى {office_name} - LexOffice'
+    brand = product_name()
+    subject = f'دعوة للانضمام إلى {office_name} - {brand}'
     html = f"""
     <div dir="rtl" style="font-family: Tajawal, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #2563eb;">LexOffice</h2>
+        <h2 style="color: #2563eb;">{brand}</h2>
         <p>مرحباً،</p>
         <p>تمت دعوتك للانضمام إلى <strong>{office_name}</strong> بصفة <strong>{role_name}</strong>.</p>
         <div style="text-align: center; margin: 30px 0;">
@@ -59,10 +62,11 @@ def send_invitation_email(email, invite_token, office_name, role_name):
 
 def send_subscription_receipt(email, plan_name_ar, office_name, trial_ends_at):
     """Send subscription selection confirmation email."""
-    subject = f'تأكيد اشتراكك في LexOffice - {plan_name_ar}'
+    brand = product_name()
+    subject = f'تأكيد اشتراكك في {brand} - {plan_name_ar}'
     html = f"""
     <div dir="rtl" style="font-family: Tajawal, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #2563eb;">LexOffice</h2>
+        <h2 style="color: #2563eb;">{brand}</h2>
         <p>مرحباً،</p>
         <p>تم اختيار خطة <strong>{plan_name_ar}</strong> بنجاح لمكتب <strong>{office_name}</strong>.</p>
         <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; margin: 20px 0;">
@@ -71,7 +75,7 @@ def send_subscription_receipt(email, plan_name_ar, office_name, trial_ends_at):
             <p style="margin:4px 0 0;">الفترة التجريبية تنتهي في: {trial_ends_at}</p>
         </div>
         <p>يمكنك البدء في استخدام النظام الآن. سيتم التواصل معك قبل انتهاء الفترة التجريبية.</p>
-        <p style="color: #64748b; font-size: 14px;">شكراً لاختيارك LexOffice.</p>
+        <p style="color: #64748b; font-size: 14px;">شكراً لاختيارك {brand}.</p>
     </div>
     """
     return send_email(email, subject, html)
@@ -81,10 +85,11 @@ def send_password_reset_email(email, reset_token, name=''):
     """Send password reset email."""
     from flask import url_for
     reset_url = url_for('auth.reset_password', token=reset_token, _external=True)
-    subject = 'إعادة تعيين كلمة المرور - LexOffice'
+    brand = product_name()
+    subject = f'إعادة تعيين كلمة المرور - {brand}'
     html = f"""
     <div dir="rtl" style="font-family: Tajawal, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #2563eb;">LexOffice</h2>
+        <h2 style="color: #2563eb;">{brand}</h2>
         <p>مرحباً {name}،</p>
         <p>تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بك.</p>
         <div style="text-align: center; margin: 30px 0;">

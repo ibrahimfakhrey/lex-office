@@ -26,6 +26,7 @@ from app.extensions import db
 from app.admin.feature_utils import tenant_has_feature, tenant_feature_limit
 from app.models.ai_usage import AIUsageEvent
 from app.models.tenant import Tenant
+from app.utils.helpers import product_name
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,11 @@ KNOWN_AI_FEATURES = [
         'key': 'judgment_extract',
         'label_ar': 'تحليل الأحكام (PDF/DOCX)',
         'description_ar': 'استخراج بيانات الحكم تلقائياً من ملف PDF أو DOCX',
+    },
+    {
+        'key': 'national_id_extract',
+        'label_ar': 'استخراج بيانات البطاقة الشخصية',
+        'description_ar': 'استخراج الاسم والعنوان من صورة البطاقة بالذكاء الاصطناعي (يُستخدم فقط إذا اختار المحامي ذلك)',
     },
     # Add new features here as they ship. The admin form re-renders automatically.
     # {'key': 'poa_extract', 'label_ar': 'استخراج التوكيلات', 'description_ar': '...'},
@@ -372,7 +378,7 @@ def _maybe_send_warning_email(tenant: Tenant) -> None:
         f'<p>سيتم إيقاف استخدام الميزة تلقائياً عند الوصول إلى الحد الأقصى. '
         f'يمكنكم ترقية الخطة في أي وقت من إعدادات الاشتراك.</p>'
         f'<p>تتجدد الحصة تلقائياً في أول كل شهر ميلادي.</p>'
-        f'<hr><small>LexOffice — منظومة إدارة مكاتب المحاماة</small></div>'
+        f'<hr><small>{product_name()} — منظومة إدارة مكاتب المحاماة</small></div>'
     )
     try:
         send_email(to=manager.email, subject=subject, html_body=body_html)

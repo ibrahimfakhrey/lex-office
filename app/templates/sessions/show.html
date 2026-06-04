@@ -119,7 +119,9 @@
 
         <form method="POST" action="{{ url_for('sessions.delete', id=session.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-outline-danger btn-sm w-100" data-confirm="هل أنت متأكد من حذف هذه الجلسة؟">
+            <button type="submit" class="btn btn-outline-danger btn-sm w-100"
+                    data-confirm="هل أنت متأكد من حذف هذه الجلسة؟ لا يمكن التراجع عن هذا الإجراء."
+                    data-confirm-danger="true">
                 <i class="bi bi-trash me-1"></i> حذف الجلسة
             </button>
         </form>

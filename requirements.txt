@@ -52,3 +52,7 @@ geoip2==4.8.0
 # anthropic 0.50+ provides client.messages.parse() with Pydantic validation
 anthropic==0.100.0
 PyMuPDF==1.25.1
+
+# Egyptian national ID OCR (Tier 1, free). Requires the Tesseract binary
+# on the host (apt: tesseract-ocr tesseract-ocr-ara | brew: tesseract tesseract-lang).
+pytesseract==0.3.13

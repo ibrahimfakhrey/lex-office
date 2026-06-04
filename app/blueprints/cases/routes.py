@@ -30,7 +30,8 @@ PAYMENT_SCHEDULES = [('upfront', 'مقدم'), ('installments', 'أقساط'), ('
 def _get_form_context():
     """Common data needed by create/edit forms."""
     clients = Client.query.filter_by(tenant_id=g.tenant_id, is_active=True).order_by(Client.full_name).all()
-    courts = Court.query.filter_by(is_active=True).order_by(Court.name).all()
+    from app.utils.market import current_market
+    courts = Court.query.filter_by(is_active=True, market=current_market()).order_by(Court.name).all()
     lawyers = User.query.filter_by(tenant_id=g.tenant_id, is_active=True).all()
     return dict(
         clients=clients, courts=courts, lawyers=lawyers,
@@ -298,9 +299,26 @@ def close(id):
 @cases_bp.route('/<int:id>/delete', methods=['POST'])
 @permission_required('cases', 'delete')
 def delete(id):
-    """Delete a case (manager only via RBAC)."""
+    """Delete a case (manager only via RBAC). Notifies the tenant team."""
     case = Case.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
+    label = case.case_number or f'#{case.id}'
+    subject = (case.subject or '').strip()
     db.session.delete(case)
     db.session.commit()
+
+    from app.services.notification_service import notify_tenant_users
+    notify_tenant_users(
+        tenant_id=g.tenant_id,
+        notification_type='general',
+        title=f'تم حذف قضية: {label}',
+        body=subject or None,
+        priority='important',
+        related_type='case',
+        related_id=id,
+        actor_name=g.current_user.full_name,
+        exclude_user_id=g.current_user.id,
+    )
+    db.session.commit()
+
     flash('تم حذف القضية', 'warning')
     return redirect(url_for('cases.index'))

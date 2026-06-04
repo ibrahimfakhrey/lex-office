@@ -16,6 +16,20 @@ CHATWOOT_HMAC_SECRET = os.getenv(
 )
 
 
+def product_name() -> str:
+    """Return the active product brand name (e.g. 'المحامي').
+
+    Reads SystemSetting.product_name with 'LexOffice' as the ultimate fallback.
+    Use this everywhere a transactional email, push, or system message needs
+    to refer to the product by name — never hardcode 'LexOffice'.
+    """
+    try:
+        from app.models.admin import SystemSetting
+        return SystemSetting.get('product_name', 'LexOffice') or 'LexOffice'
+    except Exception:
+        return 'LexOffice'
+
+
 def generate_chatwoot_token(user_id) -> str:
     """Generate HMAC-SHA256 identifier hash for Chatwoot identity verification.
 

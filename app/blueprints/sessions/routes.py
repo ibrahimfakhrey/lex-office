@@ -56,7 +56,8 @@ def create():
     cases = Case.query.filter_by(tenant_id=g.tenant_id).filter(
         Case.status.in_(['new', 'active', 'awaiting_judgment'])
     ).order_by(Case.case_number).all()
-    courts = Court.query.filter_by(is_active=True).order_by(Court.name).all()
+    from app.utils.market import current_market
+    courts = Court.query.filter_by(is_active=True, market=current_market()).order_by(Court.name).all()
     lawyers = User.query.filter_by(tenant_id=g.tenant_id, is_active=True).all()
 
     if request.method == 'POST':
@@ -190,7 +191,8 @@ def record_result(id):
 def edit(id):
     """Edit session details."""
     sess = Session.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
-    courts = Court.query.filter_by(is_active=True).order_by(Court.name).all()
+    from app.utils.market import current_market
+    courts = Court.query.filter_by(is_active=True, market=current_market()).order_by(Court.name).all()
     lawyers = User.query.filter_by(tenant_id=g.tenant_id, is_active=True).all()
 
     if request.method == 'POST':
@@ -214,11 +216,28 @@ def edit(id):
 @sessions_bp.route('/<int:id>/delete', methods=['POST'])
 @permission_required('sessions', 'delete')
 def delete(id):
-    """Delete a session."""
+    """Delete a session. Notifies the tenant team."""
     sess = Session.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
     case_id = sess.case_id
+    case_number = sess.case.case_number if sess.case else None
+    session_date = sess.session_date.strftime('%Y-%m-%d') if sess.session_date else ''
     db.session.delete(sess)
     db.session.commit()
+
+    from app.services.notification_service import notify_tenant_users
+    notify_tenant_users(
+        tenant_id=g.tenant_id,
+        notification_type='general',
+        title=f'تم حذف جلسة بتاريخ {session_date}'.strip(),
+        body=f'القضية: {case_number}' if case_number else None,
+        priority='important',
+        related_type='case',
+        related_id=case_id,
+        actor_name=g.current_user.full_name,
+        exclude_user_id=g.current_user.id,
+    )
+    db.session.commit()
+
     flash('تم حذف الجلسة', 'warning')
     return redirect(url_for('cases.show', id=case_id))
 

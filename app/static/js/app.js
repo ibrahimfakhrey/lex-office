@@ -94,10 +94,20 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ── Confirm Delete ──
+    // Two-step prompt: first ask "are you sure?", then require typing
+    // "تأكيد" (confirm) on truly destructive actions. Forms tagged with
+    // data-confirm-danger="true" trigger the strict path; anything else
+    // uses a single confirm() like before.
     document.querySelectorAll('[data-confirm]').forEach(function(el) {
         el.addEventListener('click', function(e) {
-            if (!confirm(this.dataset.confirm || 'هل أنت متأكد؟')) {
-                e.preventDefault();
+            var msg = this.dataset.confirm || 'هل أنت متأكد؟';
+            if (!confirm(msg)) { e.preventDefault(); return; }
+            if (this.dataset.confirmDanger === 'true') {
+                var typed = prompt('للتأكيد النهائي، اكتب كلمة: تأكيد');
+                if ((typed || '').trim() !== 'تأكيد') {
+                    e.preventDefault();
+                    alert('تم إلغاء الحذف.');
+                }
             }
         });
     });

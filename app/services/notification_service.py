@@ -5,6 +5,7 @@ from app.models.notification import Notification, NotificationSetting
 from app.models.user import User
 from app.services.email_service import send_email
 from app.services.fcm_service import send_push
+from app.utils.helpers import product_name
 
 
 # Maps related_type → mobile deep-link route. The mobile FcmService reads
@@ -95,7 +96,7 @@ def create_notification(
                 email_html = _build_notification_email(title, body, actor_name)
                 send_email(
                     to=user.email,
-                    subject=f'LexOffice: {title}',
+                    subject=f'{product_name()}: {title}',
                     html_body=email_html,
                 )
         except Exception as e:
@@ -190,17 +191,18 @@ _create_in_app_only = _create_in_app_and_push
 
 def _build_notification_email(title, body, actor_name=None):
     """Build Arabic HTML email for notification."""
+    brand = product_name()
     actor_line = f'<p style="margin: 8px 0 0; color: #64748b; font-size: 13px;">بواسطة: <strong>{actor_name}</strong></p>' if actor_name else ''
     body_line = f'<p style="margin: 8px 0 0; color: #475569;">{body}</p>' if body else ''
     return f"""
     <div dir="rtl" style="font-family: Tajawal, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #1849A9; margin-bottom: 16px;">LexOffice</h2>
+        <h2 style="color: #1849A9; margin-bottom: 16px;">{brand}</h2>
         <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; margin: 16px 0; border-right: 4px solid #1849A9;">
             <h3 style="margin: 0; color: #1e293b; font-size: 16px;">{title}</h3>
             {body_line}
         </div>
         {actor_line}
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-        <p style="color: #94a3b8; font-size: 12px;">هذا إشعار تلقائي من نظام LexOffice لإدارة مكتب المحاماة.</p>
+        <p style="color: #94a3b8; font-size: 12px;">هذا إشعار تلقائي من نظام {brand} لإدارة مكتب المحاماة.</p>
     </div>
     """

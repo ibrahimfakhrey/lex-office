@@ -1,6 +1,8 @@
 """Client management routes: Full CRUD with documents and RBAC."""
 from datetime import datetime
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g
+from flask import (
+    Blueprint, render_template, request, redirect, url_for, flash, g, jsonify,
+)
 from app.extensions import db
 from app.utils.decorators import login_required, permission_required, manager_only
 from app.models.client import Client, ClientDocument
@@ -391,6 +393,66 @@ def delete(id):
 
     flash('تم حذف الموكل', 'warning')
     return redirect(url_for('clients.index'))
+
+
+# ── ID card extraction (LEXOFFICE-35) ──────────────────────────────────────
+# Two-tier autofill helpers used by the add/edit client form. Both accept a
+# multipart upload of an Egyptian national ID photo and return JSON; neither
+# persists the image — bytes live only in memory for the duration of the call.
+
+_MAX_ID_IMAGE_BYTES = 10 * 1024 * 1024  # 10MB
+
+
+def _read_upload_for_extract():
+    """Pull the uploaded image into bytes. Returns (bytes, None) or (None, error_response)."""
+    f = request.files.get('image') or request.files.get('file')
+    if not f or not f.filename:
+        return None, (jsonify({'success': False, 'error': 'يرجى رفع صورة البطاقة'}), 400)
+    data = f.read()
+    if not data:
+        return None, (jsonify({'success': False, 'error': 'الملف فارغ'}), 400)
+    if len(data) > _MAX_ID_IMAGE_BYTES:
+        return None, (jsonify({'success': False, 'error': 'حجم الصورة أكبر من 10 ميجا'}), 400)
+    return data, None
+
+
+@clients_bp.route('/extract-national-id', methods=['POST'])
+@permission_required('clients', 'view')
+def extract_national_id():
+    """Tier 1 — free Tesseract OCR. Reads the 14-digit number from the photo
+    and returns the parsed DOB / governorate / gender. No AI usage tracking."""
+    from app.services.national_id_ocr import extract_id_number_from_image
+
+    data, err = _read_upload_for_extract()
+    if err:
+        return err
+    result = extract_id_number_from_image(data)
+    return jsonify(result), (200 if result.get('success') else 422)
+
+
+@clients_bp.route('/extract-national-id-ai', methods=['POST'])
+@permission_required('clients', 'view')
+def extract_national_id_ai():
+    """Tier 2 — Claude vision. Opt-in extraction of name + address + profession.
+    Counts against the tenant's `national_id_extract` AI quota."""
+    from app.services import ai_usage
+    from app.services.national_id_ocr import extract_full_id_via_claude
+
+    data, err = _read_upload_for_extract()
+    if err:
+        return err
+
+    tenant = getattr(g.current_user, 'tenant', None) if hasattr(g, 'current_user') else None
+    if tenant is None:
+        return jsonify({'success': False, 'error': 'تعذّر تحديد المكتب'}), 400
+
+    try:
+        ai_usage.check_can_use(tenant, 'national_id_extract')
+    except ai_usage.QuotaError as e:
+        return jsonify({'success': False, 'error': str(e) or 'تم تجاوز الحد المسموح به'}), 402
+
+    result = extract_full_id_via_claude(data, tenant=tenant, user=g.current_user)
+    return jsonify(result), (200 if result.get('success') else 422)
 
 
 @clients_bp.route('/<int:id>/print')

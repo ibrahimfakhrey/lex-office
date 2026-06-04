@@ -183,7 +183,8 @@ def create():
     cases = Case.query.filter_by(tenant_id=g.tenant_id).filter(
         Case.status.in_(['new', 'active', 'awaiting_judgment'])
     ).order_by(Case.case_number).all()
-    courts = Court.query.filter_by(is_active=True).order_by(Court.name).all()
+    from app.utils.market import current_market
+    courts = Court.query.filter_by(is_active=True, market=current_market()).order_by(Court.name).all()
 
     if request.method == 'POST':
         errors = []
@@ -304,7 +305,8 @@ def show(id):
 def edit(id):
     """Edit judgment."""
     judgment = Judgment.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
-    courts = Court.query.filter_by(is_active=True).order_by(Court.name).all()
+    from app.utils.market import current_market
+    courts = Court.query.filter_by(is_active=True, market=current_market()).order_by(Court.name).all()
 
     if request.method == 'POST':
         judgment.judgment_date = datetime.strptime(request.form['judgment_date'], '%Y-%m-%d').date()
