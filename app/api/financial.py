@@ -11,6 +11,7 @@ from app.utils.helpers import egypt_today
 from app.models.financial import Payment, Invoice, InvoiceItem, Expense
 from app.models.case import Case
 from app.models.client import Client
+from app.blueprints.financial.routes import sync_invoice_payment
 
 _AR_MONTH_LABELS = [
     'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
@@ -458,6 +459,7 @@ def api_update_invoice(id):
 
     db.session.flush()
     invoice.calculate_totals()
+    sync_invoice_payment(invoice)
     db.session.commit()
 
     return success_response(data=invoice.to_dict(include_items=True), message='تم تحديث الفاتورة بنجاح')
@@ -477,6 +479,7 @@ def api_update_invoice_status(id):
     invoice.status = new_status
     if new_status == 'sent' and not invoice.sent_at:
         invoice.sent_at = datetime.utcnow()
+    sync_invoice_payment(invoice)
     db.session.commit()
 
     return success_response(data=invoice.to_dict(), message='تم تحديث حالة الفاتورة')

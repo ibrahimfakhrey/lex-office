@@ -16,6 +16,7 @@ financial_bp = Blueprint('financial', __name__, template_folder='../../templates
 PAYMENT_METHODS = [
     ('cash', 'نقدي'), ('bank_transfer', 'تحويل بنكي'), ('check', 'شيك'),
     ('credit_card', 'بطاقة ائتمان'), ('online', 'دفع إلكتروني'),
+    ('invoice', 'فاتورة مسددة'),
 ]
 EXPENSE_TYPES = [
     ('court_fees', 'رسوم محكمة'), ('registration', 'رسوم تسجيل'),
@@ -31,6 +32,41 @@ ITEM_TYPES = [
     ('fees', 'أتعاب'), ('consultation', 'استشارة'), ('court_fees', 'رسوم محكمة'),
     ('expenses', 'مصاريف'), ('other', 'أخرى'),
 ]
+
+
+def sync_invoice_payment(invoice):
+    """Keep a Payment row in lockstep with the invoice's paid status.
+
+    When status='paid' we ensure exactly one linked Payment exists and
+    mirrors the invoice total. When status moves away from 'paid' we
+    delete the auto-created Payment so KPIs stay accurate.
+
+    Caller is responsible for committing the session.
+    """
+    linked = Payment.query.filter_by(invoice_id=invoice.id).first()
+    if invoice.status == 'paid':
+        amount = float(invoice.total or 0)
+        if linked:
+            linked.amount = amount
+            linked.payment_date = invoice.issue_date
+            linked.client_id = invoice.client_id
+            linked.case_id = invoice.case_id
+            linked.reference_number = invoice.invoice_number
+        else:
+            db.session.add(Payment(
+                tenant_id=invoice.tenant_id,
+                client_id=invoice.client_id,
+                case_id=invoice.case_id,
+                invoice_id=invoice.id,
+                amount=amount,
+                payment_date=invoice.issue_date,
+                payment_method='invoice',
+                reference_number=invoice.invoice_number,
+                recorded_by=getattr(g, 'current_user', None).id if getattr(g, 'current_user', None) else None,
+            ))
+    else:
+        if linked:
+            db.session.delete(linked)
 
 
 # ============= FINANCIAL OVERVIEW =============
@@ -499,6 +535,7 @@ def edit_invoice(id):
 
         db.session.flush()
         invoice.calculate_totals()
+        sync_invoice_payment(invoice)
         db.session.commit()
 
         flash('تم تحديث الفاتورة بنجاح', 'success')
@@ -520,6 +557,7 @@ def update_invoice_status(id):
         invoice.status = new_status
         if new_status == 'sent' and not invoice.sent_at:
             invoice.sent_at = datetime.utcnow()
+        sync_invoice_payment(invoice)
         db.session.commit()
         flash('تم تحديث حالة الفاتورة', 'success')
     return redirect(url_for('financial.show_invoice', id=invoice.id))
