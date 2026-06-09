@@ -22,7 +22,7 @@
     <!-- Flatpickr -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=5">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=21">
     {% block extra_css %}{% endblock %}
 
     <!-- Meta Pixel Code -->
@@ -47,9 +47,9 @@
 <body>
     <div class="d-flex" id="app-wrapper">
         <!-- Sidebar -->
-        <nav id="sidebar" class="sidebar bg-dark text-white position-fixed d-flex flex-column" style="width: 260px; height: 100vh; z-index: 1040;" role="navigation" aria-label="القائمة الرئيسية">
+        <nav id="sidebar" class="sidebar position-fixed d-flex flex-column" style="width: 260px; height: 100vh; z-index: 1040;" role="navigation" aria-label="القائمة الرئيسية">
             <!-- Brand -->
-            <div class="sidebar-brand flex-shrink-0">
+                        <div class="sidebar-brand flex-shrink-0">
                 {% if current_user and current_user.tenant %}
                     <div class="brand-text">
                         <h6 class="brand-name">{{ current_user.tenant.name }}</h6>
@@ -76,7 +76,7 @@
             {% set has_perm = g.current_user.has_permission(module, 'view')[0] if module else true %}
             {% if has_perm %}
             <li class="nav-item">
-                <a class="nav-link text-white {{ 'active bg-primary rounded' if request.path.startswith(path) }}"
+                <a class="nav-link {{ 'active' if request.path.startswith(path) }}"
                    href="{{ url }}"{% if request.path.startswith(path) %} aria-current="page"{% endif %}>
                     <i class="bi bi-{{ icon }} me-2"></i> {{ label }}
                 </a>
@@ -108,7 +108,7 @@
                     {{ nav_item('/settings', url_for('settings.index'), 'gear-fill', 'الإعدادات', 'settings') }}
 
                     <li class="nav-item">
-                        <a class="nav-link text-white d-flex align-items-center {{ 'active bg-primary rounded' if request.path.startswith('/notifications') }}"
+                        <a class="nav-link d-flex align-items-center {{ 'active' if request.path.startswith('/notifications') }}"
                            href="{{ url_for('notifications.index') }}"{% if request.path.startswith('/notifications') %} aria-current="page"{% endif %}>
                             <i class="bi bi-bell-fill me-2"></i> الإشعارات
                             {% if unread_count > 0 %}
@@ -121,9 +121,16 @@
 
             <!-- Footer -->
             <div class="p-3 border-top border-secondary flex-shrink-0">
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light btn-sm w-100">
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-primary btn-sm w-100">
                     <i class="bi bi-box-arrow-right me-1"></i> خروج
                 </a>
+                <div class="text-center mt-2" style="font-size: 0.72rem;">
+                    <a href="{{ terms_url or url_for('public.terms') }}" target="_blank"
+                       class="text-muted text-decoration-none">الشروط</a>
+                    <span class="text-muted mx-1">·</span>
+                    <a href="{{ privacy_url or url_for('public.privacy') }}" target="_blank"
+                       class="text-muted text-decoration-none">الخصوصية</a>
+                </div>
             </div>
         </nav>
 
@@ -135,7 +142,7 @@
             <!-- Top Navbar -->
             <nav class="top-navbar">
                 <div class="topnav-right">
-                    <button class="btn btn-sm btn-outline-secondary d-lg-none topnav-toggle" id="sidebarToggle" aria-label="فتح القائمة الجانبية">
+                    <button class="btn btn-sm btn-outline-secondary topnav-toggle" id="sidebarToggle" aria-label="فتح القائمة الجانبية">
                         <i class="bi bi-list"></i>
                     </button>
                     <div class="topnav-title">
@@ -359,5 +366,81 @@
     <!-- ─────────────────────────────────────────────────────────────── -->
 
     {% block extra_js %}{% endblock %}
+<style>
+
+
+#sidebar { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.main-content { transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+</style>
+
+<style>
+#sidebar { transition: width 0.3s cubic-bezier(0.4,0,0.2,1); overflow: hidden; }
+.main-content { transition: margin-right 0.3s cubic-bezier(0.4,0,0.2,1); }
+#sidebar.collapsed { width: 64px !important; }
+#sidebar.collapsed .brand-text,
+#sidebar.collapsed .nav-link span,
+#sidebar.collapsed small.text-muted,
+#sidebar.collapsed .sidebar-footer-links,
+#sidebar.collapsed .badge { display: none !important; }
+#sidebar.collapsed .nav-item { margin: 2px 4px; }
+#sidebar.collapsed .nav-link { justify-content: center; padding: 0.7rem 0 !important; }
+#sidebar.collapsed .nav-link i { margin: 0 !important; font-size: 1.1rem; }
+#sidebar.collapsed .sidebar-brand { justify-content: center; padding: 0.8rem 0; }
+#sidebar.collapsed .brand-logo { margin: 0 auto; }
+#sidebar.collapsed .p-3 { padding: 0.4rem !important; }
+#sidebar.collapsed .btn span { display: none; }
+#sidebar.collapsed .btn i { font-size: 1rem; }
+body.sidebar-collapsed .main-content { margin-right: 64px; }
+</style>
+<script>
+(function() {
+    var sidebar = document.getElementById('sidebar');
+    var body = document.body;
+    // Restore state
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+        sidebar.classList.add('collapsed');
+        body.classList.add('sidebar-collapsed');
+    }
+    // Toggle button
+    var btn = document.getElementById('sidebarToggle');
+    if (btn) {
+        btn.addEventListener('click', function() {
+            sidebar.classList.toggle('collapsed');
+            body.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        });
+    }
+    // Mobile overlay
+    var overlay = document.getElementById('sidebarOverlay');
+    if (overlay) {
+        overlay.addEventListener('click', function() {
+            sidebar.classList.remove('show');
+            this.classList.remove('show');
+        });
+    }
+})();
+</script>
+
+<style>
+#sidebar { transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+.main-content { transition: margin-right 0.3s cubic-bezier(0.4,0,0.2,1); }
+body.sidebar-hidden #sidebar { transform: translateX(100%); }
+body.sidebar-hidden .main-content { margin-right: 0; }
+</style>
+<script>
+(function() {
+    var body = document.body;
+    if (localStorage.getItem('sidebarHidden') === 'true') {
+        body.classList.add('sidebar-hidden');
+    }
+    var btn = document.getElementById('sidebarToggle');
+    if (btn) {
+        btn.addEventListener('click', function() {
+            body.classList.toggle('sidebar-hidden');
+            localStorage.setItem('sidebarHidden', body.classList.contains('sidebar-hidden'));
+        });
+    }
+})();
+</script>
 </body>
 </html>

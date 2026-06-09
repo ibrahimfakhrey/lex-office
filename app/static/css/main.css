@@ -17,11 +17,11 @@
     --info: #078FD2;
 
     --sidebar-width: 260px;
-    --sidebar-bg: #0C2461;
-    --sidebar-bg2: #1849A9;
-    --sidebar-text: rgba(255,255,255,0.65);
+    --sidebar-bg: #f8f9fa;
+    --sidebar-bg2: #f0f4f8;
+    --sidebar-text: #0b2360;
     --sidebar-active-bg: rgba(7, 143, 210, 0.15);
-    --sidebar-active-text: #fff;
+    --sidebar-active-text: #0C2461;
 
     --bg: #071333;
     --surface: #0a1d4a;
@@ -306,7 +306,7 @@ input:-webkit-autofill, input:-webkit-autofill:focus {
     right: 0;
     width: var(--sidebar-width);
     height: 100vh;
-    background: linear-gradient(180deg, #081b4b 0%, #0C2461 35%, #143575 100%);
+    background: #f8f9fa;
     color: var(--sidebar-text);
     z-index: 1040;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -363,7 +363,7 @@ input:-webkit-autofill, input:-webkit-autofill:focus {
 }
 .sidebar-brand .brand-name {
     margin: 0;
-    color: #fff;
+    color: #0C2461;
     font-weight: 700;
     font-size: 0.95rem;
     line-height: 1.3;
@@ -402,19 +402,20 @@ input:-webkit-autofill, input:-webkit-autofill:focus {
     width: 22px;
     text-align: center;
     opacity: 0.6;
+    color: var(--accent);
     transition: all var(--transition);
 }
 
 .sidebar .nav-link:hover {
     background: rgba(7,143,210,0.1);
-    color: #fff;
+    color: #0C2461;
 }
 .sidebar .nav-link:hover i { opacity: 1; color: var(--accent); }
 
 .sidebar .nav-link.active,
 .sidebar .nav-link.active.bg-primary {
-    background: linear-gradient(135deg, rgba(7,143,210,0.18) 0%, rgba(24,73,169,0.12) 100%) !important;
-    color: #fff !important;
+    background: #e8eef8 !important;
+    color: #0b2360 !important;
     font-weight: 700;
     border-right: 3px solid var(--accent);
     box-shadow: 0 2px 8px rgba(7,143,210,0.15);
