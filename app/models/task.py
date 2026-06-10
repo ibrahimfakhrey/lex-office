@@ -13,6 +13,9 @@ class Task(db.Model, EncryptedFieldsMixin):
     assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     assigned_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     case_id = db.Column(db.Integer, db.ForeignKey('cases.id'), nullable=True)
+    # When this task was auto-issued as a reminder for a court session, we
+    # link back to it so editing/deleting the session can keep the reminder
+    # in sync. ON DELETE CASCADE: deleting a session drops its reminder.
     session_id = db.Column(
         db.Integer,
         db.ForeignKey('sessions.id', ondelete='CASCADE'),

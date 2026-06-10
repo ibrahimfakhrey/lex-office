@@ -157,6 +157,8 @@ def api_sessions_update(id):
         except (ValueError, TypeError):
             pass
 
+    from app.services.tasks_service import sync_session_reminder_task
+    sync_session_reminder_task(sess)
     db.session.commit()
     return success_response(data=sess.to_dict(), message='تم تحديث الجلسة بنجاح')
 
@@ -216,6 +218,11 @@ def api_sessions_record_result(id):
         if case and case.status not in ('closed',):
             case.status = 'awaiting_judgment'
         redirect_to_judgment = True
+
+    # Mark this session's reminder task as done.
+    if sess.result:
+        from app.services.tasks_service import complete_session_reminder_task
+        complete_session_reminder_task(sess)
 
     db.session.commit()
 

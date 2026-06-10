@@ -219,10 +219,11 @@ def record_result(id):
             if case and case.status not in ('closed',):
                 case.status = 'awaiting_judgment'
 
-        # Close out the linked reminder task — session is now done.
-        linked_task = Task.query.filter_by(session_id=sess.id, tenant_id=sess.tenant_id).first()
-        if linked_task and linked_task.status not in ('done', 'cancelled'):
-            linked_task.status = 'done'
+        # Mark this session's reminder task as done — the session has now
+        # been held, so the reminder is no longer outstanding.
+        if sess.result:
+            from app.services.tasks_service import complete_session_reminder_task
+            complete_session_reminder_task(sess)
 
         db.session.commit()
 
@@ -269,7 +270,8 @@ def edit(id):
         sess.preparation_notes = request.form.get('preparation_notes', '').strip() or None
         sess.responsible_lawyer_id = request.form.get('responsible_lawyer_id', type=int) or sess.responsible_lawyer_id
 
-        _sync_session_task(sess)
+        from app.services.tasks_service import sync_session_reminder_task
+        sync_session_reminder_task(sess)
         db.session.commit()
         flash('تم تحديث الجلسة بنجاح', 'success')
         return redirect(url_for('sessions.show', id=sess.id))
