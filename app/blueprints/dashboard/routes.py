@@ -49,14 +49,22 @@ def index():
         Task.deadline < datetime.utcnow()
     ).order_by(Task.deadline).all()
 
-    # Urgent tasks (due within 48 hours)
-    urgent_deadline = datetime.utcnow() + timedelta(hours=48)
+    # Urgent tasks. General tasks surface within 48h of deadline; session
+    # reminders (Task.session_id IS NOT NULL) get a 14-day window so the
+    # lawyer sees upcoming court sessions on the dashboard, not just the
+    # day before. Both buckets exclude done tasks.
+    now = datetime.utcnow()
+    urgent_deadline = now + timedelta(hours=48)
+    session_horizon = now + timedelta(days=14)
     urgent_tasks = Task.query.filter_by(
         tenant_id=g.tenant_id
     ).filter(
         Task.status != 'done',
-        Task.deadline <= urgent_deadline,
-        Task.deadline >= datetime.utcnow()
+        Task.deadline >= now,
+        db.or_(
+            Task.deadline <= urgent_deadline,
+            db.and_(Task.session_id.isnot(None), Task.deadline <= session_horizon),
+        ),
     ).order_by(Task.deadline).all()
 
     # Unread notifications

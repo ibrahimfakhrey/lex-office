@@ -40,8 +40,14 @@
                     {% if task.case %}
                     <div class="col-md-6">
                         <small class="text-muted">القضية</small>
-                        <div><a href="{{ url_for('cases.show', id=task.case_id) }}">{{ task.case.case_number }}</a></div>
+                        <div><a href="{{ url_for('cases.show', id=task.case_id) }}">{{ task.case.case_number or '—' }}</a></div>
                     </div>
+                    {% if task.case.client %}
+                    <div class="col-md-6">
+                        <small class="text-muted">الموكل</small>
+                        <div><a href="{{ url_for('clients.show', id=task.case.client_id) }}">{{ task.case.client.full_name }}</a></div>
+                    </div>
+                    {% endif %}
                     {% endif %}
                     {% if task.deadline %}
                     <div class="col-md-6">

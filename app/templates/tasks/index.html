@@ -56,6 +56,7 @@
                     <tr>
                         <th>المهمة</th>
                         <th>القضية</th>
+                        <th>الموكل</th>
                         <th>المكلف</th>
                         <th>الأولوية</th>
                         <th>الموعد</th>
@@ -71,6 +72,11 @@
                             <a href="{{ url_for('tasks.show', id=t.id) }}">{{ t.title[:40] }}</a>
                         </td>
                         <td>{{ t.case.case_number if t.case else '-' }}</td>
+                        <td>
+                            {% if t.case and t.case.client %}
+                            <a href="{{ url_for('clients.show', id=t.case.client_id) }}">{{ t.case.client.full_name[:25] }}</a>
+                            {% else %}-{% endif %}
+                        </td>
                         <td>{{ t.assignee.full_name[:20] if t.assignee else '-' }}</td>
                         <td><span class="badge bg-{{ priority_color.get(t.priority, 'secondary') }}">{{ priority_map.get(t.priority, t.priority) }}</span></td>
                         <td>
