@@ -147,6 +147,10 @@ def create():
         _sync_session_task(sess)
         db.session.commit()
 
+        from app.services.tasks_service import create_session_reminder_task
+        create_session_reminder_task(sess, g.current_user.id)
+        db.session.commit()
+
         from app.services.notification_service import notify_tenant_users
         notify_tenant_users(
             tenant_id=g.tenant_id,
@@ -161,7 +165,7 @@ def create():
         )
         db.session.commit()
 
-        flash('تم إضافة الجلسة بنجاح', 'success')
+        flash('تم إضافة الجلسة بنجاح وتم إنشاء مهمة تذكيرية تلقائياً', 'success')
         return redirect(url_for('sessions.show', id=sess.id))
 
     pre_case = request.args.get('case_id', type=int)
@@ -205,6 +209,9 @@ def record_result(id):
                     responsible_lawyer_id=sess.responsible_lawyer_id,
                 )
                 db.session.add(next_sess)
+                db.session.flush()
+                from app.services.tasks_service import create_session_reminder_task
+                create_session_reminder_task(next_sess, g.current_user.id)
 
         # When result is judgment, update case status and redirect to record the judgment
         if sess.result == 'judgment':

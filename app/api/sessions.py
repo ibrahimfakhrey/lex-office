@@ -95,6 +95,10 @@ def api_sessions_create():
     db.session.add(sess)
     db.session.commit()
 
+    from app.services.tasks_service import create_session_reminder_task
+    create_session_reminder_task(sess, g.current_user.id)
+    db.session.commit()
+
     from app.services.notification_service import notify_tenant_users
     notify_tenant_users(
         tenant_id=g.tenant_id,
@@ -201,6 +205,9 @@ def api_sessions_record_result(id):
                 responsible_lawyer_id=sess.responsible_lawyer_id,
             )
             db.session.add(next_sess)
+            db.session.flush()
+            from app.services.tasks_service import create_session_reminder_task
+            create_session_reminder_task(next_sess, g.current_user.id)
 
     # When result is judgment, update case status
     redirect_to_judgment = False
