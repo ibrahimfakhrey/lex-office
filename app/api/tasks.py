@@ -75,6 +75,16 @@ def api_create_task():
     if data.get('deadline'):
         deadline = parse_datetime(data['deadline'])
 
+    # ALMUSTSHAR-19: optional reminder-before-deadline window.
+    # Accept only the 4 documented values; ignore anything else.
+    reminder_before_days = None
+    try:
+        rb = int(data.get('reminder_before_days')) if data.get('reminder_before_days') else None
+        if rb in (1, 2, 3, 7):
+            reminder_before_days = rb
+    except (ValueError, TypeError):
+        pass
+
     task = Task(
         tenant_id=g.tenant_id,
         title=title,
@@ -84,6 +94,7 @@ def api_create_task():
         case_id=int(data['case_id']) if data.get('case_id') else None,
         priority=data.get('priority', 'normal'),
         deadline=deadline,
+        reminder_before_days=reminder_before_days,
     )
     db.session.add(task)
     db.session.commit()
@@ -134,10 +145,31 @@ def api_update_task(id):
         task.case_id = int(data['case_id']) if data['case_id'] else None
     if data.get('priority'):
         task.priority = data['priority']
+
+    prev_deadline = task.deadline
     if data.get('deadline'):
         task.deadline = parse_datetime(data['deadline'])
     elif data.get('clear_deadline'):
         task.deadline = None
+
+    # ALMUSTSHAR-19: keep the reminder window editable via API.
+    prev_reminder = task.reminder_before_days
+    if 'reminder_before_days' in data:
+        raw = data.get('reminder_before_days')
+        new_reminder = None
+        if raw not in (None, '', 'none', '0', 0):
+            try:
+                rb = int(raw)
+                if rb in (1, 2, 3, 7):
+                    new_reminder = rb
+            except (ValueError, TypeError):
+                pass
+        task.reminder_before_days = new_reminder
+
+    # If deadline shifted OR the window changed, clear reminder_sent_at
+    # so the dispatcher fires once for the new schedule.
+    if task.deadline != prev_deadline or task.reminder_before_days != prev_reminder:
+        task.reminder_sent_at = None
 
     db.session.commit()
 
