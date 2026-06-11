@@ -53,8 +53,22 @@
                     <div class="col-md-6">
                         <small class="text-muted">الموعد النهائي</small>
                         <div class="{% if task.is_overdue %}text-danger fw-bold{% endif %}">
-                            {{ task.deadline.strftime('%Y-%m-%d %H:%M') }}
+                            {{ task.deadline.strftime('%d/%m/%Y %H:%M') }}
                             {% if task.is_overdue %}<span class="badge bg-danger">متأخرة</span>{% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if task.reminder_before_days %}
+                    {% set _rb_map = {1: 'يوم', 2: 'يومين', 3: '3 أيام', 7: 'أسبوع'} %}
+                    <div class="col-md-6">
+                        <small class="text-muted">التذكير</small>
+                        <div>
+                            قبل الموعد بـ {{ _rb_map.get(task.reminder_before_days, task.reminder_before_days ~ ' يوم') }}
+                            {% if task.reminder_sent_at %}
+                            <span class="badge bg-success">تم الإرسال {{ task.reminder_sent_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">معلَّق</span>
+                            {% endif %}
                         </div>
                     </div>
                     {% endif %}

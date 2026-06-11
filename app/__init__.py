@@ -124,6 +124,8 @@ def _register_blueprints(app):
     register_admin_cli(app)
     from app.cli_encryption import register_encryption_cli
     register_encryption_cli(app)
+    from app.cli_tasks import register_tasks_cli
+    register_tasks_cli(app)
 
     # Landing page
     @app.route('/')

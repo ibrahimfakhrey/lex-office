@@ -26,7 +26,11 @@ class Task(db.Model, EncryptedFieldsMixin):
     status = db.Column(db.String(20), default='new')
     is_recurring = db.Column(db.Boolean, default=False)
     recurrence_type = db.Column(db.String(20), nullable=True)
-    reminder_offset_days = db.Column(db.Integer, nullable=True)
+    # ALMUSTSHAR-19: how many days before `deadline` to fire a reminder.
+    # NULL = no reminder. `reminder_sent_at` is set once the dispatcher
+    # has sent the reminder so we don't re-fire on every cron tick.
+    # When `deadline` is edited, `reminder_sent_at` is reset.
+    reminder_before_days = db.Column(db.Integer, nullable=True)
     reminder_sent_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -73,7 +77,7 @@ class Task(db.Model, EncryptedFieldsMixin):
             'status': self.status,
             'is_recurring': self.is_recurring,
             'recurrence_type': self.recurrence_type,
-            'reminder_offset_days': self.reminder_offset_days,
+            'reminder_before_days': self.reminder_before_days,
             'reminder_sent_at': self.reminder_sent_at.isoformat() if self.reminder_sent_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,

@@ -86,9 +86,16 @@ def create():
         if request.form.get('deadline'):
             deadline = datetime.strptime(request.form['deadline'], '%Y-%m-%dT%H:%M')
 
-        reminder_offset = request.form.get('reminder_offset_days', type=int) or None
-        if reminder_offset is not None and reminder_offset not in (1, 2, 3, 7):
-            reminder_offset = None
+        # Reminder-before window. Empty / '0' / 'none' → no reminder.
+        reminder_raw = (request.form.get('reminder_before_days') or '').strip()
+        reminder_before_days = None
+        if reminder_raw and reminder_raw not in ('0', 'none'):
+            try:
+                rb = int(reminder_raw)
+                if rb in (1, 2, 3, 7):
+                    reminder_before_days = rb
+            except ValueError:
+                pass
 
         task = Task(
             tenant_id=g.tenant_id,
@@ -99,7 +106,7 @@ def create():
             case_id=request.form.get('case_id', type=int) or None,
             priority=request.form.get('priority', 'normal'),
             deadline=deadline,
-            reminder_offset_days=reminder_offset,
+            reminder_before_days=reminder_before_days,
         )
         db.session.add(task)
         db.session.commit()
@@ -154,6 +161,7 @@ def edit(id):
         task.case_id = request.form.get('case_id', type=int) or None
         task.priority = request.form.get('priority', task.priority)
 
+        prev_deadline = task.deadline
         if request.form.get('deadline'):
             new_deadline = datetime.strptime(request.form['deadline'], '%Y-%m-%dT%H:%M')
             if new_deadline != task.deadline:
@@ -169,6 +177,24 @@ def edit(id):
         if reminder_offset != task.reminder_offset_days:
             task.reminder_sent_at = None  # offset changed — let reminder re-fire
         task.reminder_offset_days = reminder_offset
+
+        # Reminder-before window. Empty / '0' / 'none' → no reminder.
+        reminder_raw = (request.form.get('reminder_before_days') or '').strip()
+        new_reminder = None
+        if reminder_raw and reminder_raw not in ('0', 'none'):
+            try:
+                rb = int(reminder_raw)
+                if rb in (1, 2, 3, 7):
+                    new_reminder = rb
+            except ValueError:
+                pass
+        prev_reminder = task.reminder_before_days
+        task.reminder_before_days = new_reminder
+
+        # If the deadline shifted OR the reminder window changed, clear
+        # reminder_sent_at so the dispatcher will re-send for the new schedule.
+        if task.deadline != prev_deadline or new_reminder != prev_reminder:
+            task.reminder_sent_at = None
 
         db.session.commit()
         flash('تم تحديث المهمة بنجاح', 'success')

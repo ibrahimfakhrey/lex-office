@@ -57,7 +57,21 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">الموعد النهائي</label>
-                    <input type="datetime-local" name="deadline" class="form-control" dir="ltr" value="{{ form.get('deadline', '') }}">
+                    {# Flatpickr forces dd/mm/yyyy HH:MM display regardless of browser locale;
+                       the hidden ISO value is what actually submits to the backend. #}
+                    <input type="text" name="deadline" id="taskDeadline" class="form-control" dir="ltr"
+                           placeholder="dd/mm/yyyy HH:MM" value="{{ form.get('deadline', '') }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">تذكير قبل الموعد بـ</label>
+                    <select name="reminder_before_days" class="form-select">
+                        <option value="">بدون تذكير</option>
+                        <option value="1" {% if form.get('reminder_before_days') == '1' %}selected{% endif %}>يوم</option>
+                        <option value="2" {% if form.get('reminder_before_days') == '2' %}selected{% endif %}>يومين</option>
+                        <option value="3" {% if form.get('reminder_before_days') == '3' %}selected{% endif %}>3 أيام</option>
+                        <option value="7" {% if form.get('reminder_before_days') == '7' %}selected{% endif %}>أسبوع</option>
+                    </select>
+                    <div class="form-text">يُرسل النظام إيميل وإشعار داخلي للمكلَّف قبل الموعد بالمدة المحددة.</div>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">التذكير قبل الموعد بـ</label>
@@ -99,6 +113,20 @@ document.getElementById('taskClientPicker').addEventListener('change', async fun
 
     casePicker.innerHTML = '<option value="">-- اختر القضية --</option>' +
         (data.length ? data.map(c => `<option value="${c.id}">${c.label}</option>`).join('') : '<option value="">لا توجد قضايا</option>');
+});
+
+// Deadline picker — force dd/mm/yyyy display, submit ISO (Y-m-dTH:i)
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof flatpickr === 'undefined') return;
+    flatpickr('#taskDeadline', {
+        enableTime: true,
+        time_24hr: true,
+        dateFormat: 'Y-m-d\\TH:i',   // hidden value the form submits
+        altInput: true,
+        altFormat: 'd/m/Y H:i',       // what the user sees
+        allowInput: true,
+        locale: (typeof flatpickr.l10ns !== 'undefined' && flatpickr.l10ns.ar) ? 'ar' : 'default'
+    });
 });
 </script>
 {% endblock %}
