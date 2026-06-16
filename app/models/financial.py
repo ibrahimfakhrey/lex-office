@@ -28,8 +28,8 @@ class Payment(db.Model, EncryptedFieldsMixin):
     invoice = db.relationship(
         'Invoice',
         backref=db.backref(
-            'linked_payment',
-            uselist=False,
+            'payments',
+            lazy='dynamic',
             cascade='all, delete-orphan',
             passive_deletes=True,
         ),

@@ -35,23 +35,32 @@ ITEM_TYPES = [
 
 
 def sync_invoice_payment(invoice):
-    """Keep a Payment row in lockstep with the invoice's paid status.
+    """Reconcile the invoice's stub auto-payment with its status.
 
-    When status='paid' we ensure exactly one linked Payment exists and
-    mirrors the invoice total. When status moves away from 'paid' we
-    delete the auto-created Payment so KPIs stay accurate.
+    Legacy "mark invoice paid" flow: when a user toggles an invoice to
+    'paid' without recording any real Payment rows, we drop in a single
+    stub Payment (payment_method='invoice') matching invoice.total so KPIs
+    pick it up. If real payments already exist, we leave them alone — they
+    are the source of truth via `record_payment` in app/services/billing.py.
 
     Caller is responsible for committing the session.
     """
-    linked = Payment.query.filter_by(invoice_id=invoice.id).first()
+    existing = Payment.query.filter_by(invoice_id=invoice.id).all()
+    stub = next((p for p in existing if p.payment_method == 'invoice'), None)
+    real_payments = [p for p in existing if p.payment_method != 'invoice']
+
     if invoice.status == 'paid':
+        if real_payments:
+            if stub:
+                db.session.delete(stub)
+            return
         amount = float(invoice.total or 0)
-        if linked:
-            linked.amount = amount
-            linked.payment_date = invoice.issue_date
-            linked.client_id = invoice.client_id
-            linked.case_id = invoice.case_id
-            linked.reference_number = invoice.invoice_number
+        if stub:
+            stub.amount = amount
+            stub.payment_date = invoice.issue_date
+            stub.client_id = invoice.client_id
+            stub.case_id = invoice.case_id
+            stub.reference_number = invoice.invoice_number
         else:
             db.session.add(Payment(
                 tenant_id=invoice.tenant_id,
@@ -65,8 +74,8 @@ def sync_invoice_payment(invoice):
                 recorded_by=getattr(g, 'current_user', None).id if getattr(g, 'current_user', None) else None,
             ))
     else:
-        if linked:
-            db.session.delete(linked)
+        if stub:
+            db.session.delete(stub)
 
 
 # ============= FINANCIAL OVERVIEW =============
@@ -310,18 +319,22 @@ def create_payment():
             return render_template('financial/create_payment.html', clients=clients, cases=cases,
                                    form=request.form, payment_methods=PAYMENT_METHODS)
 
-        payment = Payment(
+        from app.services.billing import record_payment, make_auto_invoice_description
+        case_id_val = request.form.get('case_id', type=int) or None
+        client = Client.query.get(client_id)
+        case_obj = Case.query.get(case_id_val) if case_id_val else None
+        payment, invoice = record_payment(
             tenant_id=g.tenant_id,
             client_id=client_id,
-            case_id=request.form.get('case_id', type=int) or None,
+            case_id=case_id_val,
             amount=amount,
             payment_date=datetime.strptime(payment_date_str, '%Y-%m-%d').date(),
             payment_method=payment_method,
             reference_number=request.form.get('reference_number', '').strip() or None,
             notes=request.form.get('notes', '').strip() or None,
             recorded_by=g.current_user.id,
+            auto_invoice_description=make_auto_invoice_description(case=case_obj, client=client),
         )
-        db.session.add(payment)
         db.session.commit()
 
         from app.services.notification_service import notify_tenant_users
@@ -360,9 +373,14 @@ def show_payment(id):
 @financial_bp.route('/payments/<int:id>/delete', methods=['POST'])
 @permission_required('financial', 'delete')
 def delete_payment(id):
-    """Delete a payment."""
+    """Delete a payment, then recompute the linked invoice's status."""
     payment = Payment.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
+    invoice = payment.invoice
     db.session.delete(payment)
+    db.session.flush()
+    if invoice is not None:
+        from app.services.billing import recompute_invoice_status
+        recompute_invoice_status(invoice)
     db.session.commit()
     flash('تم حذف الدفعة', 'warning')
     return redirect(url_for('financial.payments'))

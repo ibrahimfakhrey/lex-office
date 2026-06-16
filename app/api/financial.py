@@ -244,18 +244,24 @@ def api_create_payment():
     if not payment_date:
         return validation_error({'payment_date': 'تنسيق التاريخ غير صالح (YYYY-MM-DD)'})
 
-    payment = Payment(
+    from app.services.billing import record_payment, make_auto_invoice_description
+    from app.models.client import Client
+    from app.models.case import Case as CaseModel
+    case_id_val = int(data['case_id']) if data.get('case_id') else None
+    client = Client.query.get(int(client_id))
+    case_obj = CaseModel.query.get(case_id_val) if case_id_val else None
+    payment, _invoice = record_payment(
         tenant_id=g.tenant_id,
         client_id=int(client_id),
-        case_id=int(data['case_id']) if data.get('case_id') else None,
+        case_id=case_id_val,
         amount=amount,
         payment_date=payment_date,
         payment_method=payment_method,
         reference_number=(data.get('reference_number') or '').strip() or None,
         notes=(data.get('notes') or '').strip() or None,
         recorded_by=g.current_user.id,
+        auto_invoice_description=make_auto_invoice_description(case=case_obj, client=client),
     )
-    db.session.add(payment)
     db.session.commit()
 
     from app.services.notification_service import notify_tenant_users
@@ -286,9 +292,14 @@ def api_show_payment(id):
 @api_bp.route('/financial/payments/<int:id>', methods=['DELETE'])
 @api_permission_required('financial', 'delete')
 def api_delete_payment(id):
-    """Delete a payment."""
+    """Delete a payment, then recompute the linked invoice's status."""
     payment = Payment.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
+    invoice = payment.invoice
     db.session.delete(payment)
+    db.session.flush()
+    if invoice is not None:
+        from app.services.billing import recompute_invoice_status
+        recompute_invoice_status(invoice)
     db.session.commit()
     return success_response(message='تم حذف الدفعة')
 
