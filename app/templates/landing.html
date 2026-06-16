@@ -6,11 +6,8 @@
     <title>{{ product_name }} — نظام إدارة مكاتب المحاماة</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="96x96" href="{{ url_for('static', filename='img/favicon-96x96.png') }}">
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
-    <link rel="manifest" href="{{ url_for('static', filename='img/site.webmanifest') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon/favicon.svg') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon/favicon.ico') }}">
     <meta name="theme-color" content="#1849A9">
 
     <!-- Google Fonts -->
@@ -68,7 +65,8 @@
             position: fixed;
             top: 0; left: 0; right: 0;
             z-index: 100;
-            padding: 1.2rem 4rem;
+            height: 72px;
+            padding: 0 4rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -752,9 +750,17 @@
         }
 
         .footer-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             font-size: 1.1rem;
             font-weight: 800;
             color: var(--navy);
+        }
+
+        .footer-logo-icon {
+            width: 28px;
+            height: 28px;
         }
 
         .footer-copy {
@@ -819,7 +825,7 @@
 <nav>
     <a href="/" class="nav-logo">
         {% if product_logo %}
-            <img src="{{ product_logo }}" alt="{{ product_name }}" style="height:48px;width:auto;display:block;">
+            <img src="{{ product_logo }}" alt="{{ product_name }}" style="height:50px;width:auto;">
         {% else %}
             <div class="nav-logo-icon"><i class="bi bi-briefcase-fill"></i></div>
         {% endif %}
@@ -1061,11 +1067,16 @@
 
 <!-- ── FOOTER ── -->
 <footer>
-    <div class="footer-brand">{{ product_name }} ⚖️</div>
+    <div class="footer-brand">
+        {% if product_logo %}
+            <img src="{{ product_logo }}" alt="" class="footer-logo-icon">
+        {% endif %}
+        {{ product_name }}
+    </div>
     <span class="footer-copy">© ٢٠٢٦ {{ product_name }} — جميع الحقوق محفوظة</span>
     <ul class="footer-links">
-        <li><a href="#">سياسة الخصوصية</a></li>
-        <li><a href="#">الشروط والأحكام</a></li>
+        <li><a href="/privacy">سياسة الخصوصية</a></li>
+        <li><a href="/terms">الشروط والأحكام</a></li>
         <li><a href="#">تواصل معنا</a></li>
     </ul>
 </footer>
