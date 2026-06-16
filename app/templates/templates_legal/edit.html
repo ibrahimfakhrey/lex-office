@@ -12,13 +12,13 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                     <div class="mb-3">
-                        <label class="form-label">اسم القالب (إنجليزي)</label>
-                        <input type="text" name="name" class="form-control" value="{{ template.name }}" required>
+                        <label class="form-label">اسم القالب (عربي)</label>
+                        <input type="text" name="name_ar" class="form-control" value="{{ template.name_ar }}" required>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">اسم القالب (عربي)</label>
-                        <input type="text" name="name_ar" class="form-control" value="{{ template.name_ar }}">
+                        <label class="form-label">اسم القالب (إنجليزي - اختياري)</label>
+                        <input type="text" name="name" class="form-control" value="{{ template.name }}">
                     </div>
 
                     <div class="row mb-3">

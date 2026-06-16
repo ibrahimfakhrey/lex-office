@@ -34,7 +34,7 @@ TEMPLATE_TYPES = [
 ]
 OUTPUT_FORMATS = [('html', 'HTML'), ('docx', 'Word')]
 
-# Available variables for auto-fill
+# Available variables for auto-fill (Egypt-only — no Hijri date)
 AVAILABLE_VARIABLES = {
     'client_name': 'اسم الموكل',
     'client_national_id': 'الرقم القومي',
@@ -47,8 +47,15 @@ AVAILABLE_VARIABLES = {
     'lawyer_name': 'اسم المحامي',
     'opponent_name': 'اسم الخصم',
     'today_date': 'تاريخ اليوم',
-    'today_hijri': 'التاريخ الهجري',
     'office_name': 'اسم المكتب',
+}
+
+# Mirror of CASE_TYPES in cases/routes.py — used to render the Arabic label
+# instead of the raw English token when {{case_type}} appears in a template.
+_CASE_TYPE_AR = {
+    'criminal': 'جنائية', 'civil': 'مدنية', 'commercial': 'تجارية',
+    'administrative': 'إدارية', 'labor': 'عمالية', 'family': 'أسرة',
+    'constitutional': 'دستورية', 'enforcement': 'تنفيذ',
 }
 
 
@@ -69,7 +76,7 @@ def substitute_variables(content, case=None, client=None, tenant=None):
     if case:
         replacements['case_number'] = case.case_number or ''
         replacements['case_subject'] = case.subject or ''
-        replacements['case_type'] = case.case_type or ''
+        replacements['case_type'] = _CASE_TYPE_AR.get(case.case_type, case.case_type or '')
         replacements['opponent_name'] = case.opponent_name or ''
         if case.court:
             replacements['court_name'] = case.court.name
@@ -127,10 +134,10 @@ def create():
         template_type = request.form.get('template_type', '')
         template_content = request.form.get('template_content', '').strip()
 
-        if not name:
-            errors.append('اسم القالب مطلوب')
         if not name_ar:
-            name_ar = name
+            errors.append('اسم القالب بالعربي مطلوب')
+        if not name:
+            name = name_ar
         if not template_type:
             errors.append('نوع القالب مطلوب')
         if not template_content:
@@ -180,8 +187,15 @@ def edit(id):
     template = LegalTemplate.query.filter_by(id=id, tenant_id=g.tenant_id).first_or_404()
 
     if request.method == 'POST':
-        template.name = request.form.get('name', template.name).strip()
-        template.name_ar = request.form.get('name_ar', template.name_ar).strip()
+        new_name = request.form.get('name', '').strip()
+        new_name_ar = request.form.get('name_ar', '').strip()
+        if not new_name_ar:
+            flash('اسم القالب بالعربي مطلوب', 'danger')
+            return render_template('templates_legal/edit.html', template=template,
+                                   template_types=TEMPLATE_TYPES, output_formats=OUTPUT_FORMATS,
+                                   available_variables=AVAILABLE_VARIABLES)
+        template.name_ar = new_name_ar
+        template.name = new_name or new_name_ar
         template.template_type = request.form.get('template_type', template.template_type)
         template.output_format = request.form.get('output_format', template.output_format)
         template.template_content = request.form.get('template_content', template.template_content)
