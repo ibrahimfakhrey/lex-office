@@ -13,11 +13,18 @@ class Task(db.Model, EncryptedFieldsMixin):
     assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     assigned_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     case_id = db.Column(db.Integer, db.ForeignKey('cases.id'), nullable=True)
+    session_id = db.Column(
+        db.Integer,
+        db.ForeignKey('sessions.id', ondelete='CASCADE'),
+        nullable=True, index=True,
+    )
     priority = db.Column(db.String(20), default='normal')
     deadline = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), default='new')
     is_recurring = db.Column(db.Boolean, default=False)
     recurrence_type = db.Column(db.String(20), nullable=True)
+    reminder_offset_days = db.Column(db.Integer, nullable=True)
+    reminder_sent_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -60,6 +67,8 @@ class Task(db.Model, EncryptedFieldsMixin):
             'status': self.status,
             'is_recurring': self.is_recurring,
             'recurrence_type': self.recurrence_type,
+            'reminder_offset_days': self.reminder_offset_days,
+            'reminder_sent_at': self.reminder_sent_at.isoformat() if self.reminder_sent_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'is_overdue': self.is_overdue,

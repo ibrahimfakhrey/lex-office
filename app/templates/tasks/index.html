@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}المهام - {{ product_name }}{% endblock %}
+{% block title %}المهام والمواعيد - {{ product_name }}{% endblock %}
+{% block page_title %}المهام والمواعيد{% endblock %}
 
 {% set priority_color = {'urgent':'danger','important':'warning','normal':'secondary'} %}
 {% set status_color = {'new':'info','in_progress':'primary','done':'success','cancelled':'dark'} %}
@@ -8,7 +9,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h3>المهام</h3>
+    <h3>المهام والمواعيد</h3>
     <a href="{{ url_for('tasks.create') }}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> مهمة جديدة</a>
 </div>
 

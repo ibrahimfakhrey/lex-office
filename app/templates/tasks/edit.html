@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}تعديل المهمة - {{ product_name }}{% endblock %}
+{% block page_title %}المهام والمواعيد{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -42,9 +43,18 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label">الموعد النهائي</label>
                     <input type="datetime-local" name="deadline" class="form-control" dir="ltr" value="{{ task.deadline.strftime('%Y-%m-%dT%H:%M') if task.deadline else '' }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">التذكير قبل الموعد بـ</label>
+                    <select name="reminder_offset_days" class="form-select">
+                        <option value="">— بدون —</option>
+                        {% for days, label in [(1,'يوم'), (2,'يومين'), (3,'3 أيام'), (7,'أسبوع')] %}
+                        <option value="{{ days }}" {% if task.reminder_offset_days == days %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="col-md-12">
                     <label class="form-label">الوصف</label>

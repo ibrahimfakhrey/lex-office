@@ -86,6 +86,10 @@ def create():
         if request.form.get('deadline'):
             deadline = datetime.strptime(request.form['deadline'], '%Y-%m-%dT%H:%M')
 
+        reminder_offset = request.form.get('reminder_offset_days', type=int) or None
+        if reminder_offset is not None and reminder_offset not in (1, 2, 3, 7):
+            reminder_offset = None
+
         task = Task(
             tenant_id=g.tenant_id,
             title=title,
@@ -95,6 +99,7 @@ def create():
             case_id=request.form.get('case_id', type=int) or None,
             priority=request.form.get('priority', 'normal'),
             deadline=deadline,
+            reminder_offset_days=reminder_offset,
         )
         db.session.add(task)
         db.session.commit()
@@ -150,9 +155,20 @@ def edit(id):
         task.priority = request.form.get('priority', task.priority)
 
         if request.form.get('deadline'):
-            task.deadline = datetime.strptime(request.form['deadline'], '%Y-%m-%dT%H:%M')
+            new_deadline = datetime.strptime(request.form['deadline'], '%Y-%m-%dT%H:%M')
+            if new_deadline != task.deadline:
+                task.reminder_sent_at = None  # deadline moved — let reminder re-fire
+            task.deadline = new_deadline
         elif request.form.get('clear_deadline'):
             task.deadline = None
+            task.reminder_sent_at = None
+
+        reminder_offset = request.form.get('reminder_offset_days', type=int) or None
+        if reminder_offset is not None and reminder_offset not in (1, 2, 3, 7):
+            reminder_offset = None
+        if reminder_offset != task.reminder_offset_days:
+            task.reminder_sent_at = None  # offset changed — let reminder re-fire
+        task.reminder_offset_days = reminder_offset
 
         db.session.commit()
         flash('تم تحديث المهمة بنجاح', 'success')

@@ -17,6 +17,9 @@ ENFORCEMENT_TYPES = [
 ENFORCEMENT_STATUSES = [
     ('active', 'نشط'), ('completed', 'مكتمل'), ('suspended', 'معلق'), ('cancelled', 'ملغي'),
 ]
+COLLECTION_METHODS = [
+    ('bank_transfer', 'تحويل بنكي'), ('cash', 'نقداً'), ('cheque', 'شيك'),
+]
 
 
 @enforcement_bp.route('/')
@@ -110,7 +113,9 @@ def show(id):
     actions = enforcement.actions.all()
     type_map = dict(ENFORCEMENT_TYPES)
     return render_template('enforcement/show.html', enforcement=enforcement,
-                           collections=collections, actions=actions, type_map=type_map)
+                           collections=collections, actions=actions, type_map=type_map,
+                           collection_methods=COLLECTION_METHODS,
+                           method_map=dict(COLLECTION_METHODS))
 
 
 @enforcement_bp.route('/<int:id>/add-collection', methods=['POST'])
@@ -124,11 +129,16 @@ def add_collection(id):
         flash('يجب إدخال مبلغ صالح', 'danger')
         return redirect(url_for('enforcement.show', id=enforcement.id))
 
+    method_in = (request.form.get('collection_method') or '').strip() or None
+    if method_in and method_in not in dict(COLLECTION_METHODS):
+        flash('طريقة التحصيل غير صالحة', 'danger')
+        return redirect(url_for('enforcement.show', id=enforcement.id))
+
     collection = EnforcementCollection(
         enforcement_id=enforcement.id,
         amount=amount,
         collection_date=datetime.strptime(request.form['collection_date'], '%Y-%m-%d').date() if request.form.get('collection_date') else datetime.utcnow().date(),
-        collection_method=request.form.get('collection_method', '').strip() or None,
+        collection_method=method_in,
         notes=request.form.get('notes', '').strip() or None,
     )
     db.session.add(collection)

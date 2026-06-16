@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}مهمة جديدة - {{ product_name }}{% endblock %}
+{% block page_title %}المهام والمواعيد{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -54,9 +55,19 @@
                         {% endif %}
                     </select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label">الموعد النهائي</label>
                     <input type="datetime-local" name="deadline" class="form-control" dir="ltr" value="{{ form.get('deadline', '') }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">التذكير قبل الموعد بـ</label>
+                    <select name="reminder_offset_days" class="form-select">
+                        <option value="">— بدون —</option>
+                        <option value="1" {% if form.get('reminder_offset_days') == '1' %}selected{% endif %}>يوم</option>
+                        <option value="2" {% if form.get('reminder_offset_days') == '2' %}selected{% endif %}>يومين</option>
+                        <option value="3" {% if form.get('reminder_offset_days') == '3' %}selected{% endif %}>3 أيام</option>
+                        <option value="7" {% if form.get('reminder_offset_days') == '7' %}selected{% endif %}>أسبوع</option>
+                    </select>
                 </div>
                 <div class="col-md-12">
                     <label class="form-label">الوصف</label>

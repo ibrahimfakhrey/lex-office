@@ -1,5 +1,5 @@
 """Court session management routes."""
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, time as time_cls, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from app.extensions import db
 from app.utils.decorators import login_required, permission_required
@@ -7,6 +7,56 @@ from app.utils.helpers import egypt_today
 from app.models.session import Session
 from app.models.case import Case, Court
 from app.models.user import User
+from app.models.task import Task
+
+
+def _session_task_deadline(sess: Session) -> datetime:
+    """Deadline for the auto-task that mirrors a session — date + 09:00 if
+    no time was given on the session."""
+    t = sess.session_time or time_cls(9, 0)
+    return datetime.combine(sess.session_date, t)
+
+
+def _build_session_task_title(sess: Session) -> str:
+    case_no = sess.case.case_number if sess.case and sess.case.case_number else ''
+    return f'تذكير جلسة {case_no}'.strip() or 'تذكير جلسة'
+
+
+def _sync_session_task(sess: Session):
+    """Create or update the Task linked to this session. Returns the task.
+
+    Idempotent: if a task already exists for this session, its deadline,
+    assignee, title, and case_id are refreshed in place. If no task exists,
+    a new one is created. Reminder offset defaults to 1 day before the
+    session.
+    """
+    existing = Task.query.filter_by(session_id=sess.id, tenant_id=sess.tenant_id).first()
+    deadline = _session_task_deadline(sess)
+    title = _build_session_task_title(sess)
+    assignee = sess.responsible_lawyer_id or g.current_user.id
+    if existing:
+        if existing.deadline != deadline:
+            existing.reminder_sent_at = None
+        existing.title = title
+        existing.deadline = deadline
+        existing.assigned_to = assignee
+        existing.case_id = sess.case_id
+        return existing
+    task = Task(
+        tenant_id=sess.tenant_id,
+        session_id=sess.id,
+        case_id=sess.case_id,
+        title=title,
+        description=f'جلسة بتاريخ {sess.session_date.strftime("%Y-%m-%d")}',
+        assigned_to=assignee,
+        assigned_by=g.current_user.id,
+        priority='important',
+        deadline=deadline,
+        reminder_offset_days=1,
+        status='new',
+    )
+    db.session.add(task)
+    return task
 
 sessions_bp = Blueprint('sessions', __name__, template_folder='../../templates/sessions')
 
@@ -93,6 +143,8 @@ def create():
             responsible_lawyer_id=request.form.get('responsible_lawyer_id', type=int) or g.current_user.id,
         )
         db.session.add(sess)
+        db.session.flush()
+        _sync_session_task(sess)
         db.session.commit()
 
         from app.services.notification_service import notify_tenant_users
@@ -160,6 +212,11 @@ def record_result(id):
             if case and case.status not in ('closed',):
                 case.status = 'awaiting_judgment'
 
+        # Close out the linked reminder task — session is now done.
+        linked_task = Task.query.filter_by(session_id=sess.id, tenant_id=sess.tenant_id).first()
+        if linked_task and linked_task.status not in ('done', 'cancelled'):
+            linked_task.status = 'done'
+
         db.session.commit()
 
         from app.services.notification_service import notify_tenant_users
@@ -205,6 +262,7 @@ def edit(id):
         sess.preparation_notes = request.form.get('preparation_notes', '').strip() or None
         sess.responsible_lawyer_id = request.form.get('responsible_lawyer_id', type=int) or sess.responsible_lawyer_id
 
+        _sync_session_task(sess)
         db.session.commit()
         flash('تم تحديث الجلسة بنجاح', 'success')
         return redirect(url_for('sessions.show', id=sess.id))

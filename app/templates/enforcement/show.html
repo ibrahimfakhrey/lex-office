@@ -58,7 +58,7 @@
                         <div>{{ enforcement.enforcement_court or '-' }}</div>
                     </div>
                     <div class="col-md-4">
-                        <small class="text-muted">اسم المحضر</small>
+                        <small class="text-muted">منفذ الحكم</small>
                         <div>{{ enforcement.executor_name or '-' }}</div>
                     </div>
                     <div class="col-md-4">
@@ -93,7 +93,7 @@
                             <tr>
                                 <td dir="ltr" class="text-end">{{ '{:,.0f}'.format(c.amount) }}</td>
                                 <td>{{ c.collection_date.strftime('%Y-%m-%d') if c.collection_date else '-' }}</td>
-                                <td>{{ c.collection_method or '-' }}</td>
+                                <td>{{ method_map.get(c.collection_method, c.collection_method) or '-' }}</td>
                                 <td>{{ c.notes or '-' }}</td>
                             </tr>
                             {% endfor %}
@@ -117,7 +117,12 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small">الطريقة</label>
-                        <input type="text" name="collection_method" class="form-control form-control-sm">
+                        <select name="collection_method" class="form-select form-select-sm">
+                            <option value="">-</option>
+                            {% for value, label in collection_methods %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small">ملاحظات</label>
