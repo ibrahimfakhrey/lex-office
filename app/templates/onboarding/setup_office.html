@@ -1,4 +1,10 @@
 {% extends "base_onboarding.html" %}
+
+{% block extra_head %}
+<script>
+  if(typeof fbq !== 'undefined') { fbq('track', 'Lead'); }
+</script>
+{% endblock %}
 {% block title %}إعداد المكتب - {{ product_name }}{% endblock %}
 {% block step_label %}الخطوة ١ من ٣ — بيانات المكتب{% endblock %}
 
