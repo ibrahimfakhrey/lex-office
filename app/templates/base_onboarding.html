@@ -196,7 +196,6 @@
         .back-link a { color: var(--muted); font-size: 0.85rem; text-decoration: none; transition: color 0.2s; }
         .back-link a:hover { color: var(--cyan); }
     </style>
-    {% block extra_head %}{% endblock %}
     <!-- Meta Pixel Code -->
     <script>
     !function(f,b,e,v,n,t,s)
@@ -215,6 +214,7 @@
     src="https://www.facebook.com/tr?id=1504701044468993&ev=PageView&noscript=1"/>
     </noscript>
     <!-- End Meta Pixel Code -->
+    {% block extra_head %}{% endblock %}
     
 </head>
 <body>
