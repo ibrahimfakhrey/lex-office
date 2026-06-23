@@ -148,7 +148,11 @@
     border-radius: 0 0 12px 12px; margin-top: -1px;
 }
 
-.col-featured { background: rgba(7,143,210,0.04); }
+.col-featured { 
+    background: #EEF4FF !important; 
+    border-left: 3px solid #1849A9 !important; 
+    border-right: 3px solid #1849A9 !important;
+}
 
 @media(max-width:720px){
     .ob-panel { padding: 1.2rem; }
@@ -187,6 +191,9 @@
     {% macro plan_col_class(loop_index, total) -%}
         {%- if total == 4 and loop_index == 3 %}col-featured{%- endif -%}
         {%- if total == 3 and loop_index == 2 %}col-featured{%- endif -%}
+    {%- endmacro %}
+    {% macro featured_class(plan) -%}
+        {%- if plan.name == 'Starter' %}plans-table-featured{%- endif -%}
     {%- endmacro %}
 
     {% macro render_cell(value) -%}
