@@ -90,6 +90,23 @@
     border: 1px solid rgba(249,115,22,0.3); margin-top: 2px;
 }
 .plans-table .check-icon { color: #078FD2; font-size: 1rem; }
+.plans-table-featured {
+    background: linear-gradient(135deg, #1849A9, #078FD2) !important;
+    color: #fff !important;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(24,73,169,0.3);
+}
+.plans-table-featured small { color: rgba(255,255,255,0.8) !important; }
+.featured-badge {
+    display: inline-block;
+    background: #FFD700;
+    color: #1849A9;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-bottom: 6px;
+}
 .plans-table .x-icon { color: #cbd5e1; font-size: 0.9rem; }
 .plans-table .detail-text {
     font-size: 0.78rem; color: #334155; line-height: 1.5;
@@ -195,7 +212,8 @@
                 <tr>
                     <th>الميزة / النظام</th>
                     {% for plan in plans %}
-                    <th class="{{ plan_col_class(loop.index, plans|length) }}">
+                    <th class="{{ plan_col_class(loop.index, plans|length) }}{% if plan.name == 'Starter' %} plans-table-featured{% endif %}">
+                        {% if plan.name == 'Starter' %}<span class="featured-badge">⭐ الأكثر شيوعاً</span>{% endif %}
                         باقة: {{ plan.name_ar }}<small>({{ plan.name }})</small>
                     </th>
                     {% endfor %}
