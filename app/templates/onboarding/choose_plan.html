@@ -4,6 +4,9 @@
 {% block panel_width %}1160px{% endblock %}
 
 {% block extra_head %}
+<script>
+  if(typeof fbq !== 'undefined') { fbq('track', 'CompleteRegistration'); }
+</script>
 <style>
 .plans-table-wrap {
     overflow-x: auto;
