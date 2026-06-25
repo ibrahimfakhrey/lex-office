@@ -65,3 +65,5 @@ a.pdf
 *.bak*
 patch_*.py
 fix_*.py
+AuthKey_*.p8
+firebase-service-account.json
