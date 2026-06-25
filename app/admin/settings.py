@@ -111,7 +111,7 @@ def settings_smtp():
 def settings_smtp_test():
     """Send a test email to verify SMTP works."""
     test_email = (request.form.get('test_email') or g.current_admin.email).strip()
-    subject = 'LexOffice — Test Email'
+    subject = 'المُحامي — Test Email'
     html = f"""
     <div dir='rtl' style='font-family:Tajawal,Arial;padding:20px'>
         <h2 style='color:#1849A9'>✓ تم إرسال البريد بنجاح</h2>

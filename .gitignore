@@ -62,3 +62,6 @@ a.pdf
 
 # Claude config
 .claude/
+*.bak*
+patch_*.py
+fix_*.py

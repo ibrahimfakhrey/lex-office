@@ -19,7 +19,11 @@ def terms():
     return render_template('public/terms.html')
 
 
-@public_bp.route('/privacy')
+@public_bp.route("/security")
+def security():
+    return render_template("public/security.html")
+
+@public_bp.route("/privacy")
 def privacy():
     return render_template('public/privacy.html')
 

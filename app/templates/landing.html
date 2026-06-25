@@ -50,7 +50,7 @@
         /* ── BACKGROUND GRADIENTS ── */
         body::before {
             content: '';
-            position: fixed;
+            position: relative;
             inset: 0;
             background:
                 radial-gradient(ellipse 90% 70% at 15% 5%, rgba(7,143,210,0.12) 0%, transparent 60%),
@@ -60,10 +60,62 @@
             z-index: 0;
         }
 
+        /* ── ANNOUNCEMENT BAR ── */
+        .announce-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 110;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-align: center;
+            padding: 0 1rem;
+            background: linear-gradient(135deg, #0C2461, #078FD2);
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+        .announce-bar i { font-size: 0.9rem; }
+        .announce-bar strong { font-weight: 900; }
+        .announce-short { display: none; }
+        @media (max-width: 900px) {
+            .announce-bar {
+                position: fixed;
+                top: 0; left: 0; right: 0;
+                z-index: 110;
+                height: 40px;
+                font-size: 0.78rem;
+                padding: 0 1rem;
+                line-height: 1.3;
+            }
+            .announce-full { display: none; }
+            .announce-short { display: inline; }
+            nav {
+                position: fixed;
+                top: 40px; left: 0; right: 0;
+                z-index: 100;
+                height: auto;
+                padding: 0.75rem 1.25rem;
+            }
+            .nav-actions .btn-ghost { display: none; }
+            .hero {
+                min-height: auto;
+                padding: 8rem 1.5rem 3rem;
+            }
+            .btn-hero-primary {
+                font-size: 0.92rem;
+                padding: 0.9rem 1.5rem;
+                white-space: normal;
+            }
+        }
+
         /* ── NAVBAR ── */
         nav {
             position: fixed;
-            top: 0; left: 0; right: 0;
+            top: 44px; left: 0; right: 0;
             z-index: 100;
             height: 72px;
             padding: 0 4rem;
@@ -290,19 +342,25 @@
             gap: 1rem;
             justify-content: center;
             flex-wrap: wrap;
-            margin-bottom: 4rem;
+            margin-bottom: 0.75rem;
+        }
+        .hero-cta-note {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
         }
 
         .btn-hero-primary {
             display: inline-flex;
             align-items: center;
-            gap: 0.6rem;
-            padding: 1rem 2.5rem;
+            gap: 0.5rem;
+            padding: 0.75rem 1.75rem;
             background: linear-gradient(135deg, var(--navy), var(--blue));
             color: #fff;
             text-decoration: none;
             border-radius: 12px;
-            font-size: 1.05rem;
+            font-size: 0.95rem;
             font-weight: 700;
             box-shadow: 0 8px 30px rgba(12,36,97,0.2);
             transition: all 0.3s;
@@ -318,13 +376,13 @@
         .btn-hero-secondary {
             display: inline-flex;
             align-items: center;
-            gap: 0.6rem;
-            padding: 1rem 2.5rem;
+            gap: 0.5rem;
+            padding: 0.75rem 1.75rem;
             background: var(--white);
             color: var(--text-secondary);
             text-decoration: none;
             border-radius: 12px;
-            font-size: 1.05rem;
+            font-size: 0.95rem;
             font-weight: 600;
             border: 1px solid var(--border);
             transition: all 0.3s;
@@ -344,15 +402,22 @@
             display: flex;
             gap: 3rem;
             justify-content: center;
+            align-items: center;
             flex-wrap: wrap;
         }
 
         .stat-item {
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
         }
 
         .stat-number {
             display: block;
+            height: 2.2rem;
+            line-height: 2.2rem;
             font-size: 1.8rem;
             font-weight: 800;
             background: linear-gradient(135deg, var(--navy), var(--cyan));
@@ -360,6 +425,9 @@
             -webkit-text-fill-color: transparent;
         }
 
+        .stat-number-sm {
+            font-size: 1.35rem;
+        }
         .stat-label {
             font-size: 0.85rem;
             color: var(--text-muted);
@@ -538,6 +606,44 @@
             color: var(--text-muted);
             line-height: 1.7;
         }
+
+        /* ── PRICING ── */
+        .pricing { padding: 6rem 4rem; background: var(--bg); }
+        .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; max-width: 1100px; margin: 0 auto; align-items: stretch; }
+        .price-card { background: var(--white); border: 1px solid var(--border); border-radius: 20px; padding: 2.5rem 2rem; text-align: center; display: flex; flex-direction: column; box-shadow: var(--shadow); transition: all 0.3s; position: relative; }
+        .price-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .price-card.featured { border: 2px solid var(--cyan); box-shadow: 0 12px 48px rgba(7,143,210,0.18); transform: scale(1.04); }
+        .price-card.featured:hover { transform: scale(1.04) translateY(-4px); }
+        .price-badge-top { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, var(--navy), var(--cyan)); color: #fff; font-size: 0.78rem; font-weight: 800; padding: 0.35rem 1.2rem; border-radius: 100px; white-space: nowrap; box-shadow: 0 4px 15px rgba(12,36,97,0.25); }
+        .price-name { font-size: 1.25rem; font-weight: 800; color: var(--navy); margin-bottom: 0.3rem; }
+        .price-name-en { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-bottom: 1.5rem; }
+        .price-old { font-size: 1rem; color: var(--text-muted); text-decoration: line-through; margin-bottom: 0.2rem; }
+        .price-now { font-size: 2.4rem; font-weight: 900; color: var(--navy); line-height: 1.1; }
+        .price-now span { font-size: 1rem; font-weight: 600; color: var(--text-muted); }
+        .price-save { display: inline-block; background: rgba(249,115,22,0.12); color: #F97316; font-size: 0.8rem; font-weight: 800; padding: 0.25rem 0.9rem; border-radius: 100px; margin-top: 0.6rem; }
+        .price-period { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.4rem; margin-bottom: 1.5rem; }
+        .price-features { list-style: none; text-align: right; margin-bottom: 2rem; flex-grow: 1; }
+        .price-features li { font-size: 0.92rem; color: var(--text-secondary); padding: 0.55rem 0; display: flex; align-items: center; gap: 0.6rem; border-bottom: 1px solid var(--border); }
+        .price-features li:last-child { border-bottom: none; }
+        .price-features li i { color: var(--cyan); font-size: 1rem; flex-shrink: 0; }
+        .price-features li i.bi-plus-circle-fill { color: #16A34A; }
+        .price-cta { display: block; padding: 0.95rem; border-radius: 12px; font-size: 1rem; font-weight: 700; text-decoration: none; transition: all 0.3s; border: none; }
+        .price-cta.primary { background: linear-gradient(135deg, var(--navy), var(--blue)); color: #fff; box-shadow: 0 8px 24px rgba(12,36,97,0.2); }
+        .price-cta.primary:hover { transform: translateY(-2px); color: #fff; box-shadow: 0 12px 32px rgba(12,36,97,0.3); }
+        .price-cta.ghost { background: transparent; color: var(--navy); border: 1px solid var(--border); }
+        .price-cta.ghost:hover { border-color: var(--blue); background: rgba(24,73,169,0.04); }
+        .price-nocard { font-size: 0.78rem; color: #16A34A; font-weight: 700; margin-top: 0.75rem; }
+        @media (max-width: 900px) {
+            .pricing { padding: 4rem 1.5rem; }
+            .pricing-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+            .price-card.featured { transform: scale(1); }
+            .price-card.featured:hover { transform: translateY(-4px); }
+        }
+
+        .shared-features { max-width: 1100px; margin: 0 auto 2rem; background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem 1.75rem; text-align: center; font-size: 0.92rem; color: var(--text-secondary); line-height: 1.9; box-shadow: var(--shadow); }
+        .shared-features strong { color: var(--navy); font-weight: 800; }
+        .shared-features .dot { color: var(--cyan); margin: 0 0.3rem; font-weight: 900; }
+        .price-plus { font-size: 0.82rem; font-weight: 800; color: var(--cyan); text-align: right; margin-bottom: 0.5rem; display: block; }
 
         /* ── MODULES ── */
         .modules {
@@ -741,12 +847,31 @@
         footer {
             background: var(--white);
             border-top: 1px solid var(--border);
-            padding: 2.5rem 4rem;
+            padding: 1.75rem 4rem;
             display: flex;
+            flex-direction: row;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            gap: 1rem;
+            gap: 1.25rem 2rem;
+        }
+        .footer-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            text-align: center;
+            flex: 1;
+            min-width: 0;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .footer-manasety { font-size: 0.85rem; color: var(--text-muted); }
+        .footer-manasety a { color: var(--cyan); font-weight: 800; text-decoration: none; }
+        .footer-manasety a:hover { text-decoration: underline; }
+        @media (max-width: 900px) {
+            footer { flex-direction: column; text-align: center; padding: 2rem 1.5rem; }
         }
 
         .footer-brand {
@@ -768,7 +893,7 @@
             color: var(--text-muted);
         }
 
-        .footer-links {
+        .footer-links { flex-wrap: wrap; justify-content: flex-end;
             display: flex;
             gap: 1.5rem;
             list-style: none;
@@ -782,6 +907,30 @@
         }
 
         .footer-links a:hover { color: var(--cyan); }
+
+        .wa-float { bottom: 28px !important; }
+        @media (min-width: 901px) { .wa-float { bottom: 80px !important; } }
+        /* ── CONTACT ── */
+        .contact { padding: 5rem 4rem; background: var(--bg); text-align: center; }
+        .contact-grid { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; max-width: 800px; margin: 0 auto; }
+        .contact-card { display: flex; align-items: center; gap: 0.9rem; background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem 1.75rem; text-decoration: none; transition: all 0.3s; box-shadow: var(--shadow); min-width: 260px; }
+        .contact-card:hover { transform: translateY(-3px); border-color: rgba(7,143,210,0.3); box-shadow: var(--shadow-lg); }
+        .contact-icon { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; font-size: 1.4rem; flex-shrink: 0; }
+        .contact-icon.wa { background: rgba(37,211,102,0.12); color: #25D366; }
+        .contact-icon.phone { background: rgba(24,73,169,0.1); color: var(--blue); }
+        .contact-icon.email { background: rgba(7,143,210,0.1); color: var(--cyan); }
+        .contact-text { text-align: right; }
+        .contact-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+        .contact-value { font-size: 1rem; color: var(--navy); font-weight: 800; direction: ltr; }
+        @media (max-width: 900px) {
+            .contact { padding: 4rem 1.5rem; }
+            .contact-card { min-width: 100%; }
+        }
+
+        /* ── POWERED BY ── */
+        .powered-by { text-align: center; padding: 1.5rem 2rem; background: var(--white); border-top: 1px solid var(--border); font-size: 0.88rem; color: var(--text-muted); }
+        .powered-by a { color: var(--cyan); font-weight: 800; text-decoration: none; }
+        .powered-by a:hover { text-decoration: underline; }
 
         /* ── DIVIDER ── */
         .section-divider {
@@ -803,10 +952,101 @@
             transform: translateY(0);
         }
 
+/* ── BURGER MENU ── */
+        .burger {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 4px;
+            z-index: 1001;
+        }
+        .burger span {
+            display: block;
+            height: 2.5px;
+            background: var(--navy);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            transform-origin: center;
+        }
+        .burger.open span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+        .burger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+        .burger.open span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 0;
+            right: -280px;
+            width: 270px;
+            bottom: 0;
+            background: #fff;
+            box-shadow: -4px 0 24px rgba(12,36,97,0.12);
+            z-index: 1000;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-start;
+            overflow-y: auto;
+            padding-top: 80px;
+            transition: right 0.3s ease;
+        }
+        .mobile-menu.open { display: flex; right: 0; }
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 999;
+        }
+        .mobile-overlay.open { display: block; }
+        .mobile-menu a {
+            font-family: 'Tajawal', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--navy);
+            text-decoration: none;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s, color 0.2s;
+            text-align: right;
+        }
+        .mobile-menu a:hover { background: #f4f6f9; color: var(--blue); }
+        .mobile-menu .mobile-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 24px 16px;
+            margin-top: auto;
+        }
+        .mobile-menu .mobile-actions a {
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-align: center;
+            border-bottom: none;
+        }
+        .mobile-menu .mobile-actions .btn-ghost {
+            border: 2px solid var(--border);
+            color: var(--navy);
+            background: #fff;
+        }
+        .mobile-menu .mobile-actions .btn-primary {
+            background: var(--blue);
+            color: #fff;
+        }
+
         /* ── RESPONSIVE ── */
         @media (max-width: 900px) {
             nav { padding: 1rem 2rem; }
             .nav-links { display: none; }
+            .nav-actions { display: none; }
+            .burger { display: flex; }
             .features { padding: 4rem 1.5rem; }
             .how-it-works { padding: 4rem 1.5rem; }
             .steps { flex-direction: column; gap: 2rem; }
@@ -817,7 +1057,10 @@
             .quote-section { padding: 4rem 1.5rem; }
             footer { padding: 2rem 1.5rem; flex-direction: column; text-align: center; }
         }
-    </style>
+    
+
+        
+</style>
     <!-- Meta Pixel Code -->
 <script>
 !function(f,b,e,v,n,t,s)
@@ -841,6 +1084,13 @@ src="https://www.facebook.com/tr?id=1504701044468993&ev=PageView&noscript=1"/>
 </head>
 <body>
 
+<!-- ── ANNOUNCEMENT BAR ── -->
+<div class="announce-bar">
+    <i class="bi bi-fire"></i>
+    <span class="announce-full">عرض لفترة محدودة: <strong>خصم 50%</strong> على الاشتراك السنوي + <strong>14 يوم تجربة مجانية</strong> بدون بطاقة ائتمان</span>
+    <span class="announce-short"><strong>خصم 50%</strong> + 14 يوم مجاناً</span>
+</div>
+
 <!-- ── NAVBAR ── -->
 <nav>
     <a href="/" class="nav-logo">
@@ -856,13 +1106,33 @@ src="https://www.facebook.com/tr?id=1504701044468993&ev=PageView&noscript=1"/>
         <li><a href="#features">المميزات</a></li>
         <li><a href="#modules">الوحدات</a></li>
         <li><a href="#how">كيف يعمل</a></li>
+        <li><a href="#pricing">الأسعار</a></li>
+        <li><a href="#faq">الأسئلة الشائعة</a></li>
     </ul>
 
     <div class="nav-actions">
         <a href="/auth/login" class="btn-ghost">تسجيل الدخول</a>
         <a href="/auth/register" class="btn-primary">ابدأ مجاناً</a>
     </div>
+    <button class="burger" id="burger" aria-label="القائمة">
+        <span></span><span></span><span></span>
+    </button>
 </nav>
+
+<!-- Mobile Menu Overlay -->
+<div class="mobile-overlay" id="mobileOverlay" onclick="closeMobile()"></div>
+<!-- Mobile Menu -->
+<div class="mobile-menu" id="mobileMenu">
+    <a href="#features" onclick="closeMobile()">المميزات</a>
+    <a href="#modules" onclick="closeMobile()">الوحدات</a>
+    <a href="#how" onclick="closeMobile()">كيف يعمل</a>
+    <a href="#pricing" onclick="closeMobile()">الأسعار</a>
+    <a href="#faq" onclick="closeMobile()">الأسئلة الشائعة</a>
+    <div class="mobile-actions">
+        <a href="/auth/login" class="btn-ghost" onclick="closeMobile()">تسجيل الدخول</a>
+        <a href="/auth/register" class="btn-primary" onclick="closeMobile()">ابدأ مجاناً</a>
+    </div>
+</div>
 
 <!-- ── HERO ── -->
 <section class="hero">
@@ -872,8 +1142,8 @@ src="https://www.facebook.com/tr?id=1504701044468993&ev=PageView&noscript=1"/>
 
     <div class="hero-content">
         <div class="hero-badge">
-            <i class="bi bi-stars"></i>
-            منظومة متكاملة لإدارة مكاتب المحاماة
+            <i class="bi bi-fire"></i>
+            خصم 50% على الاشتراك السنوي — لفترة محدودة
         </div>
 
         <h1 class="hero-title">
@@ -889,7 +1159,7 @@ src="https://www.facebook.com/tr?id=1504701044468993&ev=PageView&noscript=1"/>
         <div class="hero-actions">
             <a href="/auth/register" class="btn-hero-primary">
                 <i class="bi bi-rocket-takeoff-fill"></i>
-                ابدأ تجربتك المجانية
+                ابدأ 14 يوم مجاناً
             </a>
             <a href="/auth/login" class="btn-hero-secondary">
                 <i class="bi bi-box-arrow-in-right"></i>
@@ -897,18 +1167,19 @@ src="https://www.facebook.com/tr?id=1504701044468993&ev=PageView&noscript=1"/>
             </a>
         </div>
 
+        <p class="hero-cta-note">بدون بطاقة ائتمان • يمكنك الإلغاء في أي وقت</p>
         <div class="hero-stats">
             <div class="stat-item">
-                <span class="stat-number">+١٠٠</span>
-                <span class="stat-label">قضية مُدارة</span>
+                <span class="stat-number stat-number-sm">AES-256</span>
+                <span class="stat-label">تشفير بياناتك</span>
             </div>
             <div class="stat-item">
                 <span class="stat-number">١٦</span>
                 <span class="stat-label">وحدة متكاملة</span>
             </div>
             <div class="stat-item">
-                <span class="stat-number">٩٩٪</span>
-                <span class="stat-label">نسبة الرضا</span>
+                <span class="stat-number stat-number-sm">AI</span>
+                <span class="stat-label">يرشدك خطوة بخطوة</span>
             </div>
             <div class="stat-item">
                 <span class="stat-number">٢٤/٧</span>
@@ -985,6 +1256,81 @@ src="https://www.facebook.com/tr?id=1504701044468993&ev=PageView&noscript=1"/>
             <div class="step-number">٣</div>
             <div class="step-title">أدِر بكل ثقة</div>
             <div class="step-desc">تابع القضايا، الجلسات، المدفوعات، والتقارير من لوحة تحكم احترافية واحدة.</div>
+        </div>
+    </div>
+</section>
+
+<!-- ── PRICING ── -->
+<section class="pricing" id="pricing">
+    <div class="section-header reveal">
+        <div class="section-tag">الأسعار</div>
+        <h2 class="section-title">باقات تناسب كل مكتب</h2>
+        <p class="section-desc">خصم 50% على الاشتراك السنوي — لفترة محدودة. جرّب 14 يوم مجاناً بدون بطاقة ائتمان.</p>
+    </div>
+    <div class="shared-features reveal">
+        <strong>جميع الباقات تشمل:</strong>
+        إدارة الموكلين والتوكيلات <span class="dot">•</span>
+        الأجندة والتقويم الرقمي <span class="dot">•</span>
+        سجل الأحكام ومتابعة التنفيذ <span class="dot">•</span>
+        النظام المالي والفواتير <span class="dot">•</span>
+        إدارة المصاريف والأتعاب
+    </div>
+
+    <div class="pricing-grid">
+        <div class="price-card reveal">
+            <div class="price-name">المحامي الفردي</div>
+            <div class="price-name-en">Basic</div>
+            <div class="price-old">3564 ج.م / السنة</div>
+            <div class="price-now">1782 <span>ج.م / السنة</span></div>
+            <span class="price-save">وفّر 50%</span>
+            <div class="price-period">أي ما يعادل 148.5 ج.م / الشهر شاملاً الخصم</div>
+            <ul class="price-features">
+                <li><i class="bi bi-check-circle-fill"></i> محامٍ واحد</li>
+                <li><i class="bi bi-check-circle-fill"></i> حتى 50 قضية</li>
+                <li><i class="bi bi-check-circle-fill"></i> 3 جيجابايت تخزين</li>
+                <li><i class="bi bi-check-circle-fill"></i> مهام شخصية + نموذج قانوني واحد</li>
+                <li><i class="bi bi-check-circle-fill"></i> إشعارات داخل النظام</li>
+            </ul>
+            <a href="/auth/register" class="price-cta ghost">ابدأ 14 يوم مجاناً</a>
+            <div class="price-nocard"><i class="bi bi-shield-check"></i> بدون بطاقة ائتمان</div>
+        </div>
+        <div class="price-card featured reveal">
+            <div class="price-badge-top">الأكثر شيوعاً</div>
+            <div class="price-name">فريق النمو</div>
+            <div class="price-name-en">Starter</div>
+            <div class="price-old">5964 ج.م / السنة</div>
+            <div class="price-now">2982 <span>ج.م / السنة</span></div>
+            <span class="price-save">وفّر 50%</span>
+            <div class="price-period">أي ما يعادل 248.5 ج.م / الشهر شاملاً الخصم</div>
+            <span class="price-plus">كل مميزات الفردي، بالإضافة إلى:</span>
+            <ul class="price-features">
+                <li><i class="bi bi-plus-circle-fill"></i> حتى 3 محامين</li>
+                <li><i class="bi bi-plus-circle-fill"></i> قضايا غير محدودة</li>
+                <li><i class="bi bi-plus-circle-fill"></i> 5 جيجابايت تخزين</li>
+                <li><i class="bi bi-plus-circle-fill"></i> توزيع مهام ومتابعة تنفيذ للفريق</li>
+                <li><i class="bi bi-plus-circle-fill"></i> 3 نماذج قانونية</li>
+                <li><i class="bi bi-plus-circle-fill"></i> مساعد ذكي (AI)</li>
+            </ul>
+            <a href="/auth/register" class="price-cta primary">ابدأ 14 يوم مجاناً</a>
+            <div class="price-nocard"><i class="bi bi-shield-check"></i> بدون بطاقة ائتمان</div>
+        </div>
+        <div class="price-card reveal">
+            <div class="price-name">المكاتب الكبرى</div>
+            <div class="price-name-en">Professional</div>
+            <div class="price-old">8364 ج.م / السنة</div>
+            <div class="price-now">4182 <span>ج.م / السنة</span></div>
+            <span class="price-save">وفّر 50%</span>
+            <div class="price-period">أي ما يعادل 348.5 ج.م / الشهر شاملاً الخصم</div>
+            <span class="price-plus">كل مميزات النمو، بالإضافة إلى:</span>
+            <ul class="price-features">
+                <li><i class="bi bi-plus-circle-fill"></i> حتى 6 محامين</li>
+                <li><i class="bi bi-plus-circle-fill"></i> 10 جيجابايت تخزين</li>
+                <li><i class="bi bi-plus-circle-fill"></i> 5 نماذج قانونية</li>
+                <li><i class="bi bi-plus-circle-fill"></i> تنبيهات بريد إلكتروني + إشعارات</li>
+                <li><i class="bi bi-plus-circle-fill"></i> AI متقدّم: تلخيص مستندات + تذكارات ذكية</li>
+            </ul>
+            <a href="/auth/register" class="price-cta ghost">ابدأ 14 يوم مجاناً</a>
+            <div class="price-nocard"><i class="bi bi-shield-check"></i> بدون بطاقة ائتمان</div>
         </div>
     </div>
 </section>
@@ -1085,6 +1431,124 @@ src="https://www.facebook.com/tr?id=1504701044468993&ev=PageView&noscript=1"/>
     </div>
 </section>
 
+<!-- ── CONTACT ── -->
+<section class="contact" id="contact">
+    <div class="section-header reveal">
+        <div class="section-tag">تواصل معنا</div>
+        <h2 class="section-title">احنا في خدمتك</h2>
+        <p class="section-desc">فريقنا جاهز يجاوب على أي استفسار ويساعدك تبدأ صح.</p>
+    </div>
+    <div class="contact-grid">
+        <a href="https://wa.me/201044203322?text=مرحباً،%20أريد%20الاستفسار%20عن%20نظام%20المحامي" target="_blank" rel="noopener noreferrer" class="contact-card reveal" onclick="if(typeof fbq!=='undefined'){fbq('trackCustom','WhatsAppClick');}">
+            <div class="contact-icon wa"><i class="bi bi-whatsapp"></i></div>
+            <div class="contact-text">
+                <div class="contact-label">واتساب</div>
+                <div class="contact-value">+20 104 420 3322</div>
+            </div>
+        </a>
+        <a href="tel:+201044203322" class="contact-card reveal">
+            <div class="contact-icon phone"><i class="bi bi-telephone-fill"></i></div>
+            <div class="contact-text">
+                <div class="contact-label">اتصل بينا</div>
+                <div class="contact-value">+20 104 420 3322</div>
+            </div>
+        </a>
+        <a href="mailto:info@elmouhamy.com" class="contact-card reveal">
+            <div class="contact-icon email"><i class="bi bi-envelope-fill"></i></div>
+            <div class="contact-text">
+                <div class="contact-label">البريد الإلكتروني</div>
+                <div class="contact-value">info@elmouhamy.com</div>
+            </div>
+        </a>
+    </div>
+</section>
+
+
+<!-- ── FAQ ── -->
+<section id="faq" style="padding: 80px 0; background: #f4f6f9;">
+  <div style="max-width: 800px; margin: 0 auto; padding: 0 24px;">
+    <div style="text-align:center; margin-bottom: 48px;">
+      <span style="display:inline-block; background:#e8eeff; color:#1849A9; font-size:0.85rem; font-weight:700; padding:6px 16px; border-radius:20px; margin-bottom:14px; font-family:'Tajawal',sans-serif;">الأسئلة الشائعة</span>
+      <h2 style="font-family:'Tajawal',sans-serif; font-size:2rem; font-weight:800; color:#0c2461; margin:0 0 12px;">أسئلة يسألها المحامون دايماً</h2>
+      <p style="font-family:'Tajawal',sans-serif; color:#64748b; font-size:1.05rem; margin:0;">إجابات واضحة على كل اللي بيدور في بالك قبل ما تبدأ</p>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:12px;">
+
+      <details style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(12,36,97,0.04);">
+        <summary style="font-family:'Tajawal',sans-serif; font-weight:700; font-size:1.05rem; color:#0c2461; padding:20px 24px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; user-select:none;">
+          هل في تجربة مجانية؟
+          <span style="font-size:1.4rem; color:#1849A9; transition:transform 0.3s;" class="faq-icon">＋</span>
+        </summary>
+        <div style="font-family:'Tajawal',sans-serif; color:#475569; font-size:0.97rem; line-height:1.8; padding:0 24px 20px; border-top:1px solid #f1f5f9;">
+          أيوه — 14 يوم مجاناً بدون بطاقة ائتمان وبدون أي التزام. بتسجّل، بتجرّب كل الميزات، وبعدين بتقرر.
+        </div>
+      </details>
+
+      <details style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(12,36,97,0.04);">
+        <summary style="font-family:'Tajawal',sans-serif; font-weight:700; font-size:1.05rem; color:#0c2461; padding:20px 24px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; user-select:none;">
+          هل النظام يشتغل على الموبايل؟
+          <span style="font-size:1.4rem; color:#1849A9; transition:transform 0.3s;" class="faq-icon">＋</span>
+        </summary>
+        <div style="font-family:'Tajawal',sans-serif; color:#475569; font-size:0.97rem; line-height:1.8; padding:0 24px 20px; border-top:1px solid #f1f5f9;">
+          أيوه، النظام cloud-based بالكامل — بتفتحه من أي جهاز: موبايل، تابلت، أو لاب توب. مفيش تثبيت ومفيش تحديثات يدوية.
+        </div>
+      </details>
+
+      <details style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(12,36,97,0.04);">
+        <summary style="font-family:'Tajawal',sans-serif; font-weight:700; font-size:1.05rem; color:#0c2461; padding:20px 24px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; user-select:none;">
+          بياناتي هتبقى آمنة إزاي؟
+          <span style="font-size:1.4rem; color:#1849A9; transition:transform 0.3s;" class="faq-icon">＋</span>
+        </summary>
+        <div style="font-family:'Tajawal',sans-serif; color:#475569; font-size:0.97rem; line-height:1.8; padding:0 24px 20px; border-top:1px solid #f1f5f9;">
+          بياناتك مشفّرة بتقنية AES-256 وسيرفراتنا في أوروبا بأعلى معايير الأمان. بياناتك ملكيتك أنت وما بتتشارش مع أي طرف تاني.
+        </div>
+      </details>
+
+      <details style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(12,36,97,0.04);">
+        <summary style="font-family:'Tajawal',sans-serif; font-weight:700; font-size:1.05rem; color:#0c2461; padding:20px 24px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; user-select:none;">
+          ممكن أضيف أكتر من محامٍ في المكتب؟
+          <span style="font-size:1.4rem; color:#1849A9; transition:transform 0.3s;" class="faq-icon">＋</span>
+        </summary>
+        <div style="font-family:'Tajawal',sans-serif; color:#475569; font-size:0.97rem; line-height:1.8; padding:0 24px 20px; border-top:1px solid #f1f5f9;">
+          أكيد — باقة Starter بتدعم 3 محامين وباقة Professional بتدعم 6. لكل عضو صلاحيات مخصصة: مدير، محامٍ أول، محامٍ، أو مساعد.
+        </div>
+      </details>
+
+      <details style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(12,36,97,0.04);">
+        <summary style="font-family:'Tajawal',sans-serif; font-weight:700; font-size:1.05rem; color:#0c2461; padding:20px 24px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; user-select:none;">
+          إيه اللي بيحصل لو الاشتراك خلص؟
+          <span style="font-size:1.4rem; color:#1849A9; transition:transform 0.3s;" class="faq-icon">＋</span>
+        </summary>
+        <div style="font-family:'Tajawal',sans-serif; color:#475569; font-size:0.97rem; line-height:1.8; padding:0 24px 20px; border-top:1px solid #f1f5f9;">
+          بياناتك بتفضل موجودة ومش بتتحذفش. بتقدر تجدد في أي وقت وترجع تشتغل من حيث وقفت. مفيش حاجة بتضيع.
+        </div>
+      </details>
+
+      <details style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(12,36,97,0.04);">
+        <summary style="font-family:'Tajawal',sans-serif; font-weight:700; font-size:1.05rem; color:#0c2461; padding:20px 24px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; user-select:none;">
+          هل في دعم فني لو واجهت مشكلة؟
+          <span style="font-size:1.4rem; color:#1849A9; transition:transform 0.3s;" class="faq-icon">＋</span>
+        </summary>
+        <div style="font-family:'Tajawal',sans-serif; color:#475569; font-size:0.97rem; line-height:1.8; padding:0 24px 20px; border-top:1px solid #f1f5f9;">
+          أيوه — فريق الدعم متاح على واتساب والبريد الإلكتروني. بنرد بسرعة ومش هتتاخد.
+        </div>
+      </details>
+
+    </div>
+
+    <div style="text-align:center; margin-top:40px;">
+      <p style="font-family:'Tajawal',sans-serif; color:#64748b; font-size:0.97rem; margin:0 0 16px;">عندك سؤال تاني؟</p>
+      <a href="https://wa.me/201044203322?text=مرحباً،%20عندي%20سؤال%20عن%20نظام%20المحامي" target="_blank"
+         style="display:inline-flex; align-items:center; gap:8px; background:#25D366; color:#fff; font-family:'Tajawal',sans-serif; font-weight:700; font-size:0.95rem; padding:12px 28px; border-radius:50px; text-decoration:none; transition:opacity 0.2s;"
+         onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        اسألنا على واتساب
+      </a>
+    </div>
+  </div>
+</section>
+
 <!-- ── FOOTER ── -->
 <footer>
     <div class="footer-brand">
@@ -1093,11 +1557,14 @@ src="https://www.facebook.com/tr?id=1504701044468993&ev=PageView&noscript=1"/>
         {% endif %}
         {{ product_name }}
     </div>
-    <span class="footer-copy">© ٢٠٢٦ {{ product_name }} — جميع الحقوق محفوظة</span>
+    <div class="footer-center">
+        <span class="footer-copy">© ٢٠٢٦ {{ product_name }} — جميع الحقوق محفوظة</span>
+        <span class="footer-manasety">أحد منتجات <a href="https://manasety.ai" target="_blank" rel="noopener noreferrer">شركة منصتي للحلول البرمجية</a></span>
+    </div>
     <ul class="footer-links">
         <li><a href="/privacy">سياسة الخصوصية</a></li>
         <li><a href="/terms">الشروط والأحكام</a></li>
-        <li><a href="#">تواصل معنا</a></li>
+        <li><a href="/security">الأمان وحماية البيانات</a></li>
     </ul>
 </footer>
 
@@ -1114,6 +1581,23 @@ src="https://www.facebook.com/tr?id=1504701044468993&ev=PageView&noscript=1"/>
     }, { threshold: 0.1 });
     reveals.forEach(el => observer.observe(el));
 
+
+    // Burger Menu
+    const burger = document.getElementById('burger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    burger.addEventListener('click', () => {
+        burger.classList.toggle('open');
+        mobileMenu.classList.toggle('open');
+        mobileOverlay.classList.toggle('open');
+        document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
+    });
+    function closeMobile() {
+        burger.classList.remove('open');
+        mobileMenu.classList.remove('open');
+        mobileOverlay.classList.remove('open');
+        document.body.style.overflow = '';
+    }
     // Navbar scroll effect
     window.addEventListener('scroll', () => {
         const nav = document.querySelector('nav');
@@ -1129,7 +1613,7 @@ src="https://www.facebook.com/tr?id=1504701044468993&ev=PageView&noscript=1"/>
 
 
 <!-- WhatsApp Floating Button -->
-<a href="https://wa.me/201044203322?text=مرحباً،%20أريد%20الاستفسار%20عن%20نظام%20المحامي" target="_blank" rel="noopener noreferrer"
+<a class="wa-float" href="https://wa.me/201044203322?text=مرحباً،%20أريد%20الاستفسار%20عن%20نظام%20المحامي" target="_blank" rel="noopener noreferrer"
    style="
     position: fixed;
     bottom: 28px;
