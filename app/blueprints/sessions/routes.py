@@ -52,7 +52,7 @@ def _sync_session_task(sess: Session):
         assigned_by=g.current_user.id,
         priority='important',
         deadline=deadline,
-        reminder_offset_days=1,
+        reminder_before_days=1,
         status='new',
     )
     db.session.add(task)
