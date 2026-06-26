@@ -319,6 +319,11 @@
                         <i class="bi bi-stars"></i> استخدام الذكاء الاصطناعي
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.faq') }}" href="{{ url_for('admin.faq_list') }}">
+                        <i class="bi bi-robot"></i> قاعدة معرفة المحامي
+                    </a>
+                </li>
                 {% endif %}
                 {% if g.current_admin.has_admin_permission('audit_log', 'view') %}
                 <li class="nav-item">

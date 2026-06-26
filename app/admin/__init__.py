@@ -53,3 +53,4 @@ from app.admin.finance import lenders as _finance_lenders       # noqa: E402, F4
 from app.admin.finance import expenses as _finance_expenses     # noqa: E402, F401
 from app.admin.finance import income as _finance_income         # noqa: E402, F401
 from app.admin.finance import dashboard as _finance_dashboard   # noqa: E402, F401
+from app.admin import faq  # noqa
