@@ -1,5 +1,5 @@
 """Court session management routes."""
-from datetime import datetime, date, time as time_cls, timedelta
+from datetime import datetime, date, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from app.extensions import db
 from app.utils.decorators import login_required, permission_required
@@ -7,56 +7,12 @@ from app.utils.helpers import egypt_today
 from app.models.session import Session
 from app.models.case import Case, Court
 from app.models.user import User
-from app.models.task import Task
 
-
-def _session_task_deadline(sess: Session) -> datetime:
-    """Deadline for the auto-task that mirrors a session — date + 09:00 if
-    no time was given on the session."""
-    t = sess.session_time or time_cls(9, 0)
-    return datetime.combine(sess.session_date, t)
-
-
-def _build_session_task_title(sess: Session) -> str:
-    case_no = sess.case.case_number if sess.case and sess.case.case_number else ''
-    return f'تذكير جلسة {case_no}'.strip() or 'تذكير جلسة'
-
-
-def _sync_session_task(sess: Session):
-    """Create or update the Task linked to this session. Returns the task.
-
-    Idempotent: if a task already exists for this session, its deadline,
-    assignee, title, and case_id are refreshed in place. If no task exists,
-    a new one is created. Reminder offset defaults to 1 day before the
-    session.
-    """
-    existing = Task.query.filter_by(session_id=sess.id, tenant_id=sess.tenant_id).first()
-    deadline = _session_task_deadline(sess)
-    title = _build_session_task_title(sess)
-    assignee = sess.responsible_lawyer_id or g.current_user.id
-    if existing:
-        if existing.deadline != deadline:
-            existing.reminder_sent_at = None
-        existing.title = title
-        existing.deadline = deadline
-        existing.assigned_to = assignee
-        existing.case_id = sess.case_id
-        return existing
-    task = Task(
-        tenant_id=sess.tenant_id,
-        session_id=sess.id,
-        case_id=sess.case_id,
-        title=title,
-        description=f'جلسة بتاريخ {sess.session_date.strftime("%Y-%m-%d")}',
-        assigned_to=assignee,
-        assigned_by=g.current_user.id,
-        priority='important',
-        deadline=deadline,
-        reminder_before_days=1,
-        status='new',
-    )
-    db.session.add(task)
-    return task
+# Session-reminder Task lifecycle lives in app.services.tasks_service —
+# create_session_reminder_task / sync_session_reminder_task /
+# complete_session_reminder_task. The local _sync_session_task helper
+# that used to be here was removed because it ran alongside the service
+# in `create()`, producing two reminder tasks per session.
 
 sessions_bp = Blueprint('sessions', __name__, template_folder='../../templates/sessions')
 
@@ -144,8 +100,6 @@ def create():
         )
         db.session.add(sess)
         db.session.flush()
-        _sync_session_task(sess)
-        db.session.commit()
 
         from app.services.tasks_service import create_session_reminder_task
         create_session_reminder_task(sess, g.current_user.id)
