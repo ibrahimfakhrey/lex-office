@@ -255,13 +255,23 @@ def api_sessions_calendar():
     type_map = dict(SESSION_TYPES)
     events = []
     for s in sessions:
+        time_str = s.session_time.strftime('%H:%M') if s.session_time else None
+        date_str = s.session_date.isoformat()
         events.append({
             'id': s.id,
             'title': f'{s.case.case_number or "قضية"} - {type_map.get(s.session_type, "")}',
-            'date': s.session_date.isoformat(),
-            'time': s.session_time.strftime('%H:%M') if s.session_time else None,
+            # legacy short-form keys (kept for older clients)
+            'date': date_str,
+            'time': time_str,
             'status': 'completed' if s.result else 'pending',
             'case_id': s.case_id,
+            # canonical session fields so the mobile SessionModel.fromJson
+            # parses these calendar rows the same as any other session.
+            'session_date': date_str,
+            'session_time': time_str,
+            'case_number': s.case.case_number if s.case else None,
+            'session_type': s.session_type,
+            'result': s.result,
         })
 
     return success_response(data=events)
