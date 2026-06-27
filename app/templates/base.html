@@ -10,6 +10,23 @@
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon/favicon.svg') }}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon/favicon.ico') }}">
     <meta name="theme-color" content="#1849A9">
+    <!-- Open Graph / WhatsApp Preview -->
+
+    <meta property="og:title" content="المحامي  نظام إدارة مكاتب المحاماة" />
+
+    <meta property="og:description" content="نظام متكامل لإدارة القضايا والعملاء والجلسات والمصروفات" />
+
+    <meta property="og:image" content="https://elmouhamy.com/static/images/og-image.png" />
+
+    <meta property="og:url" content="https://elmouhamy.com" />
+
+    <meta property="og:type" content="website" />
+
+    <meta property="og:site_name" content="المحامي" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <meta name="twitter:image" content="https://elmouhamy.com/static/images/og-image.png" />
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -320,46 +337,9 @@
                     if (hint) hint.classList.add('hidden');
                 });
 
-                {% if current_user %}
-                // Identity — user is logged in, attach their real name/email to the chat.
-                // identifier_hash is included only when CHATWOOT_HMAC_SECRET is configured
-                // (required only if "Identity Validation" is ON in the Chatwoot inbox).
-                window.addEventListener('chatwoot:ready', function () {
-                    if (!window.$chatwoot) { console.warn('Chatwoot SDK not ready'); return; }
-                    try {
-                        window.$chatwoot.setUser({{ current_user.id | tojson }}, {
-                            {% if chatwoot_hash %}identifier_hash: {{ chatwoot_hash | tojson }},{% endif %}
-                            name: {{ current_user.full_name | tojson }},
-                            email: {{ current_user.email | tojson }}{% if current_user.phone %},
-                            phone_number: {{ current_user.phone | tojson }}{% endif %},
-                            company_name: {{ (current_user.tenant.name if current_user.tenant else '') | tojson }}
-                        });
-                        window.$chatwoot.setCustomAttributes({
-                            tenant_id: {{ current_user.tenant_id | tojson }},
-                            role: {{ (current_user.role.name if current_user.role else '') | tojson }},
-                            subscription_status: {{ (current_user.tenant.subscription_status if current_user.tenant else '') | tojson }}
-                        });
-                        console.info('Chatwoot: identified as', {{ current_user.full_name | tojson }});
-                    } catch (e) {
-                        console.error('Chatwoot setUser failed:', e);
-                    }
-                });
-                {% endif %}
             };
         })(document, "script");
 
-        {% if current_user %}
-        // Top-level identity listener (per Chatwoot docs). Registered right
-        // after the loading script so it catches `chatwoot:ready` no matter
-        // when the SDK finishes loading. No HMAC / .env changes needed.
-        window.addEventListener("chatwoot:ready", function () {
-            if (!window.$chatwoot) return;
-            window.$chatwoot.setUser({{ current_user.id | tojson }}, {
-                name: {{ current_user.full_name | tojson }},
-                email: {{ current_user.email | tojson }}
-            });
-        });
-        {% endif %}
     </script>
     <!-- ─────────────────────────────────────────────────────────────── -->
 
