@@ -12,7 +12,7 @@ Notification of NEW acceptances is left to Phase M6 (admin notif stream).
 from flask import render_template, request
 
 from app.admin import admin_bp
-from app.admin.decorators import super_admin_required
+from app.admin.decorators import admin_permission_required
 from app.models.admin import SystemSetting
 from app.models.terms_acceptance import TermsAcceptance
 from app.models.user import User
@@ -20,7 +20,7 @@ from app.models.tenant import Tenant
 
 
 @admin_bp.route('/terms-acceptances')
-@super_admin_required
+@admin_permission_required('audit_log', 'view')
 def terms_acceptances():
     """List all T&C acceptances with filters."""
     page = request.args.get('page', 1, type=int)

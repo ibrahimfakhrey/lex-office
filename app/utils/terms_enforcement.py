@@ -21,13 +21,9 @@ _BYPASS_ENDPOINT_PREFIXES = (
     'auth.',            # login, logout, OTP, password reset
     'public.',          # /terms, /privacy, /security, /account/delete,
                         # /account/accept-terms — the destination itself
-    'admin.',           # super-admin panel — admins don't accept tenant terms
-    'admin_billing.',
-    'admin_settings.',
-    'admin_notifications.',
-    'admin_auth.',
-    'admin_faq.',
-    'admin_rbac.',
+    'admin.',           # super-admin panel (single blueprint covers
+                        # billing, settings, notifications, auth, faq,
+                        # rbac, finance, etc. — all admin.* endpoints)
     'onboarding.',      # plan-picker / setup — block on enforcement would
                         # collide with the existing onboarding redirect
 )

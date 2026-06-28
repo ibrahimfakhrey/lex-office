@@ -8,6 +8,7 @@ Required by App Store / Play Store policies:
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models.user import User
@@ -98,7 +99,10 @@ def accept_terms():
             flash('يجب الموافقة على الشروط للمتابعة', 'danger')
             return redirect(url_for('public.accept_terms'))
 
-        # Idempotent: skip insert if a row for this (user, version) exists.
+        # Idempotent: the UNIQUE(user_id, version) constraint is the source
+        # of truth. A pre-check + insert is racy if the user double-clicks;
+        # the IntegrityError that arrives milliseconds apart should be
+        # treated as success, not as a 500.
         existing = (TermsAcceptance.query
                     .filter_by(user_id=user.id, version=current_version)
                     .first())
@@ -111,8 +115,12 @@ def accept_terms():
                 user_agent=(request.headers.get('User-Agent') or '')[:4096],
             )
             db.session.add(acc)
-            db.session.commit()
-            # Admin notification fires in Phase M6 via AdminAuditLog hook.
+            try:
+                db.session.commit()
+            except IntegrityError:
+                # Concurrent insert from the same user won the race — the
+                # row is now there, the user effectively got their wish.
+                db.session.rollback()
 
         flash('تم تسجيل موافقتك بنجاح', 'success')
         next_path = (request.form.get('next') or '').strip()
