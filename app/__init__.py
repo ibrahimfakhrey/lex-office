@@ -34,6 +34,11 @@ def create_app(config_name=None):
     from app.utils.market import install_market_hook
     install_market_hook(app)
 
+    # Hard-block enforcement: logged-in tenant users must accept the current
+    # terms_version before reaching any dashboard route.
+    from app.utils.terms_enforcement import install_terms_enforcement
+    install_terms_enforcement(app)
+
     # JWT error handlers — return JSON for API, redirect for web
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):

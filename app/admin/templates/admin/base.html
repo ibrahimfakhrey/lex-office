@@ -331,6 +331,11 @@
                         <i class="bi bi-shield-check"></i> سجل العمليات
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'admin.terms_acceptances' }}" href="{{ url_for('admin.terms_acceptances') }}">
+                        <i class="bi bi-file-earmark-check-fill"></i> موافقات الشروط
+                    </a>
+                </li>
                 {% endif %}
                 {% set _show_finance = g.current_admin.has_admin_permission('finance_dashboard','view')
                                        or g.current_admin.has_admin_permission('finance_employees','view')

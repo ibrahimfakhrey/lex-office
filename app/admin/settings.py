@@ -19,6 +19,10 @@ GENERAL_KEYS = [
     ('default_currency', 'العملة الافتراضية',         'EGP'),
     ('terms_url',        'رابط شروط الخدمة',          ''),
     ('privacy_url',      'رابط سياسة الخصوصية',       ''),
+    # Bumping this string invalidates ALL prior acceptances; every
+    # tenant user is hard-blocked on next request until they accept
+    # the new version. Use semantic versioning ("1.0" → "1.1" → "2.0").
+    ('terms_version',    'إصدار الشروط والأحكام الحالي', '1.0'),
 ]
 
 SMTP_KEYS = [

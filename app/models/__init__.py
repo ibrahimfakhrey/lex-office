@@ -19,3 +19,4 @@ from app.models.op_finance import (
     OpIncome, OpFinanceAuditLog,
 )
 from app.models.admin_rbac import AdminRole, AdminRolePermission
+from app.models.terms_acceptance import TermsAcceptance

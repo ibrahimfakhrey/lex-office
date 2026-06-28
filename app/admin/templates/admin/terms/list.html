@@ -1,0 +1,137 @@
+{% extends "admin/base.html" %}
+{% block title %}موافقات الشروط والأحكام{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="mb-1">موافقات الشروط والأحكام</h4>
+    <small class="text-muted">
+      الإصدار الحالي:
+      <span class="badge bg-primary fs-6 ms-1">{{ current_version }}</span>
+    </small>
+  </div>
+</div>
+
+{# Filters #}
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form method="GET" class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <select name="tenant_id" class="form-select form-select-sm">
+          <option value="">كل المكاتب</option>
+          {% for t in tenants %}
+          <option value="{{ t.id }}" {% if sel_tenant_id == t.id %}selected{% endif %}>{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">كل الحالات</option>
+          <option value="current" {% if sel_status == 'current' %}selected{% endif %}>الإصدار الحالي ✓</option>
+          <option value="outdated" {% if sel_status == 'outdated' %}selected{% endif %}>إصدار قديم ⚠️</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+          <i class="bi bi-search me-1"></i> بحث
+        </button>
+      </div>
+      <div class="col-md-2">
+        <a href="{{ url_for('admin.terms_acceptances') }}" class="btn btn-sm btn-outline-secondary w-100">إعادة تعيين</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Acceptances table #}
+<div class="card">
+  <div class="card-body p-0">
+    {% if pagination.items %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>المكتب</th>
+            <th>المستخدم</th>
+            <th>الإصدار</th>
+            <th>تاريخ الموافقة</th>
+            <th>الحالة</th>
+            <th>IP + User Agent</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in pagination.items %}
+          {% set is_current = a.version == current_version %}
+          <tr>
+            <td>
+              <strong>{{ a.tenant.name if a.tenant else '—' }}</strong>
+            </td>
+            <td>
+              <div>{{ a.user.full_name if a.user else '—' }}</div>
+              <small class="text-muted">{{ a.user.email if a.user else '' }}</small>
+            </td>
+            <td>
+              <span class="badge bg-{{ 'primary' if is_current else 'secondary' }}">{{ a.version }}</span>
+            </td>
+            <td>
+              <small>{{ a.accepted_at.strftime('%Y-%m-%d') if a.accepted_at else '—' }}</small><br>
+              <small class="text-muted">{{ a.accepted_at.strftime('%H:%M:%S') if a.accepted_at else '' }}</small>
+            </td>
+            <td>
+              {% if is_current %}
+              <span class="badge bg-success">✓ الحالي</span>
+              {% else %}
+              <span class="badge bg-warning text-dark" title="هذا المستخدم لم يوافق بعد على الإصدار {{ current_version }}">⚠️ قديم</span>
+              {% endif %}
+            </td>
+            <td style="max-width: 280px">
+              <details style="font-size:12px">
+                <summary style="cursor:pointer">{{ a.ip_address or '—' }}</summary>
+                <div class="text-muted mt-1" style="word-break:break-all; line-height:1.4">
+                  {{ a.user_agent or '(no UA)' }}
+                </div>
+              </details>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="d-flex justify-content-center py-3">
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if pagination.has_prev %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ pagination.prev_num }}&tenant_id={{ sel_tenant_id or '' }}&status={{ sel_status }}">السابق</a>
+          </li>
+          {% endif %}
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+            <li class="page-item {% if p == pagination.page %}active{% endif %}">
+              <a class="page-link" href="?page={{ p }}&tenant_id={{ sel_tenant_id or '' }}&status={{ sel_status }}">{{ p }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+          {% endfor %}
+          {% if pagination.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ pagination.next_num }}&tenant_id={{ sel_tenant_id or '' }}&status={{ sel_status }}">التالي</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-5">
+      <i class="bi bi-file-earmark-check display-4 text-muted"></i>
+      <p class="text-muted mt-3 mb-0">لا توجد موافقات بعد</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
